@@ -1,0 +1,28 @@
+<div class="page min-vh-100 bg-light">
+  <app-header [current]="currentIndex" [total]="questions.length"></app-header>
+
+  <main class="content container py-5">
+    <ng-container *ngIf="!finished; else resultsBlock">
+      <app-question *ngIf="currentQuestion" [question]="{ id: currentQuestion.id, text: currentQuestion.text }"></app-question>
+
+      <app-options *ngIf="currentQuestion"
+                   [options]="currentQuestion.options"
+                   [selected]="selected"
+                   (selectedChange)="onSelectedChange($event)">
+      </app-options>
+
+      <app-submit [disabled]="!selected"
+                  label="Submit Answer"
+                  (clicked)="submitAnswer()">
+      </app-submit>
+    </ng-container>
+
+    <ng-template #resultsBlock>
+      <div class="card shadow-lg border-0 text-center p-5">
+        <h2 class="h3 fw-bold mb-4">Quiz Finished</h2>
+        <p class="h4 mb-4">Your Score: {{ score }} / {{ questions.length }}</p>
+        <app-submit label="Restart" (clicked)="restart()"></app-submit>
+      </div>
+    </ng-template>
+  </main>
+</div>

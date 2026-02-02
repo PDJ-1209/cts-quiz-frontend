@@ -1,0 +1,66 @@
+/* Cognizant Brand Colors */
+:host {
+  --cognizant-primary: #0066CC;
+  --cognizant-secondary: #003D7A;
+}
+
+.navbar {
+  background: linear-gradient(135deg, var(--cognizant-primary) 0%, var(--cognizant-secondary) 50%, var(--cognizant-primary) 100%);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+}
+
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  transition: all 0.3s;
+}
+
+.gradient-banner {
+  background: linear-gradient(135deg, var(--cognizant-primary), #00A7C7);
+  color: white;
+}
+
+.backdrop-blur {
+  backdrop-filter: blur(10px);
+}
+
+/* Stable Hover Logic */
+.dropdown {
+  position: relative;
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+  left: auto;
+  right: 0;
+  margin-top: 0;
+}
+
+/* Bridge to keep menu open while moving mouse */
+.dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: var(--cognizant-primary);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}

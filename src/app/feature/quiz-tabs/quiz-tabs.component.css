@@ -1,0 +1,39 @@
+/* Quiz Tabs Component - Bootstrap based */
+
+.nav-pills .nav-link.active {
+  background: linear-gradient(135deg, #0066CC, #00A7C7) !important;
+  box-shadow: 0 8px 16px rgba(0, 102, 204, 0.18);
+  color: white !important;
+}
+
+.nav-pills .nav-link {
+  color: #334155;
+  transition: all 0.3s ease;
+}
+
+.nav-pills .nav-link:hover {
+  color: #0066CC;
+  background-color: rgba(0, 102, 204, 0.1);
+}
+
+.nav-pills .nav-link:focus {
+  outline: 2px solid #0066CC;
+  outline-offset: 2px;
+}
+.tabs .tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :host { --bg: #10162b; --text: #eef1f8; --muted: #a6b0c3; --border: #273047; }
+  .tabs, .card { background: #141b2c; border-color: var(--border); }
+  .tabs .tab { background: linear-gradient(180deg, #1b2440, #202b4a); color: var(--text); }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :host { --transition: none; }
+  .tabs::after, .tabs .tab { transition: none; }
+}

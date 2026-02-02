@@ -1,0 +1,15 @@
+<section class="question-container bg-light py-3">
+  <div class="card shadow-lg border-0 mx-auto" style="max-width: 860px;" [attr.aria-labelledby]="'q-title-' + question.id">
+    <header class="question-header text-center text-white py-5">
+      <p class="question-number text-uppercase fw-semibold mb-2">Question {{ question.id }}</p>
+      <h2 class="title fw-bold mb-0" [id]="'q-title-' + question.id">Answer the question below</h2>
+    </header>
+
+    <div class="question-content p-4">
+      <p class="question-text text-center fw-semibold mb-4">{{ question.text }}</p>
+      <div class="options-section">
+        <ng-content></ng-content>
+      </div>
+    </div>
+  </div>
+</section>

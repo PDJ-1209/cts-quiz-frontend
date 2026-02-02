@@ -1,0 +1,141 @@
+<div class="result-container">
+  <!-- Header -->
+  <div class="result-header">
+    <div>
+      <h2 class="mb-2">📊 Quiz Analytics Dashboard</h2>
+      <p class="text-muted mb-0">Host ID: {{ currentHostId }}</p>
+    </div>
+    <button class="btn btn-primary" (click)="loadQuizzes()">
+      🔄 Refresh Data
+    </button>
+  </div>
+
+  @if (loading()) {
+    <app-loader type="cognizant" text="Loading analytics..."></app-loader>
+  } @else {
+    <!-- Analytics Cards -->
+    <div class="analytics-grid mb-4">
+      <div class="stat-card bg-primary">
+        <div class="stat-icon">📚</div>
+        <div class="stat-details">
+          <h3 class="stat-value">{{ analytics().totalQuizzes }}</h3>
+          <p class="stat-label">Total Quizzes</p>
+        </div>
+      </div>
+
+      <div class="stat-card bg-success">
+        <div class="stat-icon">❓</div>
+        <div class="stat-details">
+          <h3 class="stat-value">{{ analytics().totalQuestions }}</h3>
+          <p class="stat-label">Total Questions</p>
+        </div>
+      </div>
+
+      <div class="stat-card bg-warning">
+        <div class="stat-icon">📝</div>
+        <div class="stat-details">
+          <h3 class="stat-value">{{ analytics().draftQuizzes }}</h3>
+          <p class="stat-label">Draft Quizzes</p>
+        </div>
+      </div>
+
+      <div class="stat-card bg-info">
+        <div class="stat-icon">✅</div>
+        <div class="stat-details">
+          <h3 class="stat-value">{{ analytics().publishedQuizzes }}</h3>
+          <p class="stat-label">Published Quizzes</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">📂 Category Breakdown</h5>
+      </div>
+      <div class="card-body">
+        @if (getCategoryList().length > 0) {
+          <div class="category-list">
+            @for (cat of getCategoryList(); track cat.name) {
+              <div class="category-item">
+                <span class="category-name">{{ cat.name }}</span>
+                <span class="badge bg-primary rounded-pill">{{ cat.count }} quiz{{ cat.count !== 1 ? 'zes' : '' }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="text-muted mb-0">No categories yet</p>
+        }
+      </div>
+    </div>
+
+    <!-- Quiz List -->
+    <div class="card shadow-sm">
+      <div class="card-header bg-light">
+        <h5 class="mb-0">📋 All Quizzes Created</h5>
+      </div>
+      <div class="card-body">
+        @if (hostQuizzes().length > 0) {
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Quiz Number</th>
+                  <th>Quiz Name</th>
+                  <th>Category</th>
+                  <th>Questions</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (quiz of hostQuizzes(); track quiz.quizId) {
+                  <tr>
+                    <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
+                    <td><strong>{{ quiz.quizName }}</strong></td>
+                    <td><span class="badge bg-secondary">{{ quiz.category }}</span></td>
+                    <td><span class="badge bg-info">{{ quiz.questionCount }}</span></td>
+                    <td>
+                      <span 
+                        class="badge" 
+                        [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
+                        [class.bg-success]="quiz.status.toLowerCase() !== 'draft'">
+                        {{ quiz.status }}
+                      </span>
+                    </td>
+                    <td>{{ quiz.createdAt | date:'short' }}</td>
+                    <td>
+                      <button 
+                        class="btn btn-sm btn-outline-primary"
+                        (click)="toggleQR(quiz.quizId)">
+                        {{ showQRForQuizId() === quiz.quizId ? 'Hide QR' : 'Show QR' }}
+                      </button>
+                    </td>
+                  </tr>
+                  @if (showQRForQuizId() === quiz.quizId) {
+                    <tr>
+                      <td colspan="7" class="qr-cell">
+                        <app-qrcode 
+                          [quizNumber]="quiz.quizNumber" 
+                          [quizId]="quiz.quizId"
+                          [showActions]="false">
+                        </app-qrcode>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="text-center py-5">
+            <div class="mb-3" style="font-size: 3rem;">📭</div>
+            <h5>No Quizzes Found</h5>
+            <p class="text-muted">You haven't created any quizzes yet.</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

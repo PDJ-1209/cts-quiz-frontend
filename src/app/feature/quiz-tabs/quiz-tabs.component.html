@@ -1,0 +1,61 @@
+<!-- Tabs bar with Bootstrap Nav -->
+<ul class="nav nav-pills mb-4 p-2 bg-white rounded-4 shadow-lg" #tabsRef>
+  <li class="nav-item flex-fill">
+    <button
+      class="nav-link w-100 rounded-pill fw-bold"
+      [class.active]="activeTab() === 'questions'"
+      (click)="setTab('questions')"
+    >
+      Questions
+    </button>
+  </li>
+
+  <li class="nav-item flex-fill">
+    <button
+      class="nav-link w-100 rounded-pill fw-bold"
+      [class.active]="activeTab() === 'preview'"
+      (click)="setTab('preview')"
+    >
+      Preview
+    </button>
+  </li>
+
+  <li class="nav-item flex-fill">
+    <button
+      class="nav-link w-100 rounded-pill fw-bold"
+      [class.active]="activeTab() === 'results'"
+      (click)="setTab('results')"
+    >
+      Results
+    </button>
+  </li>
+
+  <li class="nav-item flex-fill">
+    <button
+      class="nav-link w-100 rounded-pill fw-bold"
+      [class.active]="activeTab() === 'settings'"
+      (click)="setTab('settings')"
+    >
+      Settings
+    </button>
+  </li>
+</ul>
+
+<!-- Pane content -->
+<div class="tab-content">
+  <ng-container [ngSwitch]="activeTab()">
+    <app-add-question *ngSwitchCase="'questions'"></app-add-question>
+
+    <div *ngSwitchCase="'preview'">
+      <app-preview (switchToQuestionsTab)="setTab('questions')"></app-preview>
+    </div>
+
+    <div *ngSwitchCase="'results'">
+      <app-result></app-result>
+    </div>
+
+    <div *ngSwitchCase="'settings'">
+      <h3>On Process....</h3>
+    </div>
+  </ng-container>
+</div>

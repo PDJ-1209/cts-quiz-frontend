@@ -1,4 +1,6 @@
-# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# --------------------------------------------------------------------
+# Angular recommended ignore patterns
+# --------------------------------------------------------------------
 
 # Compiled output
 /dist
@@ -6,10 +8,11 @@
 /out-tsc
 /bazel-out
 
-# Node
+# Node dependencies
 /node_modules
 npm-debug.log
 yarn-error.log
+package-lock.json
 
 # IDEs and editors
 .idea/
@@ -28,15 +31,33 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
-# Miscellaneous
+# Angular cache
 /.angular/cache
+
+# CSS preprocessors
 .sass-cache/
+
+# Misc
 /connect.lock
 /coverage
 /libpeerconnection.log
 testem.log
 /typings
 
-# System files
+# OS / system files
 .DS_Store
 Thumbs.db
+
+# --------------------------------------------------------------------
+# OPTIONAL (recommended)
+# --------------------------------------------------------------------
+
+# Temporary environment files (if generated)
+.env
+.env.local
+.env.production
+.env.development
+
+# Angular environment files (if generated)
+src/environments/environment.ts
+src/environments/environment.prod.ts

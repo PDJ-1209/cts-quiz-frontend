@@ -1,0 +1,16 @@
+/* Countdown Component - Bootstrap based */
+
+.countdown-wrapper {
+  background: linear-gradient(135deg, #F8FAFC 0%, rgba(113, 205, 244, 0.1) 100%);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}

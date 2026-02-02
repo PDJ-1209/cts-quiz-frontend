@@ -1,0 +1,34 @@
+<section class="participant-container">
+	<div class="card shadow-lg border-0" style="max-width: 600px; margin: 0 auto;">
+		<div class="card-header bg-primary text-white text-center py-4">
+			<p class="text-white-50 mb-2 small text-uppercase">Join a quiz</p>
+			<h1 class="h3 mb-2">Participant Desk</h1>
+			<p class="text-white-50 mb-0 small">Enter your invite code to join your quiz.</p>
+		</div>
+
+		<div class="card-body p-4">
+			<section class="mb-4">
+				<h2 class="h5 mb-3">Have a code?</h2>
+				<p class="text-muted mb-4">Paste the quiz code you received from your host.</p>
+
+				<form (submit)="onJoin($event)">
+					<div class="mb-3">
+						<label class="form-label fw-semibold" for="code">Quiz code</label>
+						<input
+							id="code"
+							name="code"
+							class="form-control"
+							placeholder="e.g. CTS-2024-ENG"
+							[(ngModel)]="code"
+							required
+						/>
+					</div>
+
+					<div class="d-grid">
+						<button type="submit" class="btn btn-primary btn-lg" [disabled]="!code.trim()">Go to lobby</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</div>
+</section>

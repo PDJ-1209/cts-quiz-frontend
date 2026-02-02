@@ -1,0 +1,77 @@
+/* ==========================================================================
+   SUBMIT COMPONENT - COGNIZANT DESIGN SYSTEM
+   ========================================================================== */
+
+:host {
+  --cognizant-primary: #0066CC;
+  --cognizant-secondary: #003D7A;
+  --cognizant-accent: #00A7C7;
+  --cognizant-light: #71CDF4;
+  --cognizant-white: #FFFFFF;
+  --cognizant-gray-200: #E2E8F0;
+  --cognizant-gray-300: #CBD5E1;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --radius: 12px;
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.submit-wrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.submit-button {
+  min-width: 220px;
+  background: linear-gradient(135deg, var(--cognizant-primary), var(--cognizant-accent));
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.submit-button:disabled {
+  background: var(--cognizant-gray-300);
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.submit-button.warning {
+  background: linear-gradient(135deg, var(--warning), #D97706);
+}
+
+.submit-button.success {
+  background: linear-gradient(135deg, var(--success), #059669);
+}
+
+.submit-button.danger {
+  background: linear-gradient(135deg, var(--error), #DC2626);
+}
+
+@media (max-width: 768px) {
+  .submit-wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .submit-button {
+    width: 100%;
+    max-width: 300px;
+  }
+}

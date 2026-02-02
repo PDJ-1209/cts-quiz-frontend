@@ -67,7 +67,8 @@
               "buildTarget": "CTS_Quiz:build:production"
             },
             "development": {
-              "buildTarget": "CTS_Quiz:build:development"
+              "buildTarget": "CTS_Quiz:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
@@ -97,5 +98,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

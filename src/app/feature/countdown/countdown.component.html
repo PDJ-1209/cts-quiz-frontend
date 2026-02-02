@@ -1,0 +1,38 @@
+              <div class="countdown-wrapper d-flex flex-column align-items-center justify-content-center min-vh-100 bg-light p-4">
+  
+  <!-- Clock Icon at top -->
+  <div class="clock-hero mb-4">
+    <div class="display-1">⏰</div>
+  </div>
+
+  <!-- Heading and subheading -->
+  <h1 class="display-5 fw-bold text-primary mb-2">Quiz will start at 12:00 PM</h1>
+  <p class="text-muted mb-5">Please stay on this screen</p>
+
+  <!-- Countdown timer circle in center -->
+  <div class="countdown-circle position-relative mb-5" style="width: 220px; height: 220px;">
+    <svg class="position-absolute top-0 start-0" width="220" height="220" viewBox="0 0 220 220">
+      <circle cx="110" cy="110" r="100" fill="none" stroke="#e9ecef" stroke-width="12"></circle>
+      <circle cx="110" cy="110" r="100" fill="none" stroke="#0066CC" stroke-width="12" 
+              [attr.stroke-dasharray]="628" 
+              [attr.stroke-dashoffset]="628 - (628 * progress / 100)"
+              style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1s linear;"></circle>
+    </svg>
+    <div class="position-absolute top-50 start-50 translate-middle text-center">
+      <div class="fs-2 mb-2">⏱️</div>
+      <div class="display-4 fw-bold text-primary">{{ formattedTime }}</div>
+      <div class="text-muted small">seconds remaining</div>
+    </div>
+  </div>
+
+  <!-- Status message at bottom center -->
+  <div class="alert alert-success d-flex align-items-center gap-3 shadow-sm" role="alert" style="max-width: 500px;">
+    <div class="spinner-grow spinner-grow-sm text-success" role="status"></div>
+    <div class="text-start">
+      <div class="fw-bold">Connected and ready</div>
+      <div class="small">The quiz will start automatically when the timer reaches zero.</div>
+    </div>
+  </div>
+</div>
+
+
