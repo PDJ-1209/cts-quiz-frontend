@@ -6,28 +6,30 @@ import {
   inject,
   ViewChild,
   ElementRef,
-  AfterViewInit
+  AfterViewInit,
+  OnInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AddQuestionComponent } from '../add-question/add-question.component';
 import { PreviewComponent } from '../preview/preview.component';
-import { PublishquizComponent } from '../publishquiz/publishquiz.component';
 import { ResultComponent } from '../result/result.component';
 import { AddQuestionService } from '../../services/add-question.service';
+import { CreateSurveyComponent } from '../create-survey/create-survey.component';
 
-type Tab = 'questions' | 'preview' | 'results' | 'settings';
+type Tab = 'questions' |'survey' | 'preview' | 'results' | 'settings';
 
 @Component({
   selector: 'app-quiz-tabs',
   standalone: true,
-  imports: [CommonModule, RouterModule, AddQuestionComponent, PreviewComponent, PublishquizComponent, ResultComponent],
+  imports: [CommonModule, RouterModule, AddQuestionComponent, PreviewComponent, ResultComponent, CreateSurveyComponent],
   templateUrl: './quiz-tabs.component.html',
   styleUrls: ['./quiz-tabs.component.css']
 })
-export class QuizTabsComponent implements AfterViewInit {
+export class QuizTabsComponent implements AfterViewInit, OnInit {
   // Router + store (if/when needed)
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private store = inject(AddQuestionService);
 
   // Tabs state via signals
@@ -39,13 +41,23 @@ export class QuizTabsComponent implements AfterViewInit {
   @ViewChild('tabsRef', { static: true }) tabsRef!: ElementRef<HTMLDivElement>;
 
   // Keep a stable tab order to compute the index cleanly
-  private readonly tabsOrder: Tab[] = ['questions', 'preview', 'results', 'settings'];
+  private readonly tabsOrder: Tab[] = ['questions', 'survey', 'preview', 'results', 'settings'];
 
   constructor() {
     // Re-run whenever the active tab changes
     effect(() => {
       // effect tracks this.currentTab()
       this.updateIndicator();
+    });
+  }
+
+  ngOnInit() {
+    // Check for tab query parameter and set initial tab
+    this.route.queryParams.subscribe(params => {
+      const tab = params['tab'] as Tab;
+      if (tab && this.tabsOrder.includes(tab)) {
+        this.setTab(tab);
+      }
     });
   }
 

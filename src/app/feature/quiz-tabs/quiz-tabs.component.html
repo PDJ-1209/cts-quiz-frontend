@@ -13,6 +13,16 @@
   <li class="nav-item flex-fill">
     <button
       class="nav-link w-100 rounded-pill fw-bold"
+      [class.active]="activeTab() === 'survey'"
+      (click)="setTab('survey')"
+    >
+      Survey
+    </button>
+  </li>
+
+  <li class="nav-item flex-fill">
+    <button
+      class="nav-link w-100 rounded-pill fw-bold"
       [class.active]="activeTab() === 'preview'"
       (click)="setTab('preview')"
     >
@@ -46,6 +56,10 @@
   <ng-container [ngSwitch]="activeTab()">
     <app-add-question *ngSwitchCase="'questions'"></app-add-question>
 
+    <div *ngSwitchCase="'survey'">
+      <app-create-survey (switchToQuestionsTab)="setTab('questions')"></app-create-survey>
+    </div>
+
     <div *ngSwitchCase="'preview'">
       <app-preview (switchToQuestionsTab)="setTab('questions')"></app-preview>
     </div>
@@ -55,7 +69,18 @@
     </div>
 
     <div *ngSwitchCase="'settings'">
-      <h3>On Process....</h3>
+      <div class="text-center py-5">
+        <h3 class="mb-3">⚙️ Settings</h3>
+        <p class="text-muted">Advanced quiz settings are coming soon...</p>
+        <div class="d-flex justify-content-center gap-2">
+          <button class="btn btn-outline-primary" (click)="setTab('questions')">
+            ← Back to Questions
+          </button>
+          <button class="btn btn-outline-secondary" (click)="setTab('preview')">
+            Go to Preview →
+          </button>
+        </div>
+      </div>
     </div>
   </ng-container>
 </div>

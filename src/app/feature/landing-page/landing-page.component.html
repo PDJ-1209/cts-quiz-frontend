@@ -46,7 +46,7 @@
                 </div>
                 <i class="fas fa-arrow-right option-arrow"></i>
               </button>
-              <button class="host-option" (click)="showAccessAlert('survey')">
+              <button class="host-option featured" (click)="showAccessAlert('survey')">
                 <div class="option-icon survey-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3ZM9,17H7V15H9V17ZM9,13H7V11H9V13ZM9,9H7V7H9V9ZM17,17H11V15H17V17ZM17,13H11V11H17V13ZM17,9H11V7H17V9Z"/>
@@ -56,7 +56,7 @@
                   <span class="option-title">Survey Builder</span>
                   <span class="option-description">Gather insights & feedback</span>
                 </div>
-                <span class="coming-soon">Q2 2024</span>
+                <i class="fas fa-arrow-right option-arrow"></i>
               </button>
               <button class="host-option" (click)="showAccessAlert('poll')">
                 <div class="option-icon poll-icon">
@@ -111,8 +111,8 @@
           </h1>
           
           <p class="cognizant-hero-subtitle">
-            Empower your organization with Cognizant's next-generation quiz platform. 
-            Create intelligent assessments, analyze performance, and accelerate workforce development 
+            Empower your organization with Cognizant's next-generation assessment platform. 
+            Create intelligent quizzes, interactive surveys, and analyze performance to accelerate workforce development 
             with enterprise-grade tools.
           </p>
           
@@ -137,9 +137,13 @@
               <span>Create Your First Quiz</span>
               <div class="btn-shine"></div>
             </button>
-            <button class="cognizant-btn-hero-secondary" (click)="navigateToParticipant()">
+            <button class="cognizant-btn-hero-secondary" (click)="navigateToSurveyCreation()">
+              <i class="fas fa-poll me-2"></i>
+              <span>Build a Survey</span>
+            </button>
+            <button class="cognizant-btn-hero-tertiary" (click)="navigateToParticipant()">
               <i class="fas fa-play me-2"></i>
-              <span>Join a Quiz</span>
+              <span>Join Assessment</span>
             </button>
           </div>
           

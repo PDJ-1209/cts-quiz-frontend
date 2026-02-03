@@ -1,0 +1,87 @@
+  <main class="container-fluid px-lg-5 pb-5">
+    <div class="row mt-4 g-4" *ngIf="!isPreviewMode">
+      <div class="col-lg-8 col-md-12" [formGroup]="surveyForm">
+        <div class="card builder-card border-top-purple mb-4">
+          <div class="card-body p-4">
+            <h6 class="text-muted fw-bold mb-3">📝 Survey Information</h6>
+            <div class="row g-3">
+              <div class="col-md-8">
+                <input type="text" formControlName="title" class="form-control cts-input" placeholder="Survey Title *">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div formArrayName="questions">
+          <div *ngFor="let q of questions.controls; let i = index" [formGroupName]="i" class="card builder-card border-top-blue mb-4 shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between mb-3">
+                <span class="q-label">❓ Question {{ i + 1 }}</span>
+                <button type="button" class="btn btn-warning btn-sm text-white fw-bold">Suggestions</button>
+              </div>
+
+              <textarea formControlName="text" class="form-control cts-textarea mb-3" rows="2" placeholder="What is your question?"></textarea>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <select formControlName="type" class="form-select cts-input">
+                    <option value="single_choice">Single Choice</option>
+                    <option value="rating">Rating (1-5 Stars)</option>
+                    <option value="text">Short Text</option>
+                  </select>
+                </div>
+              </div>
+
+              <div *ngIf="q.get('type')?.value.includes('choice')" formArrayName="options">
+                <div *ngFor="let opt of getOptions(i).controls; let oi = index" class="input-group mb-2">
+                  <span class="input-group-text bg-white"><i class="bi bi-circle"></i></span>
+                  <input [formControlName]="oi" class="form-control" placeholder="Option {{ oi + 1 }}">
+                  <button class="btn btn-outline-danger" (click)="removeOption(i, oi)" *ngIf="getOptions(i).length > 2">×</button>
+                </div>
+                <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="addOption(i)">+ Add Option</button>
+              </div>
+
+              <button type="button" class="btn btn-teal w-100 mt-4 text-white fw-bold" (click)="addQuestion()">+ Add Next Question</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-12">
+        <div class="survey-summary-card card shadow-sm">
+          <div class="card-body p-4">
+            <h6 class="fw-bold border-bottom pb-2">Survey Summary</h6>
+            <div class="d-flex justify-content-between my-3">
+              <span class="text-muted">Questions</span>
+              <span class="badge bg-primary rounded-pill px-3">{{ questions.length }}</span>
+            </div>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary py-2 fw-bold" (click)="onPublish()" [disabled]="loading">
+                {{ loading ? 'Publishing...' : 'Publish Survey' }}
+              </button>
+              <button class="btn btn-success py-2 fw-bold" (click)="createQuizFromSurvey()" [disabled]="loading">
+                🔄 Convert to Quiz Format
+              </button>
+            </div>
+            <small class="text-muted mt-2 d-block text-center">
+              Convert survey to quiz format and switch to Questions tab
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-empty-state text-center py-5" *ngIf="isPreviewMode">
+      <div class="card border-0 shadow-sm mx-auto" style="max-width: 800px;">
+        <div class="card-header cts-dark-header text-white p-3 d-flex justify-content-between">
+          <span class="fw-bold">📋 My Surveys</span>
+          <button class="btn btn-sm btn-outline-light" (click)="isPreviewMode = false">+ Create New</button>
+        </div>
+        <div class="card-body py-5">
+          <div class="icon-circle mb-4">📄</div>
+          <h3 class="fw-bold">No questions found</h3>
+          <p class="text-muted">You haven't created any survey questions yet. Use the builder to start.</p>
+        </div>
+      </div>
+    </div>
+  </main>

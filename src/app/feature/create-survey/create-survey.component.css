@@ -1,0 +1,86 @@
+.cts-app-container {
+  background-color: #f4f7f9 !important;
+  min-height: 100vh;
+}
+
+/* Header & Banner */
+.cts-top-nav {
+  background-color: #01629d;
+  color: white;
+  padding: 12px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-text { font-size: 11px; opacity: 0.7; display: block; }
+
+.cts-banner {
+  background: linear-gradient(90deg, #01629d 0%, #009ce4 100%);
+  color: white;
+  padding: 40px 40px 80px 40px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.q-stat {
+  background: white; color: #01629d;
+  padding: 15px 25px; border-radius: 12px;
+  text-align: center;
+}
+
+.q-stat .count { display: block; font-size: 28px; font-weight: bold; }
+
+/* Navigation Pills */
+.pill-nav-container { display: flex; justify-content: center; margin-top: -30px; }
+.pill-tabs { padding: 6px; border-radius: 50px; display: flex; gap: 5px; }
+.pill-tabs button {
+  border: none; background: transparent; padding: 10px 35px;
+  border-radius: 50px; font-weight: 600; color: #666;
+}
+.pill-tabs button.active {
+  background-color: #00aef0; color: white;
+  box-shadow: 0 4px 15px rgba(0, 174, 240, 0.4);
+}
+
+/* Builder Cards */
+.builder-card { border: none; border-radius: 8px; }
+.border-top-purple { border-top: 5px solid #8e7cc3; }
+.border-top-blue { border-top: 5px solid #0073b7; }
+
+.btn-teal { background-color: #24c297; border: none; padding: 12px; }
+
+/* Survey Summary Card */
+.survey-summary-card {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+  .survey-summary-card {
+    position: static;
+    margin-top: 20px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .survey-summary-card {
+    margin-top: 20px;
+  }
+  
+  .container-fluid.px-lg-5 {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+}
+
+/* Preview Empty State */
+.cts-dark-header { background-color: #004a99; }
+.icon-circle {
+  font-size: 50px; background: #eef5ff;
+  width: 100px; height: 100px; line-height: 100px;
+  border-radius: 50%; margin: 0 auto;
+}

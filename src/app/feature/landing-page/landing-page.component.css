@@ -1024,6 +1024,23 @@
   transform: translateY(-3px);
 }
 
+.cognizant-btn-hero-tertiary {
+  padding: var(--space-md) var(--space-xl);
+  background: transparent;
+  border: 2px solid #28a745;
+  color: #28a745;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.cognizant-btn-hero-tertiary:hover {
+  background: #28a745;
+  color: white;
+  transform: translateY(-3px);
+}
+
 .cognizant-trust-indicators {
   display: flex;
   gap: var(--space-lg);
@@ -2316,7 +2333,8 @@
   }
 
   .cognizant-btn-hero-primary,
-  .cognizant-btn-hero-secondary {
+  .cognizant-btn-hero-secondary,
+  .cognizant-btn-hero-tertiary {
     width: 100%;
     text-align: center;
   }

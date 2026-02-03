@@ -108,7 +108,12 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     {
       icon: 'fas fa-brain',
       title: 'Adaptive Learning',
-      description: 'Personalized learning experiences using AI to adapt content difficulty based on individual performance.'
+      description: 'Personalized learning experiences with AI-driven assessments, interactive quizzes, and comprehensive surveys to adapt content based on performance.'
+    },
+    {
+      icon: 'fas fa-poll-h',
+      title: 'Smart Assessment Suite',
+      description: 'Create dynamic quizzes and interactive surveys with real-time analytics, automatic scoring, and seamless conversion between formats.'
     },
     {
       icon: 'fas fa-globe',
@@ -216,6 +221,18 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       this.handleError(error, 'navigateToQuizCreation');
     }
   }
+
+  navigateToSurveyCreation() {
+    try {
+      this.clearError();
+      this.router.navigate(['/host/addquestion'], { queryParams: { tab: 'survey' } }).catch(error => {
+        this.handleError(error, 'navigation to survey creation');
+      });
+      this.showHostOptions = false;
+    } catch (error) {
+      this.handleError(error, 'navigateToSurveyCreation');
+    }
+  }
   
   navigateToHost() {
     try {
@@ -241,14 +258,16 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   showAccessAlert(type: 'admin' | 'survey' | 'poll') {
     this.showHostOptions = false;
     
+    // Handle survey navigation directly
+    if (type === 'survey') {
+      this.navigateToSurveyCreation();
+      return;
+    }
+    
     const messages = {
       admin: {
         title: '🔒 Administrator Access',
         message: 'Administrative features are currently under development.\n\nThis section will include:\n• User management\n• System settings\n• Analytics dashboard\n• Security controls\n\nComing soon!'
-      },
-      survey: {
-        title: '📋 Survey Creation',
-        message: 'Survey creation feature is coming soon!\n\nUpcoming features:\n• Custom survey templates\n• Advanced question types\n• Response analytics\n• Integration options\n\nStay tuned for updates!'
       },
       poll: {
         title: '📊 Poll Creation', 
@@ -256,7 +275,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       }
     };
     
-    const config = messages[type];
+    const config = messages[type as 'admin' | 'poll'];
     this.snackBar.open(`${config.title}\n\n${config.message}`, 'Close', {
       duration: 12000,
       panelClass: ['error-snackbar'],
