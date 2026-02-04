@@ -1,3 +1,23 @@
+<!-- Professional Header -->
+<div class="poll-header bg-warning text-dark py-4 mb-4">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h2 class="mb-1 fw-bold">📊 Create New Poll</h2>
+        <p class="mb-0 opacity-75">Host: <span class="fw-semibold">{{ hostName }}</span></p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <div class="opacity-75 small">
+          <i class="fas fa-calendar me-2"></i>{{ currentDateTime }}
+        </div>
+        <div class="small">
+          <i class="fas fa-clock me-2"></i>Session Active
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <main class="container-fluid px-lg-5 pb-5">
   <div class="row mt-4 g-4">
     <div class="col-lg-8 col-md-12" [formGroup]="pollForm">
@@ -8,16 +28,16 @@
           <div class="row g-3">
             <div class="col-md-8">
               <input type="text" formControlName="pollTitle" class="form-control cts-input" 
-                     placeholder="Poll Title *" [class.is-invalid]="submitted && f['pollTitle']?.errors">
-              <div *ngIf="submitted && f['pollTitle']?.errors" class="invalid-feedback">
+                     placeholder="Poll Title *" [class.is-invalid]="submitted && f['pollTitle'].errors">
+              <div *ngIf="submitted && f['pollTitle'].errors" class="invalid-feedback">
                 Title is required
               </div>
             </div>
             <div class="col-md-12">
               <textarea formControlName="pollQuestion" class="form-control cts-textarea mb-3" 
                        rows="2" placeholder="What is your poll question? *"
-                       [class.is-invalid]="submitted && f['pollQuestion']?.errors"></textarea>
-              <div *ngIf="submitted && f['pollQuestion']?.errors" class="invalid-feedback">
+                       [class.is-invalid]="submitted && f['pollQuestion'].errors"></textarea>
+              <div *ngIf="submitted && f['pollQuestion'].errors" class="invalid-feedback">
                 Question is required
               </div>
             </div>

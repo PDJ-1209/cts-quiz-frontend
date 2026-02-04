@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { QuizPublishService } from '../../services/quiz-publish.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Subscription } from 'rxjs';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
@@ -35,6 +36,7 @@ export class ResultComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private quizPublishService = inject(QuizPublishService);
+  private dashboardStatsService = inject(DashboardStatsService);
   private subscriptions: Subscription[] = [];
   
   hostQuizzes = signal<QuizListItem[]>([]);
@@ -45,11 +47,16 @@ export class ResultComponent implements OnInit, OnDestroy {
 
   analytics = computed(() => {
     const quizzes = this.hostQuizzes();
+    const draftQuizzes = quizzes.filter(q => q.status === 'DRAFT' || q.status === 'draft');
+    const publishedQuizzes = quizzes.filter(q => q.status === 'LIVE' || q.status === 'published');
+    
     return {
       totalQuizzes: quizzes.length,
+      draftQuizzes: draftQuizzes.length,
+      publishedQuizzes: publishedQuizzes.length,
       totalQuestions: quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0),
-      draftQuizzes: quizzes.filter(q => q.status === 'DRAFT').length,
-      publishedQuizzes: quizzes.filter(q => q.status === 'LIVE').length,
+      totalSurveys: 0, // Add survey counting logic when available
+      totalPolls: 0, // Add poll counting logic when available
     };
   });
 
@@ -75,11 +82,26 @@ export class ResultComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      this.hostQuizzes().forEach((quiz: QuizListItem) => {
+      const quizzes = this.hostQuizzes();
+      
+      // Calculate analytics
+      quizzes.forEach((quiz: QuizListItem) => {
         if (!this.quizAnalytics[quiz.quizId]) {
           this.quizAnalytics[quiz.quizId] = this.calculateAnalytics(quiz);
         }
       });
+
+      // Update shared dashboard stats
+      const draftQuizzes = quizzes.filter(q => q.status === 'DRAFT' || q.status === 'draft').length;
+      const publishedQuizzes = quizzes.filter(q => q.status === 'LIVE' || q.status === 'published').length;
+      const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0);
+
+      this.dashboardStatsService.updateQuizStats(
+        quizzes.length,
+        draftQuizzes,
+        publishedQuizzes,
+        totalQuestions
+      );
     });
   }
 

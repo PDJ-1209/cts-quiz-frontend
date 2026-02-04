@@ -2,6 +2,9 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AddQuestionService } from '../../services/add-question.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
+import { QuizCreationService } from '../../services/quiz-creation.service';
+import { QuizListItem } from '../../models/quiz.models';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -33,19 +36,19 @@ interface QuickAction {
 export class HostDashboardComponent implements OnInit {
   private router = inject(Router);
   private quizService = inject(AddQuestionService);
+  private quizCreationService = inject(QuizCreationService);
+  private dashboardStatsService = inject(DashboardStatsService);
 
-  // Signals for reactive data
-  stats = signal<DashboardStats>({
-    totalQuizzes: 0,
-    draftQuizzes: 0,
-    publishedQuizzes: 0,
-    totalSurveys: 0,
-    totalPolls: 0,
-    totalQuestions: 0
-  });
+  // Use shared stats service
+  stats = this.dashboardStatsService.stats;
 
   loading = signal(false);
   welcomeMessage = signal('');
+  hostQuizzes = signal<QuizListItem[]>([]);
+  currentHostId = '2463579';
+  currentDateTime = signal('Loading...');
+  hostName = 'Prasannajeet Devendra Jain';
+  currentDay = signal('Today');
 
   quickActions: QuickAction[] = [
     {
@@ -87,28 +90,51 @@ export class HostDashboardComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.updateDateTime(); // Initialize immediately
     this.loadDashboardData();
     this.setWelcomeMessage();
+    // Update time every minute
+    setInterval(() => this.updateDateTime(), 60000);
   }
 
   private loadDashboardData(): void {
     this.loading.set(true);
-    
-    // Simulate loading dashboard statistics
-    setTimeout(() => {
-      // Get actual data from services when available
-      const currentStats: DashboardStats = {
-        totalQuizzes: this.quizService.questions().length > 0 ? 1 : 0,
-        draftQuizzes: 0,
-        publishedQuizzes: 0,
-        totalSurveys: 0,
-        totalPolls: 0,
-        totalQuestions: this.quizService.questions().length
-      };
+    this.loadQuizzes();
+  }
+
+  async loadQuizzes() {
+    try {
+      this.loading.set(true);
+      const quizzes = await this.quizCreationService.getHostQuizzes(this.currentHostId);
+      this.hostQuizzes.set(quizzes);
       
-      this.stats.set(currentStats);
+      // Update shared dashboard stats with real data
+      const draftQuizzes = quizzes.filter(q => q.status === 'DRAFT' || q.status === 'draft').length;
+      const publishedQuizzes = quizzes.filter(q => q.status === 'LIVE' || q.status === 'published').length;
+      const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0);
+
+      this.dashboardStatsService.updateQuizStats(
+        quizzes.length,
+        draftQuizzes,
+        publishedQuizzes,
+        totalQuestions
+      );
+      
+    } catch (error) {
+      console.error('Failed to load quizzes:', error);
+      // Fallback to questions from AddQuestionService
+      const totalQuestions = this.quizService.questions().length;
+      const totalQuizzes = totalQuestions > 0 ? 1 : 0;
+      
+      this.dashboardStatsService.updateQuizStats(
+        totalQuizzes,
+        totalQuizzes, // Assuming all are drafts for now
+        0, // No published quizzes yet
+        totalQuestions
+      );
+    } finally {
       this.loading.set(false);
-    }, 500);
+    }
   }
 
   private setWelcomeMessage(): void {
@@ -124,6 +150,26 @@ export class HostDashboardComponent implements OnInit {
     this.welcomeMessage.set(`${greeting}, Host! Ready to create something amazing?`);
   }
 
+  private updateDateTime(): void {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    };
+    
+    const dayOptions: Intl.DateTimeFormatOptions = {
+      weekday: 'long'
+    };
+    
+    this.currentDateTime.set(now.toLocaleString('en-US', options));
+    this.currentDay.set(now.toLocaleDateString('en-US', dayOptions));
+  }
+
   navigateToAction(action: QuickAction): void {
     if (action.params) {
       this.router.navigate([action.route], { queryParams: action.params });
@@ -134,9 +180,5 @@ export class HostDashboardComponent implements OnInit {
 
   navigateBack(): void {
     this.router.navigate(['/']);
-  }
-
-  refreshStats(): void {
-    this.loadDashboardData();
   }
 }

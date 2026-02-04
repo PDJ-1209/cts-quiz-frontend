@@ -14,6 +14,7 @@ import {
   QuestionType,
   Difficulty,
 } from '../../services/add-question.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
@@ -44,6 +45,18 @@ export class AddQuestionComponent {
   private fb = inject(FormBuilder);
   private store = inject(AddQuestionService);
   private snackBar = inject(MatSnackBar);
+  private dashboardStatsService = inject(DashboardStatsService);
+
+  // Header properties
+  hostName = 'Quiz Master'; // You can make this dynamic later
+  currentDateTime = new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 
   readonly questionTypes = ['Multiple Choice', 'True/False', 'Short Answer'] as const;
   readonly difficulties = ['Easy', 'Medium', 'Hard'] as const;
@@ -317,6 +330,9 @@ export class AddQuestionComponent {
 
     // Push to the shared store so Preview sees it immediately
     this.store.addQuestion(payload);
+
+    // Update dashboard stats
+    this.dashboardStatsService.incrementQuestionCount();
 
     // Reset only the question fields; keep quiz basics
     this.resetForm();

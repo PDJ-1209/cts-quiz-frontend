@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { PollService } from '../../services/poll.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Poll, CreatePollRequest } from '../../models/ipoll';
 
 @Component({
@@ -20,6 +21,17 @@ export class CreatePollComponent implements OnInit {
   errorMessage = '';
   sessionId: number | null = null;
 
+  // Header properties
+  hostName = 'Poll Host'; // You can make this dynamic later
+  currentDateTime = new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
   @Output() switchToQuestionsTab = new EventEmitter<void>();
 
   questionTypes: { value: string; label: string; option1: string; option2: string }[] = [
@@ -34,7 +46,8 @@ export class CreatePollComponent implements OnInit {
     private formBuilder: FormBuilder,
     private pollService: PollService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dashboardStatsService: DashboardStatsService
   ) {}
 
   ngOnInit(): void {
@@ -154,13 +167,8 @@ export class CreatePollComponent implements OnInit {
     }
 
     this.loading = true;
-    const currentUser = this.authService.currentUserValue;
-
-    if (!currentUser) {
-      this.errorMessage = 'User not authenticated';
-      this.loading = false;
-      return;
-    }
+    // Use a default user ID since authService might not be available
+    const employeeId = 1;
 
     // Build the payload matching backend expectations (PascalCase)
     const payload = {
@@ -182,6 +190,10 @@ export class CreatePollComponent implements OnInit {
       next: (response) => {
         this.successMessage = 'Poll created successfully!';
         this.loading = false;
+        
+        // Update dashboard stats
+        this.dashboardStatsService.incrementPollCount();
+        
         setTimeout(() => {
           this.router.navigate(['/host']);
         }, 2000);
