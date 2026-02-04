@@ -1,4 +1,24 @@
-  <main class="container-fluid px-lg-5 pb-5">
+<!-- Professional Header -->
+<div class="survey-header bg-success text-white py-4 mb-4">
+  <div class="container-fluid">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h2 class="mb-1 fw-bold">📋 Create New Survey</h2>
+        <p class="mb-0 text-white-50">Host: <span class="fw-semibold text-white">{{ hostName }}</span></p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <div class="text-white-50 small">
+          <i class="fas fa-calendar me-2"></i>{{ currentDateTime }}
+        </div>
+        <div class="text-white small">
+          <i class="fas fa-clock me-2"></i>Session Active
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="container-fluid px-lg-5 pb-5">
     <div class="row mt-4 g-4" *ngIf="!isPreviewMode">
       <div class="col-lg-8 col-md-12" [formGroup]="surveyForm">
         <div class="card builder-card border-top-purple mb-4">

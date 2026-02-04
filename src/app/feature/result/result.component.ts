@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { QuizPublishService } from '../../services/quiz-publish.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Subscription } from 'rxjs';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
@@ -35,21 +36,31 @@ export class ResultComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private quizPublishService = inject(QuizPublishService);
+  private dashboardStatsService = inject(DashboardStatsService);
   private subscriptions: Subscription[] = [];
   
   hostQuizzes = signal<QuizListItem[]>([]);
   quizAnalytics: { [key: number]: Analytics } = {};
-  scheduledTimes: { [key: number]: string } = {};
+  startTimes: { [key: number]: string } = {};
+  endTimes: { [key: number]: string } = {};
   loading = signal(false);
   currentHostId = '2463579';
+  activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
+  private statusCheckInterval: any;
 
   analytics = computed(() => {
     const quizzes = this.hostQuizzes();
+    const draftQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'draft');
+    const activeQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'active');
+    const completedQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'completed');
+    
     return {
       totalQuizzes: quizzes.length,
+      draftQuizzes: draftQuizzes.length,
+      publishedQuizzes: activeQuizzes.length + completedQuizzes.length,
       totalQuestions: quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0),
-      draftQuizzes: quizzes.filter(q => q.status === 'DRAFT').length,
-      publishedQuizzes: quizzes.filter(q => q.status === 'LIVE').length,
+      totalSurveys: 0, // Add survey counting logic when available
+      totalPolls: 0, // Add poll counting logic when available
     };
   });
 
@@ -75,17 +86,134 @@ export class ResultComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      this.hostQuizzes().forEach((quiz: QuizListItem) => {
+      const quizzes = this.hostQuizzes();
+      
+      // Calculate analytics
+      quizzes.forEach((quiz: QuizListItem) => {
         if (!this.quizAnalytics[quiz.quizId]) {
           this.quizAnalytics[quiz.quizId] = this.calculateAnalytics(quiz);
         }
       });
+
+      // Update shared dashboard stats
+      const draftQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'draft').length;
+      const activeQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'active').length;
+      const completedQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'completed').length;
+      const publishedQuizzes = activeQuizzes + completedQuizzes;
+      const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0);
+
+      this.dashboardStatsService.updateQuizStats(
+        quizzes.length,
+        draftQuizzes,
+        publishedQuizzes,
+        totalQuestions
+      );
     });
   }
 
   async ngOnInit() {
     await this.loadQuizzes();
     this.initializeQuizPublishService();
+    this.startStatusPolling();
+  }
+
+  private startStatusPolling() {
+    console.log('[StatusPolling] Starting status check every 10 seconds');
+    // Check session statuses every 10 seconds for faster updates
+    this.statusCheckInterval = setInterval(async () => {
+      await this.checkActiveSessions();
+    }, 10000); // 10 seconds
+  }
+
+  private async checkActiveSessions() {
+    // Skip if no active sessions to check
+    if (this.activeSessionIds.size === 0) {
+      return;
+    }
+
+    console.log('[StatusPolling] Checking active sessions. Count:', this.activeSessionIds.size);
+
+    let statusChanged = false;
+
+    for (const [quizNumber, sessionId] of this.activeSessionIds.entries()) {
+      console.log(`[StatusPolling] Checking session for quiz ${quizNumber} (SessionId: ${sessionId})`);
+      try {
+        const session = await this.quizPublishService.getQuizSessionByCode(quizNumber);
+        
+        // Update the time inputs with session times (for display when Active)
+        const quiz = this.hostQuizzes().find(q => q.quizNumber === quizNumber);
+        if (quiz && session) {
+          // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+          if (session.startedAt) {
+            const startDate = new Date(session.startedAt);
+            this.startTimes[quiz.quizId] = this.formatDateTimeLocal(startDate);
+          }
+          if (session.endedAt) {
+            const endDate = new Date(session.endedAt);
+            this.endTimes[quiz.quizId] = this.formatDateTimeLocal(endDate);
+          }
+        }
+        
+        // Check current quiz status in our list
+        const currentQuiz = this.hostQuizzes().find(q => q.quizNumber === quizNumber);
+        const currentStatus = currentQuiz?.status?.toLowerCase();
+        const newStatus = session.status.toLowerCase();
+
+        // If status changed, mark for refresh
+        if (currentStatus !== newStatus) {
+          console.log(`Status changed for ${quizNumber}: ${currentStatus} -> ${newStatus}`);
+          statusChanged = true;
+        }
+
+        // If status changed to Completed, remove from tracking
+        if (session.status === 'Completed') {
+          this.activeSessionIds.delete(quizNumber);
+          
+          this.snackBar.open(
+            `🏁 Quiz ${quizNumber} has been automatically completed`,
+            'Close',
+            { duration: 5000, panelClass: ['info-snackbar'] }
+          );
+        }
+      } catch (error: any) {
+        // If 404, session might have been deleted or never created - remove from tracking
+        if (error.status === 404) {
+          console.log(`Session ${quizNumber} not found (404) - quiz may have been reset to Draft`);
+          this.activeSessionIds.delete(quizNumber);
+          
+          // Sync the quiz status back to Draft in the database
+          const quiz = this.hostQuizzes().find(q => q.quizNumber === quizNumber);
+          if (quiz) {
+            try {
+              await this.store.syncQuizStatus(quiz.quizId);
+              console.log(`Successfully synced Quiz ${quiz.quizId} back to Draft status`);
+              
+              // Clear the time inputs for this quiz
+              delete this.startTimes[quiz.quizId];
+              delete this.endTimes[quiz.quizId];
+              
+              this.snackBar.open(
+                `🔄 Quiz ${quizNumber} reset to Draft - session deleted`,
+                'Close',
+                { duration: 4000, panelClass: ['info-snackbar'] }
+              );
+            } catch (syncError) {
+              console.error('Error syncing quiz status:', syncError);
+            }
+          }
+          
+          statusChanged = true; // Force reload to sync UI with database
+        } else {
+          console.error(`Error checking status for session ${quizNumber}:`, error);
+        }
+      }
+    }
+
+    // Reload quizzes if any status changed
+    if (statusChanged) {
+      console.log('Status changed detected - reloading quiz list');
+      await this.loadQuizzes();
+    }
   }
 
   private initializeQuizPublishService() {
@@ -110,7 +238,80 @@ export class ResultComponent implements OnInit, OnDestroy {
     try {
       this.loading.set(true);
       const quizzes = await this.store.getHostQuizzes(this.currentHostId);
+      
+      console.log('Loaded quizzes:', quizzes.map(q => ({
+        id: q.quizId,
+        number: q.quizNumber,
+        name: q.quizName,
+        status: q.status
+      })));
+      
       this.hostQuizzes.set(quizzes);
+      
+      // Load session times for active/completed quizzes and verify session exists
+      for (const quiz of quizzes) {
+        const status = quiz.status?.toLowerCase();
+        
+        if (status === 'active' || status === 'completed') {
+          try {
+            const session = await this.quizPublishService.getQuizSessionByCode(quiz.quizNumber);
+            if (session) {
+              // Store session times in datetime-local format
+              if (session.startedAt) {
+                const startDate = new Date(session.startedAt);
+                this.startTimes[quiz.quizId] = this.formatDateTimeLocal(startDate);
+              }
+              if (session.endedAt) {
+                const endDate = new Date(session.endedAt);
+                this.endTimes[quiz.quizId] = this.formatDateTimeLocal(endDate);
+              }
+              // Track active sessions only
+              if (status === 'active') {
+                this.activeSessionIds.set(quiz.quizNumber, session.sessionId);
+              }
+            }
+          } catch (error: any) {
+            // If 404, session was deleted but quiz still marked Active/Completed - sync it back to Draft
+            if (error.status === 404) {
+              console.log(`Quiz ${quiz.quizNumber} is ${status.toUpperCase()} but no session exists - syncing to Draft`);
+              try {
+                await this.store.syncQuizStatus(quiz.quizId);
+                // Clear time inputs
+                delete this.startTimes[quiz.quizId];
+                delete this.endTimes[quiz.quizId];
+                
+                this.snackBar.open(
+                  `🔄 Quiz ${quiz.quizNumber} reset to Draft - session was deleted`,
+                  'Close',
+                  { duration: 4000, panelClass: ['info-snackbar'] }
+                );
+                
+                // Reload to reflect changes
+                setTimeout(async () => {
+                  await this.loadQuizzes();
+                }, 500);
+                return; // Exit to avoid further processing
+              } catch (syncError) {
+                console.error('Error syncing quiz status on load:', syncError);
+              }
+            } else {
+              console.error(`Error loading session for ${status} quiz ${quiz.quizNumber}:`, error);
+            }
+          }
+        }
+      }
+      
+      // Clean up active sessions map - remove completed or draft quizzes
+      for (const [quizNumber] of this.activeSessionIds.entries()) {
+        const quiz = quizzes.find(q => q.quizNumber === quizNumber);
+        if (!quiz || quiz.status?.toLowerCase() !== 'active') {
+          console.log(`Removing ${quizNumber} from active tracking (status: ${quiz?.status})`);
+          this.activeSessionIds.delete(quizNumber);
+        }
+      }
+      
+      // DO NOT auto-add active quizzes - only track sessions we explicitly created
+      // This prevents checking for sessions that might not exist in QuizSession table
     } catch (error) {
       this.snackBar.open('Failed to load quizzes', 'Close', { duration: 3000 });
     } finally {
@@ -188,30 +389,108 @@ export class ResultComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Check if quiz is already published
-      if (quiz.status === 'LIVE') {
-        this.snackBar.open('⚠️ Quiz is already published. Use Republish to update.', 'Close', {
+      const startTimeInput = this.startTimes[quiz.quizId];
+      const endTimeInput = this.endTimes[quiz.quizId];
+
+      // Validate that both start and end times are provided
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
         return;
       }
 
-      const scheduledTime = this.scheduledTimes[quiz.quizId];
+      if (!endTimeInput) {
+        this.snackBar.open('⚠️ End time is required', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
 
-      await this.quizPublishService.publishQuiz(
-        quiz.quizId,
+      // Convert datetime-local format to ISO string
+      let startTime: string | undefined;
+      let endTime: string | undefined;
+
+      if (startTimeInput) {
+        startTime = new Date(startTimeInput).toISOString();
+      }
+
+      if (endTimeInput) {
+        const endDate = new Date(endTimeInput);
+        endTime = endDate.toISOString();
+        
+        // Validate end time is in the future
+        const now = new Date();
+        if (endDate <= now) {
+          this.snackBar.open('⚠️ End time must be in the future', 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar'],
+          });
+          return;
+        }
+
+        // Validate end time is after start time
+        const startDate = new Date(startTimeInput);
+        if (endDate <= startDate) {
+          this.snackBar.open('⚠️ End time must be after start time', 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar'],
+          });
+          return;
+        }
+      }
+
+      console.log('Publishing quiz:', {
+        quizId: quiz.quizId,
         quizNumber,
-        'HostUser',
-        scheduledTime
-      );
-
-      this.snackBar.open(`✅ Quiz ${quizNumber} published successfully!`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar'],
+        quizName: quiz.quizName,
+        currentStatus: quiz.status,
+        startTimeInput,
+        startTimeISO: startTime,
+        endTimeInput,
+        endTimeISO: endTime,
+        currentTime: new Date().toISOString(),
+        currentTimeLocal: new Date().toString()
       });
 
+      console.log(`[PublishQuiz] Calling createQuizSession for QuizId=${quiz.quizId}, QuizNumber=${quizNumber}`);
+
+      // Create QuizSession using the new method designed for SignalR
+      const sessionResponse = await this.quizPublishService.createQuizSession(
+        quiz.quizId,
+        this.currentHostId,
+        quizNumber,
+        startTime,
+        endTime,
+        'Active'
+      );
+
+      console.log(`[PublishQuiz] Session created successfully:`, sessionResponse);
+
+      // Track this session for status monitoring
+      this.activeSessionIds.set(quizNumber, sessionResponse.sessionId);
+
+      console.log('Session created:', sessionResponse);
+
+      this.snackBar.open(
+        `✅ Quiz ${quizNumber} published! Status: ${sessionResponse.status}`,
+        'Close',
+        {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        }
+      );
+
+      // Reload quizzes immediately to reflect status change
       await this.loadQuizzes();
+      
+      // Reload again after 2 seconds to ensure database sync
+      setTimeout(async () => {
+        console.log('Secondary reload to ensure database sync');
+        await this.loadQuizzes();
+      }, 2000);
     } catch (error: any) {
       console.error('Error publishing quiz:', error);
       
@@ -223,6 +502,8 @@ export class ResultComponent implements OnInit, OnDestroy {
         errorMessage = 'Quiz already published or session conflict';
       } else if (error.status === 400) {
         errorMessage = error.error?.message || 'Invalid quiz data';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server. Please start the backend.';
       }
       
       this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
@@ -244,40 +525,168 @@ export class ResultComponent implements OnInit, OnDestroy {
         return;
       }
 
-      await this.quizPublishService.unpublishQuiz(quizNumber);
+      // Get start and end times from inputs
+      const startTimeInput = this.startTimes[quiz.quizId];
+      const endTimeInput = this.endTimes[quiz.quizId];
 
-      const scheduledTime = this.scheduledTimes[quiz.quizId];
-      
-      await this.quizPublishService.publishQuiz(
-        quiz.quizId,
+      // Validate that both start and end times are provided
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      if (!endTimeInput) {
+        this.snackBar.open('⚠️ End time is required', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      // Convert datetime-local format to ISO string
+      let startTime: string | undefined;
+      let endTime: string | undefined;
+
+      if (startTimeInput) {
+        startTime = new Date(startTimeInput).toISOString();
+      }
+
+      if (endTimeInput) {
+        const endDate = new Date(endTimeInput);
+        endTime = endDate.toISOString();
+        
+        // Validate end time is in the future
+        const now = new Date();
+        if (endDate <= now) {
+          this.snackBar.open('⚠️ End time must be in the future', 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar'],
+          });
+          return;
+        }
+
+        // Validate end time is after start time
+        const startDate = new Date(startTimeInput);
+        if (endDate <= startDate) {
+          this.snackBar.open('⚠️ End time must be after start time', 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar'],
+          });
+          return;
+        }
+      }
+
+      console.log('Republishing quiz:', {
+        quizId: quiz.quizId,
         quizNumber,
-        'HostUser',
-        scheduledTime
-      );
-
-      this.snackBar.open(`✅ Quiz ${quizNumber} republished successfully!`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar'],
+        startTimeISO: startTime,
+        endTimeISO: endTime
       });
 
+      // First, mark the old completed session (if any) - backend will create new one
+      // Create a new QuizSession with Active status
+      const sessionResponse = await this.quizPublishService.createQuizSession(
+        quiz.quizId,
+        this.currentHostId,
+        quizNumber,
+        startTime,
+        endTime,
+        'Active'  // New session starts as Active
+      );
+
+      console.log('New session created for republish:', sessionResponse);
+
+      // Now reset the quiz back to Draft status
+      try {
+        await this.store.syncQuizStatus(quiz.quizId);
+        console.log(`Quiz ${quiz.quizId} reset to Draft after creating new session`);
+      } catch (error) {
+        console.error('Error resetting quiz to Draft:', error);
+      }
+
+      // Track this session for status monitoring
+      this.activeSessionIds.set(quizNumber, sessionResponse.sessionId);
+
+      this.snackBar.open(
+        `✅ New session created for Quiz ${quizNumber}! Quiz reset to Draft.`,
+        'Close',
+        {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        }
+      );
+
+      // Reload quizzes immediately to reflect status change
       await this.loadQuizzes();
-    } catch (error) {
+      
+      // Reload again after 2 seconds to ensure database sync
+      setTimeout(async () => {
+        console.log('Secondary reload after republish');
+        await this.loadQuizzes();
+      }, 2000);
+    } catch (error: any) {
       console.error('Error republishing quiz:', error);
-      this.snackBar.open('⚠️ Failed to republish quiz', 'Close', {
-        duration: 3000,
+      
+      let errorMessage = 'Failed to republish quiz';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error - check backend logs';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
         panelClass: ['error-snackbar'],
       });
     }
   }
 
-  onScheduleTimeChange(quizId: number, event: Event) {
+  onStartTimeChange(quizId: number, event: Event) {
     const input = event.target as HTMLInputElement;
-    this.scheduledTimes[quizId] = input.value;
-    console.log(`Schedule time for quiz ${quizId}:`, input.value);
+    this.startTimes[quizId] = input.value;
+    console.log(`Start time for quiz ${quizId}:`, input.value);
+    
+    // Convert to ISO string for backend
+    if (input.value) {
+      const date = new Date(input.value);
+      console.log(`Converted start time:`, date.toISOString(), `Local:`, date.toString());
+    }
+  }
+
+  onEndTimeChange(quizId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.endTimes[quizId] = input.value;
+    console.log(`End time for quiz ${quizId}:`, input.value);
+    
+    // Convert to ISO string for backend
+    if (input.value) {
+      const date = new Date(input.value);
+      console.log(`Converted end time:`, date.toISOString(), `Local:`, date.toString());
+    }
+  }
+
+  /**
+   * Format Date object to datetime-local input format (YYYY-MM-DDTHH:mm)
+   */
+  private formatDateTimeLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   ngOnDestroy() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.quizPublishService.disconnect();
+    
+    // Clear status polling interval
+    if (this.statusCheckInterval) {
+      clearInterval(this.statusCheckInterval);
+    }
   }
 }

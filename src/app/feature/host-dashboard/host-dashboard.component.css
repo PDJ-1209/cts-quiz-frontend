@@ -56,16 +56,44 @@
 }
 
 .welcome-title {
-  font-size: 2.2rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: var(--cognizant-dark);
   margin-bottom: 0.5rem;
 }
 
 .welcome-subtitle {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--cognizant-primary);
+  margin-bottom: 0.5rem;
+}
+
+.welcome-description {
   font-size: 1.1rem;
   color: #6C757D;
-  margin-bottom: 0;
+  margin-bottom: 1rem;
+}
+
+.welcome-meta {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #E9ECEF;
+}
+
+.welcome-meta small {
+  font-size: 0.9rem;
+  color: #6C757D;
+}
+
+/* DateTime Info in Header */
+.datetime-display {
+  margin-top: 0.25rem;
+}
+
+.datetime-display small {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .welcome-illustration {

@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } fr
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { SurveyService } from '../../services/survey.service';
 import { SignalrService } from '../../services/signalr.service';
+import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { CreateSurveyRequest, CreateQuestionRequest, CreateSessionRequest, PublishSurveyRequest } from '../../Models/isurvey';
 import { AddQuestionService, QuizQuestion, QuestionType } from '../../services/add-question.service';
 
@@ -21,6 +22,17 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
   isPreviewMode = false;
   employeeId = 1; // Map this to your actual Auth user ID
   
+  // Header properties
+  hostName = 'Survey Host'; // You can make this dynamic later
+  currentDateTime = new Date().toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
   @Output() switchToQuestionsTab = new EventEmitter<void>();
 
   constructor(
@@ -29,7 +41,8 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
     private router: Router,
     private surveyService: SurveyService,
     private signalrService: SignalrService,
-    private quizService: AddQuestionService
+    private addQuestionService: AddQuestionService,
+    private dashboardStatsService: DashboardStatsService
   ) {}
 
   ngOnInit(): void {
@@ -226,6 +239,9 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
               next: (publishRes: any) => {
                 console.log('Step 3 SUCCESS - Published:', publishRes);
                 
+                // Update dashboard stats
+                this.dashboardStatsService.incrementSurveyCount();
+                
                 // Step 5: Initialize SignalR and Navigate
                 console.log('Step 4: Initializing SignalR for sessionId:', sessionId);
                 this.signalrService.initHubConnection(sessionId, this.employeeId);
@@ -285,7 +301,7 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
         this.loading = true;
         
         // Set quiz basics in the quiz service
-        this.quizService.setQuizBasics(
+        this.addQuestionService.setQuizBasics(
           this.surveyForm.value.title,
           this.surveyForm.value.category || 'General'
         );
@@ -310,7 +326,7 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
           
           // Use addQuestion method directly (it's void)
           try {
-            this.quizService.addQuestion(quizQuestion);
+            this.addQuestionService.addQuestion(quizQuestion);
           } catch (error) {
             console.warn('Failed to add question:', error);
           }

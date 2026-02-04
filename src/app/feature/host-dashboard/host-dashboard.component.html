@@ -21,12 +21,11 @@
         </div>
       </div>
       <div class="header-actions d-flex align-items-center gap-3">
-        <button class="btn btn-outline-light" (click)="refreshStats()">
-          <i class="fas fa-sync-alt me-2"></i>Refresh
-        </button>
         <div class="user-info text-end text-white">
-          <div class="fw-bold">Host User</div>
-          <small class="opacity-75">Administrator</small>
+          <div class="fw-bold">{{ hostName }}</div>
+          <div class="datetime-display">
+            <small class="opacity-75">{{ currentDay() }} - {{ currentDateTime() }}</small>
+          </div>
         </div>
       </div>
     </div>
@@ -40,8 +39,9 @@
       <div class="col-12">
         <div class="welcome-card">
           <div class="welcome-content">
-            <h2 class="welcome-title">{{ welcomeMessage() }}</h2>
-            <p class="welcome-subtitle">Create, manage, and deploy your learning content with our professional platform.</p>
+            <h1 class="welcome-title">Welcome, {{ hostName }}!</h1>
+            <h3 class="welcome-subtitle">{{ welcomeMessage() }}</h3>
+            <p class="welcome-description">Create, manage, and deploy your learning content with our professional platform.</p>
           </div>
           <div class="welcome-illustration">
             <i class="fas fa-graduation-cap"></i>

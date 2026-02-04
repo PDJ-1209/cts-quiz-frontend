@@ -11,7 +11,9 @@ import {
   ParticipantJoinedData,
   QuizSessionData,
   QuizSessionEndData,
-  ConnectionState
+  ConnectionState,
+  CreateQuizSessionRequest,
+  CreateQuizSessionResponse
 } from '../models/quiz-publish.models';
 
 @Injectable({
@@ -161,13 +163,15 @@ export class QuizPublishService {
    * @param quizId - The quiz ID to publish
    * @param quizNumber - The quiz number
    * @param publishedBy - The host/user ID
-   * @param scheduledTime - Optional scheduled publish time
+   * @param startTime - Quiz start time
+   * @param endTime - Quiz end time
    */
   public async publishQuiz(
     quizId: number, 
     quizNumber: string, 
     publishedBy: string,
-    scheduledTime?: string
+    startTime?: string,
+    endTime?: string
   ): Promise<QuizPublishResponse> {
     const url = `${this.apiBase}/publish`;
     
@@ -175,7 +179,8 @@ export class QuizPublishService {
       quizId,
       quizNumber,
       publishedBy,
-      scheduledTime: scheduledTime || new Date().toISOString()
+      startTime: startTime || new Date().toISOString(),
+      endTime: endTime
     };
 
     console.log('========================================');
@@ -242,6 +247,112 @@ export class QuizPublishService {
       console.log(`[QuizPublish] Completed quiz ${quizNumber}`);
     } catch (error) {
       console.error('[QuizPublish] Failed to complete quiz:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a QuizSession - Designed for SignalR integration from result component
+   * This creates a new entry in the QuizSession table with quiz_id, host_id, session_code, etc.
+   * @param quizId - The quiz ID
+   * @param hostId - The host user ID
+   * @param quizNumber - The quiz number (used as session_code)
+   * @param startedAt - Optional start time (defaults to now)
+   * @param endedAt - Optional end time
+   * @param status - Session status (default: 'Active')
+   */
+  public async createQuizSession(
+    quizId: number,
+    hostId: string,
+    quizNumber: string,
+    startedAt?: string,
+    endedAt?: string,
+    status: string = 'Active'
+  ): Promise<CreateQuizSessionResponse> {
+    const url = `${environment.apiUrl}/api/Host/QuizSession/create`;
+    
+    const payload: CreateQuizSessionRequest = {
+      quizId,
+      hostId,
+      sessionCode: quizNumber,
+      startedAt: startedAt || new Date().toISOString(),
+      endedAt,
+      status
+    };
+
+    console.log('========================================');
+    console.log('📤 CREATING QUIZ SESSION - REQUEST PAYLOAD');
+    console.log('========================================');
+    console.log('URL:', url);
+    console.log('Method: POST');
+    console.log('Payload (JSON):', JSON.stringify(payload, null, 2));
+    console.log('Payload (Object):', payload);
+    console.log('========================================');
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<CreateQuizSessionResponse>(url, payload)
+      );
+      console.log('========================================');
+      console.log('✅ QUIZ SESSION CREATED SUCCESSFULLY');
+      console.log('========================================');
+      console.log('Response (JSON):', JSON.stringify(response, null, 2));
+      console.log('Response (Object):', response);
+      console.log('Session ID:', response.sessionId);
+      console.log('Session Code:', response.sessionCode);
+      console.log('========================================');
+      return response;
+    } catch (error: any) {
+      console.error('========================================');
+      console.error('❌ CREATE SESSION FAILED - ERROR DETAILS');
+      console.error('========================================');
+      console.error('Status:', error.status);
+      console.error('Status Text:', error.statusText);
+      console.error('Error Message:', error.error?.message || error.message);
+      console.error('Backend Error (JSON):', JSON.stringify(error.error, null, 2));
+      console.error('Full Error Object:', error);
+      console.error('========================================');
+      throw error;
+    }
+  }
+
+  /**
+   * Get quiz session by session code
+   * @param sessionCode - The session code (quiz number)
+   */
+  public async getQuizSessionByCode(sessionCode: string): Promise<CreateQuizSessionResponse> {
+    const url = `${environment.apiUrl}/api/Host/QuizSession/by-code/${encodeURIComponent(sessionCode)}`;
+    
+    try {
+      const response = await firstValueFrom(
+        this.http.get<CreateQuizSessionResponse>(url)
+      );
+      return response;
+    } catch (error: any) {
+      // Don't log 404 errors as they're expected when sessions are completed/deleted
+      if (error.status !== 404) {
+        console.error('[QuizPublish] Failed to get quiz session:', error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Update quiz session status
+   * @param sessionId - The session ID
+   * @param status - New status (Active, Completed, etc.)
+   */
+  public async updateQuizSessionStatus(sessionId: number, status: string): Promise<CreateQuizSessionResponse> {
+    const url = `${environment.apiUrl}/api/Host/QuizSession/${sessionId}/status`;
+    
+    try {
+      const response = await firstValueFrom(
+        this.http.put<CreateQuizSessionResponse>(url, { status })
+      );
+      console.log(`[QuizPublish] Updated session ${sessionId} status to: ${status}`);
+      return response;
+    } catch (error) {
+      console.error('[QuizPublish] Failed to update session status:', error);
       throw error;
     }
   }

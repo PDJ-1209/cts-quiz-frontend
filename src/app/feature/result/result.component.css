@@ -235,12 +235,12 @@
   line-height: 1.6 !important;
 }
 
-/* Schedule Time Input */
-.schedule-cell {
-  min-width: 200px;
+/* Start Time & End Time Inputs */
+.time-cell {
+  min-width: 180px;
 }
 
-.schedule-input {
+.time-input {
   border: 2px solid #E2E8F0;
   border-radius: 6px;
   padding: 6px 10px;
@@ -248,13 +248,13 @@
   transition: all 0.3s ease;
 }
 
-.schedule-input:focus {
+.time-input:focus {
   border-color: #0066CC;
   box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
   outline: none;
 }
 
-.schedule-input:hover {
+.time-input:hover {
   border-color: #CBD5E1;
 }
 
@@ -330,7 +330,7 @@
     font-size: 13px;
   }
   
-  .schedule-input {
+  .time-input {
     font-size: 12px;
     padding: 5px 8px;
   }
