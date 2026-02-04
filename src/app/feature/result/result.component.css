@@ -215,3 +215,129 @@
 ::ng-deep .error-snackbar .mdc-snackbar__surface {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
 }
+
+/* Success Snackbar */
+::ng-deep .success-snackbar {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 17px !important;
+  padding: 24px !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
+  border-radius: 12px !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  min-width: 450px !important;
+}
+
+::ng-deep .success-snackbar .mat-mdc-snack-bar-label {
+  color: white !important;
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+}
+
+/* Schedule Time Input */
+.schedule-cell {
+  min-width: 200px;
+}
+
+.schedule-input {
+  border: 2px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.schedule-input:focus {
+  border-color: #0066CC;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+  outline: none;
+}
+
+.schedule-input:hover {
+  border-color: #CBD5E1;
+}
+
+/* Publish Buttons */
+.publish-cell {
+  min-width: 130px;
+  text-align: center;
+}
+
+.publish-btn,
+.republish-btn {
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.publish-btn {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+}
+
+.publish-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.publish-btn:active {
+  transform: translateY(0);
+}
+
+.republish-btn {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: white;
+}
+
+.republish-btn:hover {
+  background: linear-gradient(135deg, #D97706, #B45309);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.republish-btn:active {
+  transform: translateY(0);
+}
+
+/* Make table more spacious */
+.table thead th {
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 2px solid #E2E8F0;
+  padding: 14px 12px;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  vertical-align: middle;
+  padding: 14px 12px;
+}
+
+/* Improve table responsiveness */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1200px) {
+  .table {
+    font-size: 13px;
+  }
+  
+  .schedule-input {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  
+  .publish-btn,
+  .republish-btn {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+}
