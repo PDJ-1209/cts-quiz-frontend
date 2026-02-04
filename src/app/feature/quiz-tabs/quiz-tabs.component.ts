@@ -12,18 +12,18 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AddQuestionComponent } from '../add-question/add-question.component';
-import { PreviewComponent } from '../preview/preview.component';
 import { ResultComponent } from '../result/result.component';
 import { AddQuestionService } from '../../services/add-question.service';
 import { CreateSurveyComponent } from '../create-survey/create-survey.component';
+import { CreatePollComponent } from '../create-poll/create-poll.component';
 import { TemplateComponent } from '../template/template.component';
 
-type Tab = 'questions' | 'template' | 'survey' | 'preview' | 'results' | 'settings';
+type Tab = 'questions' | 'template' | 'survey' | 'polls' | 'management' | 'results' | 'settings';
 
 @Component({
   selector: 'app-quiz-tabs',
   standalone: true,
-  imports: [CommonModule, RouterModule, AddQuestionComponent, TemplateComponent, PreviewComponent, ResultComponent, CreateSurveyComponent],
+  imports: [CommonModule, RouterModule, AddQuestionComponent, TemplateComponent, ResultComponent, CreateSurveyComponent, CreatePollComponent],
   templateUrl: './quiz-tabs.component.html',
   styleUrls: ['./quiz-tabs.component.css']
 })
@@ -35,14 +35,18 @@ export class QuizTabsComponent implements AfterViewInit, OnInit {
 
   // Tabs state via signals
   private currentTab = signal<Tab>('questions');
-  setTab(tab: Tab) { this.currentTab.set(tab); }
-  activeTab(): Tab { return this.currentTab(); }
+  setTab(tab: Tab) {
+    this.currentTab.set(tab);
+  }
+  activeTab(): Tab {
+    return this.currentTab();
+  }
 
   // Reference to the tabs container to set CSS variables
   @ViewChild('tabsRef', { static: true }) tabsRef!: ElementRef<HTMLDivElement>;
 
   // Keep a stable tab order to compute the index cleanly
-  private readonly tabsOrder: Tab[] = ['questions', 'template', 'survey', 'preview', 'results', 'settings'];
+  private readonly tabsOrder: Tab[] = ['questions', 'template', 'survey', 'polls', 'management', 'results', 'settings'];
 
   constructor() {
     // Re-run whenever the active tab changes
@@ -53,6 +57,9 @@ export class QuizTabsComponent implements AfterViewInit, OnInit {
   }
 
   ngOnInit() {
+    // Set default tab first
+    this.setTab('questions');
+
     // Check for tab query parameter and set initial tab
     this.route.queryParams.subscribe(params => {
       const tab = params['tab'] as Tab;
@@ -72,7 +79,7 @@ export class QuizTabsComponent implements AfterViewInit, OnInit {
     const el = this.tabsRef?.nativeElement;
     if (!el) return;
 
-    const totalTabs = el.querySelectorAll('.tab').length || this.tabsOrder.length;
+    const totalTabs = el.querySelectorAll('.nav-item').length || this.tabsOrder.length;
     const activeIndex = Math.max(0, this.tabsOrder.indexOf(this.currentTab()));
 
     el.style.setProperty('--indicator-index', String(activeIndex));

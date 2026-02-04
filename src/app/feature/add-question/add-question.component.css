@@ -17,37 +17,114 @@
   box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
 }
 
+/* Submit Button Override */
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none !important;
+  color: white !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+  background: linear-gradient(135deg, #20c997 0%, #28a745 100%) !important;
+}
+
+.btn-success:active {
+  transform: translateY(0) !important;
+}
+
+.btn-success:disabled {
+  background: #6c757d !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 /* Animation */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes bounce {
-  0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
-  40%, 43% { transform: translateY(-20px); }
-  70% { transform: translateY(-10px); }
-  90% { transform: translateY(-4px); }
+
+  0%,
+  20%,
+  53%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40%,
+  43% {
+    transform: translateY(-20px);
+  }
+
+  70% {
+    transform: translateY(-10px);
+  }
+
+  90% {
+    transform: translateY(-4px);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* ==========================================================================
@@ -762,20 +839,20 @@
     gap: 24px;
     padding: 20px;
   }
-  
+
   .sidebar {
     position: static;
     order: -1;
   }
-  
+
   .quiz-basics-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .options-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .question-options {
     grid-template-columns: 1fr;
   }
@@ -785,24 +862,24 @@
   .layout-container {
     padding: 16px;
   }
-  
+
   .card-header {
     padding: 20px 20px 0;
     margin-bottom: 20px;
   }
-  
+
   .card-content {
     padding: 0 20px 20px;
   }
-  
+
   .card-title {
     font-size: 18px;
   }
-  
+
   .quiz-name-card .card-title {
     font-size: 20px;
   }
-  
+
   .csv-actions {
     flex-direction: column;
   }
@@ -813,20 +890,20 @@
     padding: 12px;
     gap: 16px;
   }
-  
+
   .card-header {
     padding: 16px 16px 0;
     margin-bottom: 16px;
   }
-  
+
   .card-content {
     padding: 0 16px 16px;
   }
-  
+
   .sidebar {
     gap: 16px;
   }
-  
+
   .question-item {
     padding: 12px;
   }

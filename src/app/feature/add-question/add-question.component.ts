@@ -70,8 +70,8 @@ export class AddQuestionComponent {
 
   /** root form (typed) */
   form: AddQuestionForm = this.fb.group({
-    quizName: this.fb.nonNullable.control<string>('', { 
-      validators: [Validators.required, Validators.minLength(2)] 
+    quizName: this.fb.nonNullable.control<string>('', {
+      validators: [Validators.required, Validators.minLength(2)]
     }),
     question: this.fb.nonNullable.control<string>('', {
       validators: [Validators.required, Validators.minLength(10)],
@@ -123,7 +123,7 @@ export class AddQuestionComponent {
     effect(() => {
       const name = this.form.controls.quizName.value?.trim();
       const cat = this.form.controls.category.value?.trim();
-    //  const duration = 30; // If you plan a quiz-level duration, bind a field; keeping 30 for now
+      //  const duration = 30; // If you plan a quiz-level duration, bind a field; keeping 30 for now
       if (name && cat) {
         this.store.setQuizBasics(name, cat);
       }
@@ -142,7 +142,7 @@ export class AddQuestionComponent {
     if (this.form.controls.type.value === 'Short Answer') return;
     if (this.options.length > 2) this.options.removeAt(index);
   }
-  
+
   addTag(input: HTMLInputElement): void {
     const value = input.value.trim();
     if (value) {
@@ -165,7 +165,7 @@ export class AddQuestionComponent {
     // Check if quiz name and category are filled
     const quizName = this.form.controls.quizName.value?.trim();
     const category = this.form.controls.category.value?.trim();
-    
+
     if (!quizName || !category) {
       this.snackBar.open('⚠️ Please enter Quiz Name and Category before uploading CSV!', 'Close', {
         duration: 5000,
@@ -177,7 +177,7 @@ export class AddQuestionComponent {
       this.csvStatus.set('');
       return;
     }
-    
+
     const file = event.target.files[0];
     if (file && file.type === 'text/csv') {
       this.csvStatus.set('Importing...');
@@ -217,7 +217,7 @@ export class AddQuestionComponent {
     if (type === 'Short Answer') return true;
     return this.options.length >= 2;
   }
-  
+
   /** Prevent 'e', 'E', '+', '-' in number input */
   preventInvalidInput(event: KeyboardEvent): void {
     const invalidKeys = ['e', 'E', '+', '-'];
@@ -230,17 +230,17 @@ export class AddQuestionComponent {
   clearPlaceholderText(event: FocusEvent, index: number): void {
     const input = event.target as HTMLInputElement;
     const currentValue = this.options.at(index).controls.text.value;
-    
+
     // Clear if it's a default placeholder like "Option 1", "Option 2", etc.
     if (currentValue && currentValue.match(/^Option \d+$/)) {
       this.options.at(index).controls.text.setValue('');
     }
   }
-  
+
   hasAtLeastOneCorrect(): boolean {
     const type = this.form.controls.type.value;
     if (type === 'Short Answer') return true;
-    
+
     const hasCorrect = this.options.controls.some((opt) => opt.controls.correct.value === true);
     console.log('[DEBUG] hasAtLeastOneCorrect check:', {
       type,
@@ -252,7 +252,7 @@ export class AddQuestionComponent {
       })),
       hasCorrect
     });
-    
+
     return hasCorrect;
   }
   disableAdd(): boolean {
@@ -266,7 +266,7 @@ export class AddQuestionComponent {
   /** submit: push one question to the store (preview updates instantly) */
   onSubmit(): void {
     const type = this.form.controls.type.value;
-    
+
     console.log('[DEBUG] onSubmit started, question type:', type);
 
     if (!this.hasAtLeastTwoOptions()) {
@@ -279,11 +279,11 @@ export class AddQuestionComponent {
       this.form.markAllAsTouched();
       return;
     }
-    
+
     // Re-check correct options right before validation
     const hasCorrectNow = this.hasAtLeastOneCorrect();
     console.log('[DEBUG] Final hasAtLeastOneCorrect check:', hasCorrectNow);
-    
+
     if (!hasCorrectNow) {
       this.snackBar.open('⚠️ Please mark at least one option as correct.', 'Close', {
         duration: 5000,
@@ -293,7 +293,7 @@ export class AddQuestionComponent {
       });
       return;
     }
-    
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -310,9 +310,9 @@ export class AddQuestionComponent {
         type === 'Short Answer'
           ? []
           : this.options.controls.map((opt) => ({
-              text: opt.controls.text.value,
-              isCorrect: opt.controls.correct.value,
-            })),
+            text: opt.controls.text.value,
+            isCorrect: opt.controls.correct.value,
+          })),
     };
 
     // Push to the shared store so Preview sees it immediately
@@ -335,7 +335,7 @@ export class AddQuestionComponent {
    *  - calls store.createQuiz() to POST quiz + 10 questions + options to MVC controller
    *  - server generates final quiz number
    */
-  
+
   /**
    * Delete a question from the preview
    */
@@ -346,7 +346,7 @@ export class AddQuestionComponent {
       horizontalPosition: 'center',
       verticalPosition: 'top'
     });
-    
+
     snackBarRef.onAction().subscribe(() => {
       this.store.removeQuestion(index);
     });
@@ -354,7 +354,7 @@ export class AddQuestionComponent {
 
   async publishFromPreview() {
     if (!this.canPublish()) return; // guard
-  
+
     // Enforce 1-25 questions (matches server rule)
     const total = this.questions().length;
     if (total < 1 || total > 25) {
@@ -381,7 +381,7 @@ export class AddQuestionComponent {
     }
     // Explicitly set quiz basics to ensure they're in the store
     this.store.setQuizBasics(name, cat);
-  
+
     // Show confirmation snackbar
     const snackBarRef = this.snackBar.open(
       `Create Quiz: "${name}" | Category: ${cat} | Questions: ${total}`,
@@ -393,31 +393,31 @@ export class AddQuestionComponent {
         verticalPosition: 'top'
       }
     );
-    
+
     const confirmed = await new Promise<boolean>((resolve) => {
       snackBarRef.onAction().subscribe(() => resolve(true));
       snackBarRef.afterDismissed().subscribe(() => resolve(false));
     });
-    
+
     if (!confirmed) {
       return; // User cancelled
     }
 
     try {
       const res = await this.store.createQuiz();
-      
+
       console.log('Full backend response:', res);
-      
+
       // Backend returns data nested: { success, message, data: { quizNumber, quizId, ... } }
       const data = (res as any).data || res;
       const quizNumber = data.quizNumber;
       const quizId = data.quizId;
-      
+
       if (quizNumber) {
         this.createdQuizNumber.set(quizNumber.toString());
         this.createdQuizId.set(quizId);
         this.isQuizCreated.set(true);
-        
+
         this.snackBar.open(
           `✅ Quiz Created Successfully! | Quiz Number: ${quizNumber} | Quiz ID: ${quizId}`,
           'Close',
@@ -428,7 +428,7 @@ export class AddQuestionComponent {
             verticalPosition: 'top'
           }
         );
-        
+
         // Scroll to show QR code
         setTimeout(() => {
           const qrElement = document.querySelector('app-qrcode');
@@ -448,7 +448,7 @@ export class AddQuestionComponent {
           }
         );
       }
-      
+
       console.log(`SUCCESS: Quiz Created!\nQuiz Number: ${quizNumber}\nQuiz ID: ${quizId}`);
     } catch (err: any) {
       console.error(err);
@@ -464,7 +464,7 @@ export class AddQuestionComponent {
       );
     }
   }
-  
+
 
   private resetForm(): void {
     this.form.patchValue({
@@ -502,7 +502,7 @@ export class AddQuestionComponent {
     this.tags.clear();
   }
 
-  
+
   /** Reset QR display for creating a new quiz */
   startNewQuiz() {
     this.isQuizCreated.set(false);

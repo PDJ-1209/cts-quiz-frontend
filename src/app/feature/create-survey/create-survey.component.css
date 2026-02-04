@@ -48,6 +48,33 @@
 .border-top-purple { border-top: 5px solid #8e7cc3; }
 .border-top-blue { border-top: 5px solid #0073b7; }
 
+/* Button Styling */
+.btn-primary {
+  background: linear-gradient(135deg, #0066cc 0%, #004999 100%) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3) !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4) !important;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+}
+
 .btn-teal { background-color: #24c297; border: none; padding: 12px; }
 
 /* Survey Summary Card */

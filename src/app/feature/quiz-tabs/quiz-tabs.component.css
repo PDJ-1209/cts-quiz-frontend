@@ -1,39 +1,257 @@
-/* Quiz Tabs Component - Bootstrap based */
-
-.nav-pills .nav-link.active {
-  background: linear-gradient(135deg, #0066CC, #00A7C7) !important;
-  box-shadow: 0 8px 16px rgba(0, 102, 204, 0.18);
-  color: white !important;
+/* Cognizant Professional Design System */
+:root {
+  --cognizant-primary: #0066CC;
+  --cognizant-secondary: #004999;
+  --cognizant-accent: #00A3E0;
+  --cognizant-success: #28A745;
+  --cognizant-warning: #FFC107;
+  --gradient-primary: linear-gradient(135deg, #0066CC 0%, #004999 100%);
+  --shadow-light: 0 4px 20px rgba(0, 102, 204, 0.1);
+  --shadow-medium: 0 8px 30px rgba(0, 102, 204, 0.15);
 }
 
-.nav-pills .nav-link {
-  color: #334155;
+/* Professional component headers */
+.component-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--cognizant-primary);
+  box-shadow: var(--shadow-light);
+}
+
+.component-header h3 {
+  color: var(--cognizant-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.component-header p {
+  color: #6c757d;
+  margin-bottom: 0;
+}
+
+/* Management grid styles */
+.management-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.management-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.nav-pills .nav-link:hover {
-  color: #0066CC;
-  background-color: rgba(0, 102, 204, 0.1);
+.management-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
 }
 
-.nav-pills .nav-link:focus {
-  outline: 2px solid #0066CC;
-  outline-offset: 2px;
-}
-.tabs .tab:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+.management-card .card-header {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 1rem;
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :host { --bg: #10162b; --text: #eef1f8; --muted: #a6b0c3; --border: #273047; }
-  .tabs, .card { background: #141b2c; border-color: var(--border); }
-  .tabs .tab { background: linear-gradient(180deg, #1b2440, #202b4a); color: var(--text); }
+.management-card .card-body {
+  padding: 1.5rem;
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  :host { --transition: none; }
-  .tabs::after, .tabs .tab { transition: none; }
+/* Settings grid styles */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.settings-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.settings-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+.settings-card .card-header {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+  padding: 1rem;
+}
+
+.settings-card .card-body {
+  padding: 1.5rem;
+}
+
+/* Navigation Header */
+.quiz-nav-header {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+  border-bottom: 1px solid rgba(0, 102, 204, 0.1);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-light);
+}
+
+.nav-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Professional Navigation Pills */
+.cognizant-tabs {
+  background: white;
+  border-radius: 20px;
+  padding: 0.5rem;
+  box-shadow: var(--shadow-medium);
+  border: 1px solid rgba(0, 102, 204, 0.08);
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.cognizant-tabs .nav-item {
+  flex: 1;
+  min-width: 140px;
+}
+
+.cognizant-tabs .nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  border-radius: 15px;
+  border: none;
+  background: transparent;
+  color: #6C757D;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-height: 60px;
+}
+
+.cognizant-tabs .nav-link:hover {
+  color: var(--cognizant-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 102, 204, 0.15);
+}
+
+.cognizant-tabs .nav-link.active {
+  color: white;
+  background: var(--gradient-primary);
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+/* Tab Content */
+.cognizant-content {
+  padding: 2rem;
+  min-height: calc(100vh - 200px);
+}
+
+.tab-pane {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Management Container */
+.management-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.management-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem 0;
+  background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+  border-radius: 20px;
+}
+
+.management-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--cognizant-primary);
+  margin-bottom: 1rem;
+}
+
+.management-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.management-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: var(--shadow-medium);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.management-card:hover {
+  transform: translateY(-5px);
+}
+
+.management-card .card-header {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 1.5rem;
+  border: none;
+}
+
+.management-stats {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-item {
+  text-align: center;
+  flex: 1;
+}
+
+.stat-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--cognizant-primary);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #6C757D;
+}
+
+/* Responsive Design */
+@media (max-width: 991.98px) {
+  .cognizant-tabs .nav-link {
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .cognizant-tabs .nav-link {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 }

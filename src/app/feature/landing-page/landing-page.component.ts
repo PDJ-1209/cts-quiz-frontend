@@ -213,8 +213,8 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   navigateToQuizCreation() {
     try {
       this.clearError();
-      this.router.navigate(['/host/addquestion']).catch(error => {
-        this.handleError(error, 'navigation to quiz creation');
+      this.router.navigate(['/host/dashboard']).catch(error => {
+        this.handleError(error, 'navigation to host dashboard');
       });
       this.showHostOptions = false;
     } catch (error) {
@@ -225,12 +225,24 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   navigateToSurveyCreation() {
     try {
       this.clearError();
-      this.router.navigate(['/host/addquestion'], { queryParams: { tab: 'survey' } }).catch(error => {
-        this.handleError(error, 'navigation to survey creation');
+      this.router.navigate(['/host/dashboard']).catch(error => {
+        this.handleError(error, 'navigation to host dashboard');
       });
       this.showHostOptions = false;
     } catch (error) {
       this.handleError(error, 'navigateToSurveyCreation');
+    }
+  }
+
+  navigateToPollCreation() {
+    try {
+      this.clearError();
+      this.router.navigate(['/host/dashboard']).catch(error => {
+        this.handleError(error, 'navigation to host dashboard');
+      });
+      this.showHostOptions = false;
+    } catch (error) {
+      this.handleError(error, 'navigateToPollCreation');
     }
   }
   
@@ -264,24 +276,26 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       return;
     }
     
-    const messages = {
-      admin: {
+    // Handle poll navigation directly
+    if (type === 'poll') {
+      this.navigateToPollCreation();
+      return;
+    }
+    
+    // Only handle admin type now since survey and poll are handled above
+    if (type === 'admin') {
+      const config = {
         title: '🔒 Administrator Access',
         message: 'Administrative features are currently under development.\n\nThis section will include:\n• User management\n• System settings\n• Analytics dashboard\n• Security controls\n\nComing soon!'
-      },
-      poll: {
-        title: '📊 Poll Creation', 
-        message: 'Real-time polling feature is in development!\n\nPlanned features:\n• Live polling\n• Real-time results\n• Multiple choice options\n• Audience engagement tools\n\nLaunching soon!'
-      }
-    };
-    
-    const config = messages[type as 'admin' | 'poll'];
-    this.snackBar.open(`${config.title}\n\n${config.message}`, 'Close', {
-      duration: 12000,
-      panelClass: ['error-snackbar'],
-      horizontalPosition: 'center',
-      verticalPosition: 'top'
-    });
+      };
+      
+      this.snackBar.open(`${config.title}\n\n${config.message}`, 'Close', {
+        duration: 12000,
+        panelClass: ['error-snackbar'],
+        horizontalPosition: 'center',
+        verticalPosition: 'top'
+      });
+    }
   }
   
   navigateToAdmin() {

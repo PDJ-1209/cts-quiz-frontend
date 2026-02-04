@@ -3,25 +3,29 @@
 ## ✅ What I've Done (Frontend)
 
 ### 1. **Created Backend DTOs Guide** (`BACKEND_DTOS_GUIDE.md`)
-   - Complete DTOs for your C# backend
-   - Controller methods with SignalR integration
-   - Database mapping guidelines
+
+- Complete DTOs for your C# backend
+- Controller methods with SignalR integration
+- Database mapping guidelines
 
 ### 2. **Updated Models** (`quiz-publish.models.ts`)
-   - Added `QuizPublishRequest` - matches your backend DTO
-   - Added `QuizPublishResponse` - for backend responses
-   - Mapped `SessionCode` ↔ `QuizNumber`
+
+- Added `QuizPublishRequest` - matches your backend DTO
+- Added `QuizPublishResponse` - for backend responses
+- Mapped `SessionCode` ↔ `QuizNumber`
 
 ### 3. **Updated Quiz Publish Service** (`quiz-publish.service.ts`)
-   - Now calls backend REST API endpoints
-   - SignalR for real-time updates only
-   - Proper payload structure matching your DTOs
+
+- Now calls backend REST API endpoints
+- SignalR for real-time updates only
+- Proper payload structure matching your DTOs
 
 ### 4. **Updated Result Component** (`result.component.ts`)
-   - Integrated with `QuizPublishService`
-   - Real-time updates via SignalR subscriptions
-   - Scheduled time support
-   - Proper error handling and notifications
+
+- Integrated with `QuizPublishService`
+- Real-time updates via SignalR subscriptions
+- Scheduled time support
+- Proper error handling and notifications
 
 ---
 
@@ -32,6 +36,7 @@
 Create these files in your backend:
 
 **`DTOs/Session/QuizPublishRequestDto.cs`**
+
 ```csharp
 namespace cts_quiz_backend.DTOs.Session
 {
@@ -46,6 +51,7 @@ namespace cts_quiz_backend.DTOs.Session
 ```
 
 **`DTOs/Session/QuizPublishResponseDto.cs`**
+
 ```csharp
 namespace cts_quiz_backend.DTOs.Session
 {
@@ -66,12 +72,14 @@ namespace cts_quiz_backend.DTOs.Session
 ### Step 2: Update Database Models
 
 **Add to `Publish` model:**
+
 ```csharp
 public int? SessionId { get; set; }
 public virtual QuizSession? Session { get; set; }
 ```
 
 **Ensure `QuizSession` has:**
+
 ```csharp
 public string? SessionCode { get; set; } // This stores the QuizNumber
 ```
@@ -101,15 +109,15 @@ public class QuizSessionController : ControllerBase
             QuizId = request.QuizId,
             HostId = request.PublishedBy,
             SessionCode = request.QuizNumber, // Map QuizNumber to SessionCode
-            StartedAt = string.IsNullOrEmpty(request.ScheduledTime) 
-                ? DateTime.UtcNow 
+            StartedAt = string.IsNullOrEmpty(request.ScheduledTime)
+                ? DateTime.UtcNow
                 : DateTime.Parse(request.ScheduledTime),
             Status = "LIVE"
         };
-        
+
         _context.QuizSessions.Add(session);
         await _context.SaveChangesAsync();
-        
+
         // 2. Create Publish record
         var publish = new Publish
         {
@@ -119,13 +127,13 @@ public class QuizSessionController : ControllerBase
             QuizNumber = int.Parse(request.QuizNumber.Replace("QZ", "")),
             SessionId = session.SessionId
         };
-        
+
         _context.Publishes.Add(publish);
         await _context.SaveChangesAsync();
-        
+
         // 3. Notify via SignalR
         await _hubContext.Clients.Group($"Host_{request.PublishedBy}")
-            .SendAsync("QuizPublished", new 
+            .SendAsync("QuizPublished", new
             {
                 quizId = request.QuizId,
                 quizNumber = request.QuizNumber,
@@ -133,7 +141,7 @@ public class QuizSessionController : ControllerBase
                 sessionCode = request.QuizNumber,
                 publishedAt = DateTime.UtcNow
             });
-        
+
         return Ok(new QuizPublishResponseDto
         {
             PublishId = publish.PublishId,
@@ -153,21 +161,21 @@ public class QuizSessionController : ControllerBase
         string quizNumber = body.quizNumber;
         var session = await _context.QuizSessions
             .FirstOrDefaultAsync(s => s.SessionCode == quizNumber);
-            
+
         if (session == null) return NotFound();
-        
+
         session.Status = "DRAFT";
         session.EndedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        
+
         await _hubContext.Clients.Group($"Host_{session.HostId}")
-            .SendAsync("QuizStatusChanged", new 
+            .SendAsync("QuizStatusChanged", new
             {
                 quizNumber,
                 status = "DRAFT",
                 timestamp = DateTime.UtcNow
             });
-        
+
         return Ok();
     }
 
@@ -177,20 +185,20 @@ public class QuizSessionController : ControllerBase
         string quizNumber = body.quizNumber;
         var session = await _context.QuizSessions
             .FirstOrDefaultAsync(s => s.SessionCode == quizNumber);
-            
+
         if (session == null) return NotFound();
-        
+
         session.Status = "COMPLETED";
         session.EndedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        
+
         await _hubContext.Clients.All
-            .SendAsync("QuizSessionEnded", new 
+            .SendAsync("QuizSessionEnded", new
             {
                 quizNumber,
                 endedAt = DateTime.UtcNow
             });
-        
+
         return Ok();
     }
 
@@ -200,9 +208,9 @@ public class QuizSessionController : ControllerBase
         var session = await _context.QuizSessions
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.SessionCode == quizNumber);
-            
+
         if (session == null) return NotFound();
-        
+
         return Ok(session.Participants.Count);
     }
 }
@@ -291,7 +299,7 @@ UI updates with success message
 ✅ Session management  
 ✅ Proper error handling  
 ✅ Success/error notifications  
-✅ Automatic quiz list refresh  
+✅ Automatic quiz list refresh
 
 ---
 
@@ -312,10 +320,11 @@ UI updates with success message
 ## 📝 Environment Variables
 
 Ensure `environment.ts` has:
+
 ```typescript
 export const environment = {
-  apiUrl: 'http://localhost:5186/api',
-  signalRUrl: 'http://localhost:5186/hubs'
+  apiUrl: "http://localhost:5195/api",
+  signalRUrl: "http://localhost:5195/hubs",
 };
 ```
 

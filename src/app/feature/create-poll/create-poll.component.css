@@ -1,0 +1,102 @@
+.card {
+  border: none;
+  border-radius: 12px;
+}
+
+.card-header {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.form-control,
+.form-select {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 8px;
+}
+
+/* Poll Summary Card */
+.poll-summary-card {
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+  .poll-summary-card {
+    position: static;
+    margin-top: 20px;
+    max-height: none;
+  }
+}
+
+/* Builder Cards */
+.builder-card { 
+  border: none; 
+  border-radius: 8px; 
+}
+
+.border-top-purple { 
+  border-top: 5px solid #8e7cc3; 
+}
+
+.border-top-blue { 
+  border-top: 5px solid #0073b7; 
+}
+
+/* Button Styling */
+.btn-primary {
+  background: linear-gradient(135deg, #0066cc 0%, #004999 100%) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3) !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4) !important;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+}
+
+.cts-input {
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  padding: 10px 12px;
+}
+
+.cts-textarea {
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.q-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+}
+
+/* Responsive improvements */
+@media (max-width: 767.98px) {
+  .container-fluid.px-lg-5 {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+}
