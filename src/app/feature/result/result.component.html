@@ -86,6 +86,8 @@
                   <th>Questions</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th>Schedule Time</th>
+                  <th>Publish</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -105,6 +107,31 @@
                       </span>
                     </td>
                     <td>{{ quiz.createdAt | date:'short' }}</td>
+                    <td class="schedule-cell">
+                      <input 
+                        type="datetime-local" 
+                        class="form-control form-control-sm schedule-input"
+                        [value]="scheduledTimes[quiz.quizId] || ''"
+                        (change)="onScheduleTimeChange(quiz.quizId, $event)"
+                        [id]="'schedule-' + quiz.quizId">
+                    </td>
+                    <td class="publish-cell">
+                      @if (quiz.status.toLowerCase() === 'draft') {
+                        <button 
+                          class="btn btn-sm btn-success publish-btn"
+                          (click)="publishQuiz(quiz.quizNumber)">
+                          📤 Publish
+                        </button>
+                      } @else if (quiz.status.toLowerCase() === 'live' || quiz.status.toLowerCase() === 'completed') {
+                        <button 
+                          class="btn btn-sm btn-warning republish-btn"
+                          (click)="republishQuiz(quiz.quizNumber)">
+                          🔄 Republish
+                        </button>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
                     <td>
                       <button 
                         class="btn btn-sm btn-outline-primary"
@@ -115,7 +142,7 @@
                   </tr>
                   @if (showQRForQuizId() === quiz.quizId) {
                     <tr>
-                      <td colspan="7" class="qr-cell">
+                      <td colspan="9" class="qr-cell">
                         <app-qrcode 
                           [quizNumber]="quiz.quizNumber" 
                           [quizId]="quiz.quizId"
