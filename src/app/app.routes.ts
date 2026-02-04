@@ -9,6 +9,11 @@ import { LandingPageComponent } from './feature/landing-page/landing-page.compon
 export const routes: Routes = [
   { path: '', component: LandingPageComponent, pathMatch: 'full' },
   { path: 'host/addquestion', component: QuizTabsComponent },
+  { 
+    path: 'template',
+    loadComponent: () =>
+      import('./feature/template/template.component').then(m => m.TemplateComponent),
+  },
   { path: 'participant', component: ParticipantPageComponent },
   { path: 'countdown', component: CountdownComponent },
   { path: 'quiz', component: QuizPageComponent },

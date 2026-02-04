@@ -16,13 +16,14 @@ import { PreviewComponent } from '../preview/preview.component';
 import { ResultComponent } from '../result/result.component';
 import { AddQuestionService } from '../../services/add-question.service';
 import { CreateSurveyComponent } from '../create-survey/create-survey.component';
+import { TemplateComponent } from '../template/template.component';
 
-type Tab = 'questions' |'survey' | 'preview' | 'results' | 'settings';
+type Tab = 'questions' | 'template' | 'survey' | 'preview' | 'results' | 'settings';
 
 @Component({
   selector: 'app-quiz-tabs',
   standalone: true,
-  imports: [CommonModule, RouterModule, AddQuestionComponent, PreviewComponent, ResultComponent, CreateSurveyComponent],
+  imports: [CommonModule, RouterModule, AddQuestionComponent, TemplateComponent, PreviewComponent, ResultComponent, CreateSurveyComponent],
   templateUrl: './quiz-tabs.component.html',
   styleUrls: ['./quiz-tabs.component.css']
 })
@@ -41,7 +42,7 @@ export class QuizTabsComponent implements AfterViewInit, OnInit {
   @ViewChild('tabsRef', { static: true }) tabsRef!: ElementRef<HTMLDivElement>;
 
   // Keep a stable tab order to compute the index cleanly
-  private readonly tabsOrder: Tab[] = ['questions', 'survey', 'preview', 'results', 'settings'];
+  private readonly tabsOrder: Tab[] = ['questions', 'template', 'survey', 'preview', 'results', 'settings'];
 
   constructor() {
     // Re-run whenever the active tab changes
