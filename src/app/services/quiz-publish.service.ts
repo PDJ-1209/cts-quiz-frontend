@@ -47,7 +47,7 @@ export class QuizPublishService {
     this.connectionState$.next('connecting');
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${environment.signalRUrl}/quizHub`, {
+      .withUrl(`${environment.signalRHubUrl}`, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
         accessTokenFactory: () => {
@@ -191,6 +191,10 @@ export class QuizPublishService {
       const response = await firstValueFrom(
         this.http.post<QuizPublishResponse>(url, payload)
       );
+      
+      // Also record in Publish table for calendar
+      await this.recordPublishForCalendar(quizId, publishedBy);
+      
       console.log('========================================');
       console.log('✅ QUIZ PUBLISHED SUCCESSFULLY');
       console.log('========================================');
@@ -209,6 +213,28 @@ export class QuizPublishService {
       console.error('Full Error Object:', error);
       console.error('========================================');
       throw error;
+    }
+  }
+
+  /**
+   * Record quiz publish in Publish table for calendar tracking
+   */
+  private async recordPublishForCalendar(quizId: number, publishedBy: string): Promise<void> {
+    const publishUrl = `${environment.apiUrl}/Host/Publish`;
+    const publishPayload = {
+      quizId: quizId,
+      questionId: null,
+      publishedBy: publishedBy
+    };
+
+    try {
+      await firstValueFrom(
+        this.http.post(publishUrl, publishPayload)
+      );
+      console.log('[QuizPublish] Recorded in Publish table for calendar');
+    } catch (error) {
+      console.error('[QuizPublish] Failed to record in Publish table:', error);
+      // Don't throw error, as the main publish operation succeeded
     }
   }
 

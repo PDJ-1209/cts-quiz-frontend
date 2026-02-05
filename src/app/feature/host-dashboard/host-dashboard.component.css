@@ -107,6 +107,33 @@
   padding: 2rem 0;
 }
 
+/* Calendar Icon Button in Header */
+.calendar-icon-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  position: relative;
+}
+
+.calendar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+  transform: scale(1.1);
+}
+
+.calendar-icon-btn:active {
+  transform: scale(0.95);
+}
+
 .stat-card {
   background: white;
   border-radius: 16px;

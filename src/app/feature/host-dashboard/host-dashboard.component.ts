@@ -5,6 +5,7 @@ import { AddQuestionService } from '../../services/add-question.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
+import { QuizCalendarComponent } from '../../components/quiz-calendar/quiz-calendar.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -29,7 +30,7 @@ interface QuickAction {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, QuizCalendarComponent],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
@@ -49,6 +50,7 @@ export class HostDashboardComponent implements OnInit {
   currentDateTime = signal('Loading...');
   hostName = 'Prasannajeet Devendra Jain';
   currentDay = signal('Today');
+  showCalendar = signal(false);
 
   quickActions: QuickAction[] = [
     {
@@ -179,8 +181,15 @@ export class HostDashboardComponent implements OnInit {
       this.router.navigate([action.route]);
     }
   }
-
   navigateBack(): void {
     this.router.navigate(['/']);
+  }
+
+  openCalendar(): void {
+    this.showCalendar.set(true);
+  }
+
+  closeCalendar(): void {
+    this.showCalendar.set(false);
   }
 }

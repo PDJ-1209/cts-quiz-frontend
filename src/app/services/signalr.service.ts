@@ -46,7 +46,7 @@ export class SignalrService {
    */
   public initHubConnection(sessionId: number, participantId: number): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${environment.signalRUrl}`, {
+      .withUrl(`${environment.signalRHubUrl}`, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets
       })

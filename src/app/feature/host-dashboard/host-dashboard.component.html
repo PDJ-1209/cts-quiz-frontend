@@ -21,6 +21,10 @@
         </div>
       </div>
       <div class="header-actions d-flex align-items-center gap-3">
+        <!-- Calendar Icon Button -->
+        <button class="calendar-icon-btn" (click)="openCalendar()" title="View Publishing Calendar">
+          <i class="fas fa-calendar-alt"></i>
+        </button>
         <div class="user-info text-end text-white">
           <div class="fw-bold">{{ hostName }}</div>
           <div class="datetime-display">
@@ -199,3 +203,6 @@
     <p class="mt-3 text-muted">Loading dashboard...</p>
   </div>
 </div>
+
+<!-- Calendar Component -->
+<app-quiz-calendar *ngIf="showCalendar()" (close)="closeCalendar()"></app-quiz-calendar>

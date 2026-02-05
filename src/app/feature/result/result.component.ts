@@ -262,11 +262,12 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const scheduledTime = this.scheduledTimes[quiz.quizId];
+      const currentHostId = '2463579'; // Should match the host dashboard
 
       await this.quizPublishService.publishQuiz(
         quiz.quizId,
         quizNumber,
-        'HostUser',
+        currentHostId,
         scheduledTime
       );
 
