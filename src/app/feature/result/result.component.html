@@ -5,9 +5,14 @@
       <h2 class="mb-2">📊 Quiz Analytics Dashboard</h2>
       <p class="text-muted mb-0">Host ID: {{ currentHostId }}</p>
     </div>
-    <button class="btn btn-primary" (click)="loadQuizzes()">
-      🔄 Refresh Data
-    </button>
+    <div class="d-flex gap-2 align-items-center">
+      <button class="btn btn-outline-light btn-sm" (click)="resetTutorial()">
+        🎯 Tutorial
+      </button>
+      <button class="btn btn-primary" (click)="loadQuizzes()">
+        🔄 Refresh Data
+      </button>
+    </div>
   </div>
 
   @if (loading()) {
@@ -166,3 +171,69 @@
     </div>
   }
 </div>
+
+<!-- TUTORIAL OVERLAY -->
+@if (tutorialActive()) {
+<div class="tutorial-overlay">
+  <!-- Spotlight -->
+  @if (getSpotlightPosition(); as spotlightPos) {
+  <div class="tutorial-spotlight" 
+       [style.top]="spotlightPos.top"
+       [style.left]="spotlightPos.left"
+       [style.width]="spotlightPos.width"
+       [style.height]="spotlightPos.height">
+  </div>
+  }
+
+  <!-- Tutorial Popup -->
+  @if (getCurrentStep(); as step) {
+  <div class="tutorial-popup"
+       [style.top]="getPopupPosition()?.top || '50px'"
+       [style.left]="getPopupPosition()?.left || '50px'">
+    
+    <h4>{{ step.title }}</h4>
+    <p>{{ step.description }}</p>
+    
+    <div class="tutorial-controls">
+      @if (step.skipable) {
+      <button class="tutorial-skip" (click)="skipTutorial()">
+        Skip Tutorial
+      </button>
+      }
+      
+      <div class="tutorial-navigation">
+        @if (currentTutorialStep() > 0) {
+        <button class="tutorial-btn secondary" (click)="previousTutorialStep()">
+          Previous
+        </button>
+        }
+        
+        @if (currentTutorialStep() < tutorialSteps().length - 1) {
+        <button class="tutorial-btn" (click)="nextTutorialStep()">
+          Next
+        </button>
+        } @else {
+        <button class="tutorial-btn" (click)="skipTutorial()">
+          Finish
+        </button>
+        }
+      </div>
+    </div>
+    
+    <div class="tutorial-progress">
+      Step {{ currentTutorialStep() + 1 }} of {{ tutorialSteps().length }}
+      
+      <div class="tutorial-step-indicator">
+        @for (step of tutorialSteps(); track step.id; let i = $index) {
+        <div class="tutorial-step-dot" 
+             [class.active]="i === currentTutorialStep()"
+             [class.completed]="i < currentTutorialStep()">
+        </div>
+        }
+      </div>
+    </div>
+    
+  </div>
+  }
+</div>
+}

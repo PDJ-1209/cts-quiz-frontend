@@ -137,6 +137,8 @@ export class HostDashboardComponent implements OnInit {
     }
   }
 
+
+
   private setWelcomeMessage(): void {
     const hour = new Date().getHours();
     let greeting = 'Good morning';

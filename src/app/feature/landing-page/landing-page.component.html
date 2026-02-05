@@ -94,6 +94,8 @@
     <div class="shape shape-1"></div>
     <div class="shape shape-2"></div>
     <div class="shape shape-3"></div>
+    <div class="shape shape-4"></div>
+    <div class="shape shape-5"></div>
   </div>
   
   <div class="container">
@@ -103,11 +105,13 @@
           <div class="cognizant-badge mb-4">
             <i class="fas fa-brain me-2"></i>
             <span>AI-Powered Learning Platform</span>
+            <div class="badge-glow"></div>
           </div>
           
           <h1 class="cognizant-hero-title">
             Transform Learning with
             <span class="cognizant-gradient-text">Smart Assessments</span>
+            <div class="title-underline"></div>
           </h1>
           
           <p class="cognizant-hero-subtitle">
@@ -116,25 +120,44 @@
             with enterprise-grade tools.
           </p>
           
+          <!-- Enhanced Stats with Icons -->
           <div class="cognizant-stats-preview">
             <div class="stat-item">
+              <div class="stat-icon">
+                <i class="fas fa-shield-alt"></i>
+              </div>
               <span class="stat-number">99.9%</span>
               <span class="stat-label">Uptime</span>
             </div>
             <div class="stat-item">
+              <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
               <span class="stat-number">2M+</span>
               <span class="stat-label">Assessments</span>
             </div>
             <div class="stat-item">
+              <div class="stat-icon">
+                <i class="fas fa-building"></i>
+              </div>
               <span class="stat-number">500+</span>
               <span class="stat-label">Enterprises</span>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <span class="stat-number">10M+</span>
+              <span class="stat-label">Learners</span>
             </div>
           </div>
           
           <div class="cognizant-cta-buttons">
             <button class="cognizant-btn-hero-primary" (click)="navigateToQuizCreation()" [@pulse]="showHero() ? 'in' : 'void'">
-              <i class="fas fa-rocket me-2"></i>
-              <span>Create Your First Quiz</span>
+              <div class="btn-content">
+                <i class="fas fa-rocket me-2"></i>
+                <span>Create Your First Quiz</span>
+              </div>
               <div class="btn-shine"></div>
             </button>
             <button class="cognizant-btn-hero-secondary" (click)="navigateToSurveyCreation()">

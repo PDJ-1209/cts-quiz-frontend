@@ -1,10 +1,11 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, AfterViewInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { PollService } from '../../services/poll.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Poll, CreatePollRequest } from '../../models/ipoll';
+import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 
 @Component({
   selector: 'app-create-poll',
@@ -13,7 +14,7 @@ import { Poll, CreatePollRequest } from '../../models/ipoll';
   templateUrl: './create-poll.component.html',
   styleUrls: ['./create-poll.component.css']
 })
-export class CreatePollComponent implements OnInit {
+export class CreatePollComponent implements OnInit, AfterViewInit {
   pollForm!: FormGroup;
   submitted = false;
   loading = false;
@@ -33,6 +34,47 @@ export class CreatePollComponent implements OnInit {
   });
 
   @Output() switchToQuestionsTab = new EventEmitter<void>();
+
+  // Tutorial properties
+  private tutorialService = inject(TutorialService);
+  readonly tutorialActive = computed(() => this.tutorialService.isActive());
+  readonly currentTutorialStep = computed(() => this.tutorialService.currentStep());
+  readonly tutorialSteps = computed(() => this.tutorialService.steps());
+
+  private tutorialStepDefinitions: TutorialStep[] = [
+    {
+      id: 'poll-title',
+      title: '📊 Poll Title',
+      description: 'Enter a clear and engaging title for your poll to attract participants.',
+      targetElement: 'input[formControlName="pollTitle"]',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'poll-question',
+      title: '❓ Poll Question',
+      description: 'Write your poll question clearly. This is what participants will see and respond to.',
+      targetElement: 'textarea[formControlName="pollQuestion"]',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'question-types',
+      title: '🔄 Question Types',
+      description: 'Choose from predefined options like True/False, Yes/No, Agree/Disagree, or create custom options.',
+      targetElement: '.question-type-selector',
+      position: 'left',
+      skipable: true
+    },
+    {
+      id: 'publish-poll',
+      title: '🚀 Publish Poll',
+      description: 'When you\'re ready, publish your poll to make it available for participants!',
+      targetElement: '.btn-success',
+      position: 'top',
+      skipable: true
+    }
+  ];
 
   questionTypes: { value: string; label: string; option1: string; option2: string }[] = [
     { value: 'true_false', label: 'True/False', option1: 'True', option2: 'False' },
@@ -220,5 +262,104 @@ export class CreatePollComponent implements OnInit {
     } else {
       alert('Please fill in all required fields before converting.');
     }
+  }
+
+  ngAfterViewInit(): void {
+    // Start tutorial after view is fully initialized
+    setTimeout(() => {
+      this.startTutorial();
+    }, 1000);
+  }
+
+  // Tutorial methods
+  startTutorial(): void {
+    if (this.tutorialService.shouldAutoStart('polls')) {
+      console.log('Auto-starting tutorial for polls component');
+      this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'polls');
+    } else {
+      console.log('Tutorial already seen for polls component');
+    }
+  }
+
+  resetTutorial(): void {
+    this.tutorialService.resetTutorial('polls');
+    this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'polls');
+  }
+
+  nextTutorialStep(): void {
+    this.tutorialService.nextStep();
+  }
+
+  previousTutorialStep(): void {
+    this.tutorialService.previousStep();
+  }
+
+  skipTutorial(): void {
+    this.tutorialService.skipTutorial();
+  }
+
+  getCurrentStep(): TutorialStep | null {
+    return this.tutorialService.getCurrentStepData();
+  }
+
+  getSpotlightPosition(): { top: string; left: string; width: string; height: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    return {
+      top: `${rect.top - 5}px`,
+      left: `${rect.left - 5}px`,
+      width: `${rect.width + 10}px`,
+      height: `${rect.height + 10}px`
+    };
+  }
+
+  getPopupPosition(): { top: string; left: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    const popupWidth = 350;
+    const popupHeight = 200;
+
+    let top = rect.top;
+    let left = rect.left;
+
+    switch (currentStep.position) {
+      case 'bottom':
+        top = rect.bottom + 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'top':
+        top = rect.top - popupHeight - 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'left':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.left - popupWidth - 10;
+        break;
+      case 'right':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.right + 10;
+        break;
+    }
+
+    // Ensure popup stays within viewport
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+    if (top < 10) top = 10;
+    if (top + popupHeight > window.innerHeight - 10) top = window.innerHeight - popupHeight - 10;
+
+    return {
+      top: `${top}px`,
+      left: `${left}px`
+    };
   }
 }

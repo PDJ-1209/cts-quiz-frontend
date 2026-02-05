@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, effect, inject, OnInit, OnDestroy, signal, computed, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -9,6 +9,7 @@ import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Subscription } from 'rxjs';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
+import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 
 export interface Analytics {
   totalParticipants: number;
@@ -31,7 +32,7 @@ export interface Analytics {
   standalone: true,
   imports: [CommonModule, LoaderComponent, QrcodeComponent],
 })
-export class ResultComponent implements OnInit, OnDestroy {
+export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   private store = inject(QuizCreationService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
@@ -44,6 +45,47 @@ export class ResultComponent implements OnInit, OnDestroy {
   scheduledTimes: { [key: number]: string } = {};
   loading = signal(false);
   currentHostId = '2463579';
+
+  // Tutorial properties
+  private tutorialService = inject(TutorialService);
+  readonly tutorialActive = computed(() => this.tutorialService.isActive());
+  readonly currentTutorialStep = computed(() => this.tutorialService.currentStep());
+  readonly tutorialSteps = computed(() => this.tutorialService.steps());
+
+  private tutorialStepDefinitions: TutorialStep[] = [
+    {
+      id: 'analytics-overview',
+      title: '📊 Analytics Overview',
+      description: 'View key metrics about your quizzes: total quizzes, questions, drafts, and published content.',
+      targetElement: '.analytics-grid',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'quiz-list',
+      title: '📋 Quiz Management',
+      description: 'See all your quizzes here. You can view details, edit, publish, or schedule them from this list.',
+      targetElement: '.quiz-list-section',
+      position: 'left',
+      skipable: true
+    },
+    {
+      id: 'publish-actions',
+      title: '🚀 Publishing Options',
+      description: 'Use these buttons to publish quizzes, schedule them, or generate QR codes for easy participant access.',
+      targetElement: '.publish-actions',
+      position: 'top',
+      skipable: true
+    },
+    {
+      id: 'refresh-data',
+      title: '🔄 Refresh Data',
+      description: 'Click here to reload your quiz data and see the latest updates and analytics.',
+      targetElement: '.btn-primary',
+      position: 'left',
+      skipable: true
+    }
+  ];
 
   analytics = computed(() => {
     const quizzes = this.hostQuizzes();
@@ -296,6 +338,105 @@ export class ResultComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     this.scheduledTimes[quizId] = input.value;
     console.log(`Schedule time for quiz ${quizId}:`, input.value);
+  }
+
+  ngAfterViewInit(): void {
+    // Start tutorial after view is fully initialized
+    setTimeout(() => {
+      this.startTutorial();
+    }, 1000);
+  }
+
+  // Tutorial methods
+  startTutorial(): void {
+    if (this.tutorialService.shouldAutoStart('results')) {
+      console.log('Auto-starting tutorial for results component');
+      this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'results');
+    } else {
+      console.log('Tutorial already seen for results component');
+    }
+  }
+
+  resetTutorial(): void {
+    this.tutorialService.resetTutorial('results');
+    this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'results');
+  }
+
+  nextTutorialStep(): void {
+    this.tutorialService.nextStep();
+  }
+
+  previousTutorialStep(): void {
+    this.tutorialService.previousStep();
+  }
+
+  skipTutorial(): void {
+    this.tutorialService.skipTutorial();
+  }
+
+  getCurrentStep(): TutorialStep | null {
+    return this.tutorialService.getCurrentStepData();
+  }
+
+  getSpotlightPosition(): { top: string; left: string; width: string; height: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    return {
+      top: `${rect.top - 5}px`,
+      left: `${rect.left - 5}px`,
+      width: `${rect.width + 10}px`,
+      height: `${rect.height + 10}px`
+    };
+  }
+
+  getPopupPosition(): { top: string; left: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    const popupWidth = 350;
+    const popupHeight = 200;
+
+    let top = rect.top;
+    let left = rect.left;
+
+    switch (currentStep.position) {
+      case 'bottom':
+        top = rect.bottom + 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'top':
+        top = rect.top - popupHeight - 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'left':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.left - popupWidth - 10;
+        break;
+      case 'right':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.right + 10;
+        break;
+    }
+
+    // Ensure popup stays within viewport
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+    if (top < 10) top = 10;
+    if (top + popupHeight > window.innerHeight - 10) top = window.innerHeight - popupHeight - 10;
+
+    return {
+      top: `${top}px`,
+      left: `${left}px`
+    };
   }
 
   ngOnDestroy() {

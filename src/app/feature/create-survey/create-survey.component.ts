@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, AfterViewInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -7,6 +7,7 @@ import { SignalrService } from '../../services/signalr.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { CreateSurveyRequest, CreateQuestionRequest, CreateSessionRequest, PublishSurveyRequest } from '../../Models/isurvey';
 import { AddQuestionService, QuizQuestion, QuestionType } from '../../services/add-question.service';
+import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 
 @Component({
   selector: 'app-create-survey',
@@ -15,7 +16,7 @@ import { AddQuestionService, QuizQuestion, QuestionType } from '../../services/a
   templateUrl: './create-survey.component.html',
   styleUrls: ['./create-survey.component.css']
 })
-export class CreateSurveyComponent implements OnInit, OnDestroy {
+export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
   surveyForm!: FormGroup;
   sessionId: number | null = null;
   loading = false;
@@ -34,6 +35,47 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
   });
   
   @Output() switchToQuestionsTab = new EventEmitter<void>();
+
+  // Tutorial properties
+  private tutorialService = inject(TutorialService);
+  readonly tutorialActive = computed(() => this.tutorialService.isActive());
+  readonly currentTutorialStep = computed(() => this.tutorialService.currentStep());
+  readonly tutorialSteps = computed(() => this.tutorialService.steps());
+
+  private tutorialStepDefinitions: TutorialStep[] = [
+    {
+      id: 'survey-title',
+      title: '📝 Survey Title',
+      description: 'Enter a descriptive title for your survey. This will help participants understand the survey topic.',
+      targetElement: 'input[formControlName="title"]',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'add-questions',
+      title: '❓ Add Questions',
+      description: 'Create your survey questions here. Choose different question types like single choice, rating, or text.',
+      targetElement: '.builder-card.border-top-blue',
+      position: 'left',
+      skipable: true
+    },
+    {
+      id: 'question-types',
+      title: '🔽 Question Types',
+      description: 'Select the type of question: Single Choice, Rating (1-5 stars), or Short Text responses.',
+      targetElement: 'select[formControlName="type"]',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'publish-survey',
+      title: '🚀 Publish Survey',
+      description: 'Once you\'re done creating questions, publish your survey to make it available to participants!',
+      targetElement: '.btn-success',
+      position: 'top',
+      skipable: true
+    }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -345,6 +387,105 @@ export class CreateSurveyComponent implements OnInit, OnDestroy {
     } else {
       alert('Please fill in the survey title and add at least one question.');
     }
+  }
+
+  ngAfterViewInit(): void {
+    // Start tutorial after view is fully initialized
+    setTimeout(() => {
+      this.startTutorial();
+    }, 1000);
+  }
+
+  // Tutorial methods
+  startTutorial(): void {
+    if (this.tutorialService.shouldAutoStart('survey')) {
+      console.log('Auto-starting tutorial for survey component');
+      this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'survey');
+    } else {
+      console.log('Tutorial already seen for survey component');
+    }
+  }
+
+  resetTutorial(): void {
+    this.tutorialService.resetTutorial('survey');
+    this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'survey');
+  }
+
+  nextTutorialStep(): void {
+    this.tutorialService.nextStep();
+  }
+
+  previousTutorialStep(): void {
+    this.tutorialService.previousStep();
+  }
+
+  skipTutorial(): void {
+    this.tutorialService.skipTutorial();
+  }
+
+  getCurrentStep(): TutorialStep | null {
+    return this.tutorialService.getCurrentStepData();
+  }
+
+  getSpotlightPosition(): { top: string; left: string; width: string; height: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    return {
+      top: `${rect.top - 5}px`,
+      left: `${rect.left - 5}px`,
+      width: `${rect.width + 10}px`,
+      height: `${rect.height + 10}px`
+    };
+  }
+
+  getPopupPosition(): { top: string; left: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) return null;
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    const popupWidth = 350;
+    const popupHeight = 200;
+
+    let top = rect.top;
+    let left = rect.left;
+
+    switch (currentStep.position) {
+      case 'bottom':
+        top = rect.bottom + 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'top':
+        top = rect.top - popupHeight - 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'left':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.left - popupWidth - 10;
+        break;
+      case 'right':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.right + 10;
+        break;
+    }
+
+    // Ensure popup stays within viewport
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+    if (top < 10) top = 10;
+    if (top + popupHeight > window.innerHeight - 10) top = window.innerHeight - popupHeight - 10;
+
+    return {
+      top: `${top}px`,
+      left: `${left}px`
+    };
   }
 
   ngOnDestroy(): void {

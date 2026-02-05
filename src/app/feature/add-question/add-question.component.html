@@ -15,6 +15,10 @@
         <div class="text-white small">
           <i class="fas fa-clock me-2"></i>Session Active
         </div>
+        <!-- Debug: Manual tutorial trigger (remove in production) -->
+        <button class="btn btn-outline-light btn-sm mt-2" (click)="resetTutorial()">
+          🎯 Start Tutorial
+        </button>
       </div>
     </div>
   </div>
@@ -30,6 +34,9 @@
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0 text-white"><span class="me-2">📝</span>Quiz Information</h5>
+          <button type="button" class="btn btn-success btn-sm template-btn" (click)="openTemplate()">
+            📋 Template
+          </button>
         </div>
         <div class="card-body">
           <div class="row g-3">
@@ -57,13 +64,14 @@
       </div>
 
       <!-- ADD QUESTION CARD -->
-      <div class="card shadow-sm mb-4">
+      <div class="card shadow-sm mb-4 add-question-card">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0 text-white"><span class="me-2">❓</span>Add New Question</h5>
           <div class="d-flex gap-2">
             <button type="button" class="btn btn-light btn-sm" (click)="downloadSampleCSV()">
               📄 Sample CSV
             </button>
+            
             <button type="button" class="btn btn-warning btn-sm" (click)="toggleSuggestion()">
               💡 Suggestions
             </button>
@@ -280,7 +288,7 @@
       </div>
 
       <!-- CSV IMPORT CARD -->
-      <div class="card shadow-sm">
+      <div class="card shadow-sm csv-import-card">
         <div class="card-header bg-warning text-dark">
           <h5 class="mb-0 text-dark"><span class="me-2">📁</span>CSV Import/Export</h5>
         </div>
@@ -310,3 +318,74 @@
 
   </div>
 </div>
+
+<!-- TUTORIAL OVERLAY -->
+@if (tutorialActive()) {
+<div class="tutorial-overlay">
+  <!-- Spotlight -->
+  @if (getSpotlightPosition(); as spotlightPos) {
+  <div class="tutorial-spotlight" 
+       [style.top]="spotlightPos.top"
+       [style.left]="spotlightPos.left"
+       [style.width]="spotlightPos.width"
+       [style.height]="spotlightPos.height">
+  </div>
+  }
+
+  <!-- Tutorial Popup -->
+  @if (getCurrentStep(); as step) {
+  <div class="tutorial-popup"
+       [style.top]="getPopupPosition()?.top || '50px'"
+       [style.left]="getPopupPosition()?.left || '50px'">
+    
+    <h4>{{ step.title }}</h4>
+    <p>{{ step.description }}</p>
+    
+    <!-- Debug info (remove later) -->
+    <div style="font-size: 10px; color: #999; margin-bottom: 10px;">
+      Step {{ currentTutorialStep() + 1 }} | Target: {{ step.targetElement }}
+    </div>
+    
+    <div class="tutorial-controls">
+      @if (step.skipable) {
+      <button class="tutorial-skip" (click)="skipTutorial()">
+        Skip Tutorial
+      </button>
+      }
+      
+      <div class="tutorial-navigation">
+        @if (currentTutorialStep() > 0) {
+        <button class="tutorial-btn secondary" (click)="previousTutorialStep()">
+          Previous
+        </button>
+        }
+        
+        @if (currentTutorialStep() < tutorialSteps().length - 1) {
+        <button class="tutorial-btn" (click)="nextTutorialStep()">
+          Next
+        </button>
+        } @else {
+        <button class="tutorial-btn" (click)="skipTutorial()">
+          Finish
+        </button>
+        }
+      </div>
+    </div>
+    
+    <div class="tutorial-progress">
+      Step {{ currentTutorialStep() + 1 }} of {{ tutorialSteps().length }}
+      
+      <div class="tutorial-step-indicator">
+        @for (step of tutorialSteps(); track step.id; let i = $index) {
+        <div class="tutorial-step-dot" 
+             [class.active]="i === currentTutorialStep()"
+             [class.completed]="i < currentTutorialStep()">
+        </div>
+        }
+      </div>
+    </div>
+    
+  </div>
+  }
+</div>
+}

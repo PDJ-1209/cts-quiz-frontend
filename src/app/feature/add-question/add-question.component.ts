@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import {
   FormBuilder,
   Validators,
@@ -17,6 +18,7 @@ import {
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 
 type OptionForm = FormGroup<{
   text: FormControl<string>;
@@ -41,11 +43,13 @@ type AddQuestionForm = FormGroup<{
   templateUrl: './add-question.component.html',
   styleUrls: ['./add-question.component.css'],
 })
-export class AddQuestionComponent {
+export class AddQuestionComponent implements AfterViewInit {
   private fb = inject(FormBuilder);
   private store = inject(AddQuestionService);
   private snackBar = inject(MatSnackBar);
   private dashboardStatsService = inject(DashboardStatsService);
+  private router = inject(Router);
+  private tutorialService = inject(TutorialService);
 
   // Header properties
   hostName = 'Quiz Master'; // You can make this dynamic later
@@ -72,6 +76,46 @@ export class AddQuestionComponent {
   /** Shared signals from the store (for summary/preview sidebar) */
   readonly quizMeta = computed(() => this.store.quizMeta());
   readonly questions = computed(() => this.store.questions());
+
+  // Tutorial properties
+  readonly tutorialActive = computed(() => this.tutorialService.isActive());
+  readonly currentTutorialStep = computed(() => this.tutorialService.currentStep());
+  readonly tutorialSteps = computed(() => this.tutorialService.steps());
+
+  private tutorialStepDefinitions: TutorialStep[] = [
+    {
+      id: 'template',
+      title: '📋 Use Templates',
+      description: 'Click the Template button to choose from pre-built quiz templates and get started quickly!',
+      targetElement: '.template-btn',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'quiz-name',
+      title: '📝 Quiz Name',
+      description: 'Enter a descriptive name for your quiz. This will help participants understand what the quiz is about.',
+      targetElement: 'input[formControlName="quizName"]',
+      position: 'bottom',
+      skipable: true
+    },
+    {
+      id: 'add-question',
+      title: '❓ Add Questions',
+      description: 'Create questions here! Choose the type, add your question text, and set up answer options.',
+      targetElement: '.add-question-card',
+      position: 'left',
+      skipable: true
+    },
+    {
+      id: 'csv-import',
+      title: '📁 CSV Import',
+      description: 'Want to add multiple questions at once? Use CSV import to upload questions from a spreadsheet!',
+      targetElement: '.csv-import-card',
+      position: 'top',
+      skipable: true
+    }
+  ];
 
   /** create a typed option form group */
   private newOption(placeholder: string): OptionForm {
@@ -143,10 +187,129 @@ export class AddQuestionComponent {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Start tutorial after view is fully initialized
+    setTimeout(() => {
+      this.startTutorial();
+    }, 1000);
+  }
+
   /** UI actions */
   toggleSuggestion(): void {
     this.suggestionsOpen.update((v) => !v);
   }
+
+  openTemplate(): void {
+    this.router.navigate(['/template']);
+  }
+
+  // Tutorial methods
+  startTutorial(): void {
+    if (this.tutorialService.shouldAutoStart('add-question')) {
+      console.log('Auto-starting tutorial for add-question component');
+      this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'add-question');
+    } else {
+      console.log('Tutorial already seen for add-question component');
+    }
+  }
+
+  resetTutorial(): void {
+    this.tutorialService.resetTutorial('add-question');
+    this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'add-question');
+  }
+
+  nextTutorialStep(): void {
+    this.tutorialService.nextStep();
+  }
+
+  previousTutorialStep(): void {
+    this.tutorialService.previousStep();
+  }
+
+  skipTutorial(): void {
+    localStorage.setItem('quiz-tutorial-seen', 'true');
+    this.tutorialService.skipTutorial();
+  }
+
+  getCurrentStep(): TutorialStep | null {
+    return this.tutorialService.getCurrentStepData();
+  }
+
+  getSpotlightPosition(): { top: string; left: string; width: string; height: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) {
+      console.log('No current step');
+      return null;
+    }
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) {
+      console.log('Element not found:', currentStep.targetElement);
+      return null;
+    }
+
+    const rect = element.getBoundingClientRect();
+    console.log('Element found, rect:', rect);
+    return {
+      top: `${rect.top - 5}px`,
+      left: `${rect.left - 5}px`,
+      width: `${rect.width + 10}px`,
+      height: `${rect.height + 10}px`
+    };
+  }
+
+  getPopupPosition(): { top: string; left: string } | null {
+    const currentStep = this.getCurrentStep();
+    if (!currentStep) {
+      console.log('No current step for popup');
+      return null;
+    }
+
+    const element = document.querySelector(currentStep.targetElement);
+    if (!element) {
+      console.log('Element not found for popup:', currentStep.targetElement);
+      return null;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const popupWidth = 350;
+    const popupHeight = 200;
+
+    let top = rect.top;
+    let left = rect.left;
+
+    switch (currentStep.position) {
+      case 'bottom':
+        top = rect.bottom + 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'top':
+        top = rect.top - popupHeight - 10;
+        left = rect.left + (rect.width / 2) - (popupWidth / 2);
+        break;
+      case 'left':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.left - popupWidth - 10;
+        break;
+      case 'right':
+        top = rect.top + (rect.height / 2) - (popupHeight / 2);
+        left = rect.right + 10;
+        break;
+    }
+
+    // Ensure popup stays within viewport
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+    if (top < 10) top = 10;
+    if (top + popupHeight > window.innerHeight - 10) top = window.innerHeight - popupHeight - 10;
+
+    console.log('Popup position calculated:', { top: `${top}px`, left: `${left}px` });
+    return {
+      top: `${top}px`,
+      left: `${left}px`
+    };
+  }
+
   addOption(): void {
     if (this.form.controls.type.value === 'Short Answer') return;
     this.options.push(this.newOption(`Option ${this.options.length + 1}`));
