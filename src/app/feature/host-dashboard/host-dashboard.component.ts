@@ -5,6 +5,7 @@ import { AddQuestionService } from '../../services/add-question.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
+import { QuizCalendarComponent } from '../quiz-calendar/quiz-calendar.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -29,7 +30,7 @@ interface QuickAction {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, QuizCalendarComponent],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
@@ -48,6 +49,7 @@ export class HostDashboardComponent implements OnInit {
   currentHostId = '2463579';
   currentDateTime = signal('Loading...');
   hostName = 'Prasannajeet Devendra Jain';
+  calendarVisible = signal(false);
   currentDay = signal('Today');
 
   quickActions: QuickAction[] = [
@@ -95,6 +97,15 @@ export class HostDashboardComponent implements OnInit {
       route: '/host/manage-content',
       color: '#6F42C1',
       gradient: 'linear-gradient(135deg, #6F42C1 0%, #5A32A3 100%)'
+    },
+    {
+      id: 'quiz-calendar',
+      title: 'Quiz Calendar',
+      description: 'View and manage your quiz schedule and upcoming events',
+      icon: 'fas fa-calendar-alt',
+      route: '#',
+      color: '#E83E8C',
+      gradient: 'linear-gradient(135deg, #E83E8C 0%, #C8306A 100%)'
     }
   ];
 
@@ -118,8 +129,12 @@ export class HostDashboardComponent implements OnInit {
       this.hostQuizzes.set(quizzes);
       
       // Update shared dashboard stats with real data
-      const draftQuizzes = quizzes.filter(q => q.status === 'DRAFT' || q.status === 'draft').length;
-      const publishedQuizzes = quizzes.filter(q => q.status === 'LIVE' || q.status === 'published').length;
+      const draftQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'draft').length;
+      const publishedQuizzes = quizzes.filter(q => 
+        q.status?.toLowerCase() === 'live' || 
+        q.status?.toLowerCase() === 'published' ||
+        q.status?.toLowerCase() === 'active'
+      ).length;
       const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0);
 
       this.dashboardStatsService.updateQuizStats(
@@ -180,7 +195,9 @@ export class HostDashboardComponent implements OnInit {
   }
 
   navigateToAction(action: QuickAction): void {
-    if (action.params) {
+    if (action.id === 'quiz-calendar') {
+      this.openCalendar();
+    } else if (action.params) {
       this.router.navigate([action.route], { queryParams: action.params });
     } else {
       this.router.navigate([action.route]);
@@ -188,5 +205,18 @@ export class HostDashboardComponent implements OnInit {
   }
   navigateBack(): void {
     this.router.navigate(['/']);
+  }
+
+  // Calendar methods
+  showCalendar(): boolean {
+    return this.calendarVisible();
+  }
+
+  openCalendar(): void {
+    this.calendarVisible.set(true);
+  }
+
+  closeCalendar(): void {
+    this.calendarVisible.set(false);
   }
 }
