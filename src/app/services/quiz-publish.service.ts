@@ -47,7 +47,7 @@ export class QuizPublishService {
     this.connectionState$.next('connecting');
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${environment.signalRHubUrl}`, {
+      .withUrl(`${environment.signalRUrl}`, {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
         accessTokenFactory: () => {

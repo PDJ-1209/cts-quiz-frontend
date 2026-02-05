@@ -5,7 +5,7 @@ import { AddQuestionService } from '../../services/add-question.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
-import { QuizCalendarComponent } from '../../components/quiz-calendar/quiz-calendar.component';
+import { QuizCalendarComponent } from '../quiz-calendar/quiz-calendar.component';
 
 interface DashboardStats {
   totalQuizzes: number;
