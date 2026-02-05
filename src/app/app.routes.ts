@@ -11,6 +11,7 @@ import { CreatePollComponent } from './feature/create-poll/create-poll.component
 import { AddQuestionComponent } from './feature/add-question/add-question.component';
 import { CreateSurveyComponent } from './feature/create-survey/create-survey.component';
 import { ResultComponent } from './feature/result/result.component';
+import { PreviewComponent } from './feature/preview/preview.component';
 
 export const routes: Routes = [
   { path: '', component: LandingPageComponent, pathMatch: 'full' },
@@ -19,6 +20,7 @@ export const routes: Routes = [
   { path: 'host/create-question', component: AddQuestionComponent },
   { path: 'host/create-survey', component: CreateSurveyComponent },
   { path: 'host/create-poll', component: CreatePollComponent },
+  { path: 'host/preview', component: PreviewComponent },
   { path: 'host/manage-content', component: ResultComponent },
   { 
     path: 'host/create-quiz', 

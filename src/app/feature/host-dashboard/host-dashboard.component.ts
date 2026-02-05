@@ -81,6 +81,15 @@ export class HostDashboardComponent implements OnInit {
       gradient: 'linear-gradient(135deg, #FD7E14 0%, #DC6502 100%)'
     },
     {
+      id: 'preview',
+      title: 'Preview Content',
+      description: 'Preview and test your quizzes before publishing',
+      icon: 'fas fa-eye',
+      route: '/host/preview',
+      color: '#17A2B8',
+      gradient: 'linear-gradient(135deg, #17A2B8 0%, #138496 100%)'
+    },
+    {
       id: 'manage-content',
       title: 'Manage Content',
       description: 'Edit, organize and configure your learning materials',

@@ -11,6 +11,7 @@ export interface QuizOption {
 }
 
 export interface QuizQuestion {
+  questionId?: number;
   text: string;
   type: QuestionType;
   difficulty: Difficulty;

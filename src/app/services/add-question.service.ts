@@ -72,6 +72,7 @@ export class AddQuestionService {
       category: cat.trim(),
     });
   }
+    
 
   /**
    * Add a single question with validation
@@ -186,6 +187,10 @@ export class AddQuestionService {
     return this.quizCreationService.updateQuiz(quizId, payload);
   }
 
+  async updateQuestionOnServer(questionId: number, questionData: any) {
+    return this.quizCreationService.updateQuestion(questionId, questionData);
+  }
+
   async deleteQuiz(quizId: number) {
     return this.quizCreationService.deleteQuiz(quizId);
   }
@@ -231,6 +236,7 @@ export class AddQuestionService {
     });
 
     const questions: QuizQuestion[] = quizDetails.questions.map(q => ({
+      questionId: parseInt(q.questionId),  // Keep the question ID for updates
       text: q.questionText,
       type: q.type as QuestionType,
       difficulty: q.difficulty as Difficulty,
@@ -238,6 +244,7 @@ export class AddQuestionService {
       timerSeconds: q.timeLimit || null,
       tags: [],
       options: q.options.map(opt => ({
+        optionId: parseInt(opt.optionId),  // Keep the option ID for updates
         text: opt.optionText,
         isCorrect: opt.isCorrect
       }))

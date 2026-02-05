@@ -11,7 +11,7 @@ import {
 } from '../models/quiz.models';
 
 export interface CreateQuizPayload {
-  QuizName: string;
+  quizTitle: string;
   quizDescription: string;
   category: string;
   difficulty: string;
@@ -113,6 +113,22 @@ export class QuizCreationService {
   }
 
   /**
+   * Update a single question
+   */
+  async updateQuestion(questionId: number, questionData: any): Promise<any> {
+    const url = `http://localhost:5195/api/Host/Question/${questionId}`;
+    try {
+      console.log('Updating question:', questionId, questionData);
+      const response = await firstValueFrom(this.http.put<any>(url, questionData));
+      console.log('Question updated successfully:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Error updating question:', error);
+      throw new Error(`Failed to update question: ${error?.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Delete a quiz
    */
   async deleteQuiz(quizId: number): Promise<void> {
@@ -143,7 +159,7 @@ export class QuizCreationService {
    */
   private mapToBackendPayload(quiz: QuizMeta, questions: QuizQuestion[]): CreateQuizPayload {
     return {
-      QuizName: quiz.quizName,
+      quizTitle: quiz.quizName,
       quizDescription: '',
       category: quiz.category,
       difficulty: 'Medium',
