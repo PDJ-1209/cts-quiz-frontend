@@ -5,7 +5,8 @@ export interface QuizPublishRequest {
   quizId: number;
   quizNumber: string;
   publishedBy: string;
-  scheduledTime?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 // Response from backend after publishing
@@ -57,3 +58,24 @@ export interface QuizSessionEndData {
 }
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
+
+// Request payload for creating a QuizSession from result component
+export interface CreateQuizSessionRequest {
+  quizId: number;
+  hostId: string;
+  sessionCode: string; // This will be the quizNumber
+  startedAt?: string;
+  endedAt?: string;
+  status?: string;
+}
+
+// Response from backend after creating QuizSession
+export interface CreateQuizSessionResponse {
+  sessionId: number;
+  quizId: number;
+  hostId: string;
+  sessionCode: string;
+  startedAt: string;
+  endedAt?: string;
+  status: string;
+}

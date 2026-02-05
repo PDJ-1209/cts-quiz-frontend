@@ -91,7 +91,8 @@
                   <th>Questions</th>
                   <th>Status</th>
                   <th>Created</th>
-                  <th>Schedule Time</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
                   <th>Publish</th>
                   <th>Actions</th>
                 </tr>
@@ -107,18 +108,32 @@
                       <span 
                         class="badge" 
                         [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
-                        [class.bg-success]="quiz.status.toLowerCase() !== 'draft'">
+                        [class.bg-success]="quiz.status.toLowerCase() === 'active'"
+                        [class.bg-info]="quiz.status.toLowerCase() === 'completed'"
+                        [class.bg-primary]="quiz.status.toLowerCase() === 'live'">
                         {{ quiz.status }}
                       </span>
                     </td>
                     <td>{{ quiz.createdAt | date:'short' }}</td>
-                    <td class="schedule-cell">
+                    <td class="time-cell">
                       <input 
                         type="datetime-local" 
-                        class="form-control form-control-sm schedule-input"
-                        [value]="scheduledTimes[quiz.quizId] || ''"
-                        (change)="onScheduleTimeChange(quiz.quizId, $event)"
-                        [id]="'schedule-' + quiz.quizId">
+                        class="form-control form-control-sm time-input"
+                        [value]="startTimes[quiz.quizId] || ''"
+                        (change)="onStartTimeChange(quiz.quizId, $event)"
+                        placeholder="Start time"
+                        [disabled]="quiz.status.toLowerCase() === 'active'"
+                        [id]="'start-' + quiz.quizId">
+                    </td>
+                    <td class="time-cell">
+                      <input 
+                        type="datetime-local" 
+                        class="form-control form-control-sm time-input"
+                        [value]="endTimes[quiz.quizId] || ''"
+                        (change)="onEndTimeChange(quiz.quizId, $event)"
+                        placeholder="End time"
+                        [disabled]="quiz.status.toLowerCase() === 'active'"
+                        [id]="'end-' + quiz.quizId">
                     </td>
                     <td class="publish-cell">
                       @if (quiz.status.toLowerCase() === 'draft') {
@@ -127,7 +142,9 @@
                           (click)="publishQuiz(quiz.quizNumber)">
                           📤 Publish
                         </button>
-                      } @else if (quiz.status.toLowerCase() === 'live' || quiz.status.toLowerCase() === 'completed') {
+                      } @else if (quiz.status.toLowerCase() === 'active') {
+                        <span class="badge bg-success">🟢 Active</span>
+                      } @else if (quiz.status.toLowerCase() === 'completed') {
                         <button 
                           class="btn btn-sm btn-warning republish-btn"
                           (click)="republishQuiz(quiz.quizNumber)">

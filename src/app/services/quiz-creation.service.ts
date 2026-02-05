@@ -36,6 +36,15 @@ export class QuizCreationService {
   constructor(private http: HttpClient) {}
 
   /**
+   * Sync quiz status - Reset to Draft if no active session exists
+   */
+  async syncQuizStatus(quizId: number): Promise<void> {
+    const url = `${this.apiBase}/${quizId}/sync-status`;
+    await firstValueFrom(this.http.post(url, {}));
+    console.log(`[QuizCreationService] Synced status for Quiz ${quizId} back to Draft`);
+  }
+
+  /**
    * Create a new quiz with questions
    */
   async createQuiz(quiz: QuizMeta, questions: QuizQuestion[]): Promise<CreateQuizResponse> {
@@ -74,10 +83,15 @@ export class QuizCreationService {
    * Get all quizzes created by a specific host
    */
   async getHostQuizzes(hostName: string): Promise<QuizListItem[]> {
-    const url = `${this.apiBase}/GetByHost?createdBy=${encodeURIComponent(hostName)}`;
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const url = `${this.apiBase}/GetByHost?createdBy=${encodeURIComponent(hostName)}&_t=${timestamp}`;
     try {
       const response: any = await firstValueFrom(this.http.get<any>(url));
-      return response.data || response;
+      console.log('Raw API response:', response);
+      const quizzes = response.data || response;
+      console.log('Parsed quizzes:', quizzes);
+      return quizzes;
     } catch (error: any) {
       console.error('Error fetching host quizzes:', error);
       throw new Error(`Failed to fetch quizzes: ${error?.message || 'Unknown error'}`);

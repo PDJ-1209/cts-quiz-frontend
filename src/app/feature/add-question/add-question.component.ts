@@ -48,8 +48,6 @@ export class AddQuestionComponent implements AfterViewInit {
   private store = inject(AddQuestionService);
   private snackBar = inject(MatSnackBar);
   private dashboardStatsService = inject(DashboardStatsService);
-  private router = inject(Router);
-  private tutorialService = inject(TutorialService);
 
   // Header properties
   hostName = 'Quiz Master'; // You can make this dynamic later
