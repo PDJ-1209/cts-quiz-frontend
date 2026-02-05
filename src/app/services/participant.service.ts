@@ -2,6 +2,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { ValidateSessionResponse, JoinSessionRequest, ParticipantResponse } from '../models/participant.models';
 
 /** ===== Participant Domain Models ===== */
 
@@ -197,5 +198,45 @@ export class ParticipantService {
     this._currentSession.set(null);
     this._currentQuestion.set(null);
     this._quizResults.set(null);
+  }
+
+  /**
+   * Validate session code - check if it's active
+   */
+  async validateSessionCode(sessionCode: string): Promise<ValidateSessionResponse> {
+    const url = 'http://localhost:5195/api/Participate/Session/validate';
+    
+    try {
+      console.log(`[ParticipantService] Validating session code: ${sessionCode}`);
+      const response = await firstValueFrom(
+        this.http.post<ValidateSessionResponse>(url, JSON.stringify(sessionCode), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
+      console.log('[ParticipantService] Validation response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Validate session failed:', error);
+      throw new Error(`Failed to validate session: ${error?.error?.message || error?.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Join session - create participant entry
+   */
+  async joinSession(request: JoinSessionRequest): Promise<ParticipantResponse> {
+    const url = 'http://localhost:5195/api/Participate/Session/join';
+    
+    try {
+      console.log('[ParticipantService] Joining session:', request);
+      const response = await firstValueFrom(
+        this.http.post<ParticipantResponse>(url, request)
+      );
+      console.log('[ParticipantService] Join response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Join session failed:', error);
+      throw new Error(`Failed to join session: ${error?.error?.message || error?.message || 'Unknown error'}`);
+    }
   }
 }

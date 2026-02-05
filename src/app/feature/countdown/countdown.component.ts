@@ -1,11 +1,21 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import * as signalR from '@microsoft/signalr';
+
+interface SessionData {
+  sessionId: number;
+  quizId: number;
+  quizTitle: string;
+  startedAt: string;
+  endedAt: string;
+  status: string;
+}
 
 @Component({
   selector: 'app-countdown',
@@ -15,48 +25,190 @@ import { Router } from '@angular/router';
   styleUrls: ['./countdown.component.css']
 })
 export class CountdownComponent implements OnInit, OnDestroy {
-  totalTime = 10;
-  timeLeft = this.totalTime;
-  progress = 100;
+  sessionData: SessionData | null = null;
+  participantName: string = '';
+  sessionCode: string = '';
+  
+  quizStartTime: Date | null = null;
+  quizEndTime: Date | null = null;
+  
+  timeUntilStart = signal({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  isWaiting = signal(true);
+  hasStarted = signal(false);
 
   private intervalId?: number;
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
-  private platformId = inject(PLATFORM_ID); // detect SSR vs browser
+  private route = inject(ActivatedRoute);
+  private platformId = inject(PLATFORM_ID);
+  
+  private hubConnection?: signalR.HubConnection;
 
   ngOnInit(): void {
-    // Only run countdown in the browser
-    if (isPlatformBrowser(this.platformId)) {
-      this.startCountdown();
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    // Load session data from localStorage
+    const sessionDataStr = localStorage.getItem('sessionData');
+    const participantNameStr = localStorage.getItem('participantName');
+    
+    if (!sessionDataStr) {
+      this.snackBar.open('No session data found. Please join a quiz first.', 'Close', { duration: 3000 });
+      this.router.navigate(['/participant']);
+      return;
+    }
+
+    this.sessionData = JSON.parse(sessionDataStr);
+    this.participantName = participantNameStr || 'Participant';
+    
+    // Get session code from query params
+    this.route.queryParams.subscribe(params => {
+      this.sessionCode = params['code'] || '';
+    });
+
+    if (this.sessionData) {
+      this.quizStartTime = new Date(this.sessionData.startedAt);
+      this.quizEndTime = new Date(this.sessionData.endedAt);
+      
+      // Check if quiz has already started
+      const now = new Date();
+      if (now >= this.quizStartTime) {
+        this.hasStarted.set(true);
+        this.isWaiting.set(false);
+        this.navigateToQuiz();
+      } else {
+        // Start countdown timer
+        this.startCountdown();
+        
+        // Initialize SignalR connection
+        this.initializeSignalR();
+      }
     }
   }
 
-  private startCountdown() {
-    // Use setInterval (not window.setInterval) and it’s still guarded by isPlatformBrowser
-    this.intervalId = setInterval(() => {
-      if (this.timeLeft > 0) {
-        this.timeLeft--;
-        this.progress = (this.timeLeft / this.totalTime) * 100;
-      } else {
-        this.stopCountdown();
-        this.snackBar.open('Countdown finished!', 'Close', { duration: 1500 });
-        this.router.navigate(['/quiz']);
-      }
-    }, 1000) as unknown as number; // cast for TS if strict typing complains
+  private initializeSignalR(): void {
+    this.hubConnection = new signalR.HubConnectionBuilder()
+      .withUrl('http://localhost:5195/quizSessionHub', {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    this.hubConnection.on('QuizStarted', (sessionCode: string) => {
+      console.log('Quiz started notification received for session:', sessionCode);
+      this.hasStarted.set(true);
+      this.isWaiting.set(false);
+      this.stopCountdown();
+      this.snackBar.open('Quiz is starting now!', 'Close', { duration: 2000 });
+      setTimeout(() => this.navigateToQuiz(), 1000);
+    });
+
+    this.hubConnection.start()
+      .then(() => {
+        console.log('SignalR Connected');
+        if (this.sessionCode) {
+          this.hubConnection?.invoke('JoinSession', this.sessionCode);
+        }
+      })
+      .catch(err => console.error('Error connecting to SignalR:', err));
   }
 
-  private stopCountdown() {
+  private startCountdown(): void {
+    this.updateTimeRemaining();
+    
+    this.intervalId = setInterval(() => {
+      this.updateTimeRemaining();
+      
+      if (this.quizStartTime && new Date() >= this.quizStartTime) {
+        this.hasStarted.set(true);
+        this.isWaiting.set(false);
+        this.stopCountdown();
+        this.navigateToQuiz();
+      }
+    }, 1000) as unknown as number;
+  }
+
+  private updateTimeRemaining(): void {
+    if (!this.quizStartTime) return;
+
+    const now = new Date();
+    const diff = this.quizStartTime.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      this.timeUntilStart.set({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    this.timeUntilStart.set({ days, hours, minutes, seconds });
+  }
+
+  private stopCountdown(): void {
     if (this.intervalId !== undefined) {
       clearInterval(this.intervalId);
       this.intervalId = undefined;
     }
   }
 
-  ngOnDestroy(): void {
-    this.stopCountdown();
+  private navigateToQuiz(): void {
+    this.router.navigate(['/quiz']);
   }
 
-  get formattedTime(): string {
-    return `00:${this.timeLeft.toString().padStart(2, '0')}`;
+  ngOnDestroy(): void {
+    this.stopCountdown();
+    
+    if (this.hubConnection) {
+      if (this.sessionCode) {
+        this.hubConnection.invoke('LeaveSession', this.sessionCode);
+      }
+      this.hubConnection.stop();
+    }
+  }
+
+  get formattedStartTime(): string {
+    if (!this.quizStartTime) return '';
+    return this.quizStartTime.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  }
+
+  get formattedEndTime(): string {
+    if (!this.quizEndTime) return '';
+    return this.quizEndTime.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  }
+
+  get formattedStartDate(): string {
+    if (!this.quizStartTime) return '';
+    return this.quizStartTime.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  }
+
+  get progress(): number {
+    if (!this.quizStartTime || !this.sessionData) return 0;
+    
+    const now = new Date();
+    const start = this.quizStartTime;
+    const totalWaitTime = start.getTime() - now.getTime();
+    
+    if (totalWaitTime <= 0) return 100;
+    
+    // Calculate progress based on time remaining
+    const maxWaitTime = 60 * 60 * 1000; // 1 hour max for progress calculation
+    const progress = Math.min(100, ((maxWaitTime - totalWaitTime) / maxWaitTime) * 100);
+    
+    return Math.max(0, progress);
   }
 }
