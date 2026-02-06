@@ -30,9 +30,14 @@
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0 text-white"><span class="me-2">📝</span>Quiz Information</h5>
-          <button type="button" class="btn btn-success btn-sm template-btn" (click)="openTemplate()">
-            📋 Template
-          </button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success btn-sm template-btn" (click)="openTemplate()">
+              📋 Template
+            </button>
+            <button type="button" class="btn btn-info btn-sm" (click)="startTutorial()" title="Start Tutorial">
+              🎓 Tutorial
+            </button>
+          </div>
         </div>
         <div class="card-body">
           <div class="row g-3">

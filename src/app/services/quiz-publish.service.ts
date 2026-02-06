@@ -21,7 +21,7 @@ import {
 })
 export class QuizPublishService {
   private http = inject(HttpClient);
-  private apiBase = `${environment.apiUrl}/api/Host/QuizSession`;
+  private apiBase = `${environment.apiUrl}/Host/QuizSession`;
   private hubConnection: signalR.HubConnection | null = null;
   
   // Connection state
@@ -295,7 +295,7 @@ export class QuizPublishService {
     endedAt?: string,
     status: string = 'Active'
   ): Promise<CreateQuizSessionResponse> {
-    const url = `${environment.apiUrl}/api/Host/QuizSession/create`;
+    const url = `${this.apiBase}/create`;
     
     const payload: CreateQuizSessionRequest = {
       quizId,
@@ -347,7 +347,7 @@ export class QuizPublishService {
    * @param sessionCode - The session code (quiz number)
    */
   public async getQuizSessionByCode(sessionCode: string): Promise<CreateQuizSessionResponse> {
-    const url = `${environment.apiUrl}/api/Host/QuizSession/by-code/${encodeURIComponent(sessionCode)}`;
+    const url = `${this.apiBase}/by-code/${encodeURIComponent(sessionCode)}`;
     
     try {
       const response = await firstValueFrom(
@@ -369,7 +369,7 @@ export class QuizPublishService {
    * @param status - New status (Active, Completed, etc.)
    */
   public async updateQuizSessionStatus(sessionId: number, status: string): Promise<CreateQuizSessionResponse> {
-    const url = `${environment.apiUrl}/api/Host/QuizSession/${sessionId}/status`;
+    const url = `${this.apiBase}/${sessionId}/status`;
     
     try {
       const response = await firstValueFrom(
