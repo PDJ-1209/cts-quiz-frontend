@@ -11,6 +11,7 @@ import {
 } from '../models/quiz.models';
 
 export interface CreateQuizPayload {
+  quizName?: string;
   quizTitle: string;
   quizDescription: string;
   category: string;
@@ -20,6 +21,7 @@ export interface CreateQuizPayload {
   questions: {
     questionText: string;
     questionType: string;
+    timerSeconds?: number;
     options: {
       optionText: string;
       isCorrect: boolean;
@@ -91,7 +93,21 @@ export class QuizCreationService {
       console.log('Raw API response:', response);
       const quizzes = response.data || response;
       console.log('Parsed quizzes:', quizzes);
-      return quizzes;
+      
+      // Map to handle both PascalCase and camelCase property names
+      return quizzes.map((quiz: any) => ({
+        quizId: quiz.QuizId || quiz.quizId,
+        quizName: quiz.QuizName || quiz.quizName,
+        quizNumber: quiz.QuizNumber || quiz.quizNumber,
+        category: quiz.Category || quiz.category,
+        questionCount: quiz.QuestionCount || quiz.questionCount,
+        templateId: quiz.TemplateId || quiz.templateId,
+        createdBy: quiz.CreatedBy || quiz.createdBy,
+        updatedBy: quiz.UpdatedBy || quiz.updatedBy,
+        createdAt: quiz.CreatedAt || quiz.createdAt,
+        updatedAt: quiz.UpdatedAt || quiz.updatedAt,
+        status: quiz.Status || quiz.status
+      }));
     } catch (error: any) {
       console.error('Error fetching host quizzes:', error);
       throw new Error(`Failed to fetch quizzes: ${error?.message || 'Unknown error'}`);
@@ -173,6 +189,7 @@ export class QuizCreationService {
    */
   private mapToBackendPayload(quiz: QuizMeta, questions: QuizQuestion[]): CreateQuizPayload {
     return {
+      quizName: quiz.quizName,
       quizTitle: quiz.quizName,
       quizDescription: '',
       category: quiz.category,
@@ -182,6 +199,7 @@ export class QuizCreationService {
       questions: questions.map(q => ({
         questionText: q.text,
         questionType: this.mapQuestionType(q.type),
+        timerSeconds: q.timerSeconds ?? 30,
         options: q.options.map(o => ({ 
           optionText: o.text, 
           isCorrect: o.isCorrect 

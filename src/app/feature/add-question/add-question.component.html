@@ -107,6 +107,17 @@
               </div>
             </div>
 
+            <!-- Timer Input -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Time Limit (seconds)</label>
+              <input type="number" class="form-control" [formControl]="form.controls.timerSeconds"
+                placeholder="Enter time limit in seconds (e.g., 30)" min="5" max="300" />
+              <div class="form-text">Time allowed for this question (5-300 seconds, default: 30)</div>
+              @if (form.controls.timerSeconds.invalid && form.controls.timerSeconds.touched) {
+              <div class="text-danger small mt-1">Timer must be between 5 and 300 seconds.</div>
+              }
+            </div>
+
             <!-- Options (hidden for Short Answer) -->
             @if (form.controls.type.value !== 'Short Answer') {
             <div class="mb-3">
@@ -151,16 +162,6 @@
                 <input #tagInput type="text" class="form-control" placeholder="Add tag..." />
                 <button type="button" class="btn btn-outline-secondary" (click)="addTag(tagInput)">Add</button>
               </div>
-            </div>
-
-            <!-- Timer -->
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Timer (seconds)</label>
-              <input type="number" class="form-control" min="0" [formControl]="form.controls.timerSeconds"
-                placeholder="Enter time in seconds" (keydown)="preventInvalidInput($event)" />
-              @if (form.controls.timerSeconds.invalid && form.controls.timerSeconds.touched) {
-              <div class="text-danger small mt-1">Must be a positive number.</div>
-              }
             </div>
 
             <!-- Submit Button -->

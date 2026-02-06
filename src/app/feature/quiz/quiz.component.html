@@ -2,7 +2,31 @@
   <app-header [current]="currentIndex" [total]="questions.length"></app-header>
 
   <main class="content container py-5">
-    <ng-container *ngIf="!finished; else resultsBlock">
+    <!-- Loading State -->
+    <ng-container *ngIf="loading">
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted">Loading quiz questions...</p>
+      </div>
+    </ng-container>
+
+    <!-- Quiz Content -->
+    <ng-container *ngIf="!loading && !finished">
+      <!-- Timer Display -->
+      <div class="timer-display text-center mb-4">
+        <div class="card shadow-sm" [ngClass]="{'bg-danger text-white': timeRemaining <= 5, 'bg-warning': timeRemaining <= 10 && timeRemaining > 5, 'bg-light': timeRemaining > 10}">
+          <div class="card-body py-3">
+            <h5 class="mb-0">
+              <span class="fs-4">⏱️</span>
+              <span class="fs-3 fw-bold mx-2">{{ timeRemaining }}</span>
+              <span class="fs-6">seconds</span>
+            </h5>
+          </div>
+        </div>
+      </div>
+
       <app-question *ngIf="currentQuestion" [question]="{ id: currentQuestion.id, text: currentQuestion.text }"></app-question>
 
       <app-options *ngIf="currentQuestion"
@@ -11,18 +35,50 @@
                    (selectedChange)="onSelectedChange($event)">
       </app-options>
 
-      <app-submit [disabled]="!selected"
+      <app-submit [disabled]="!selected || submitting"
                   label="Submit Answer"
-                  (clicked)="submitAnswer()">
+                  (clicked)="submitAnswer(false)">
       </app-submit>
     </ng-container>
 
-    <ng-template #resultsBlock>
-      <div class="card shadow-lg border-0 text-center p-5">
-        <h2 class="h3 fw-bold mb-4">Quiz Finished</h2>
-        <p class="h4 mb-4">Your Score: {{ score }} / {{ questions.length }}</p>
-        <app-submit label="Restart" (clicked)="restart()"></app-submit>
+    <!-- Results Block -->
+    <ng-container *ngIf="!loading && finished">
+      <div class="card shadow-lg border-0 p-4">
+        <div class="text-center mb-4">
+          <h2 class="h3 fw-bold mb-3">🎉 Quiz Finished!</h2>
+          <div class="score-display mb-4">
+            <div class="display-4 fw-bold text-primary">{{ score }} / {{ questions.length }}</div>
+            <p class="text-muted h5">{{ quizTitle }}</p>
+            <p class="text-muted">{{ getScorePercentage() }}% Correct</p>
+          </div>
+        </div>
+
+        <!-- Answer Review -->
+        <div class="answers-review mt-4">
+          <h4 class="fw-semibold mb-3">📋 Answer Review</h4>
+          <div class="list-group">
+            <div *ngFor="let question of questions; let i = index" 
+                 class="list-group-item mb-2 border rounded">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-semibold mb-1">Question {{ i + 1 }}</h6>
+              </div>
+              <p class="mb-2">{{ question.text }}</p>
+              <div class="small">
+                <div class="text-muted mb-1">
+                  <strong>Time Limit:</strong> {{ question.timerSeconds }} seconds
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="text-center mt-4">
+          <button class="btn btn-primary btn-lg" (click)="returnToParticipant()">
+            Return to Home
+          </button>
+        </div>
       </div>
-    </ng-template>
+    </ng-container>
   </main>
 </div>

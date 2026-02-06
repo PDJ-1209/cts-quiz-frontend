@@ -199,16 +199,16 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         // Check current quiz status in our list
         const currentQuiz = this.hostQuizzes().find(q => q.quizNumber === quizNumber);
         const currentStatus = currentQuiz?.status?.toLowerCase();
-        const newStatus = session.status.toLowerCase();
+        const newStatus = session?.status?.toLowerCase();
 
         // If status changed, mark for refresh
-        if (currentStatus !== newStatus) {
+        if (newStatus && currentStatus !== newStatus) {
           console.log(`Status changed for ${quizNumber}: ${currentStatus} -> ${newStatus}`);
           statusChanged = true;
         }
 
         // If status changed to Completed, remove from tracking
-        if (session.status === 'Completed') {
+        if (session?.status?.toLowerCase() === 'completed') {
           this.activeSessionIds.delete(quizNumber);
           
           this.snackBar.open(
@@ -308,7 +308,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.endTimes[quiz.quizId] = this.formatDateTimeLocal(endDate);
               }
               // Track active sessions only
-              if (status === 'active') {
+              if (status === 'active' && session.sessionId) {
                 this.activeSessionIds.set(quiz.quizNumber, session.sessionId);
               }
             }

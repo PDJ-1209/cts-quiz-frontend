@@ -66,21 +66,51 @@ export class CountdownComponent implements OnInit, OnDestroy {
     });
 
     if (this.sessionData) {
-      this.quizStartTime = new Date(this.sessionData.startedAt);
-      this.quizEndTime = new Date(this.sessionData.endedAt);
+      console.log('[Countdown] Session data:', this.sessionData);
+      
+      // Parse dates with validation
+      if (this.sessionData.startedAt) {
+        const startDate = new Date(this.sessionData.startedAt);
+        if (!isNaN(startDate.getTime())) {
+          this.quizStartTime = startDate;
+          console.log('[Countdown] Valid start time:', this.quizStartTime);
+        } else {
+          console.error('[Countdown] Invalid startedAt date:', this.sessionData.startedAt);
+          this.snackBar.open('Invalid quiz start time. Please contact the host.', 'Close', { duration: 5000 });
+        }
+      } else {
+        console.warn('[Countdown] No startedAt in session data');
+      }
+      
+      if (this.sessionData.endedAt) {
+        const endDate = new Date(this.sessionData.endedAt);
+        if (!isNaN(endDate.getTime())) {
+          this.quizEndTime = endDate;
+          console.log('[Countdown] Valid end time:', this.quizEndTime);
+        } else {
+          console.error('[Countdown] Invalid endedAt date:', this.sessionData.endedAt);
+        }
+      } else {
+        console.warn('[Countdown] No endedAt in session data');
+      }
       
       // Check if quiz has already started
-      const now = new Date();
-      if (now >= this.quizStartTime) {
-        this.hasStarted.set(true);
-        this.isWaiting.set(false);
-        this.navigateToQuiz();
+      if (this.quizStartTime) {
+        const now = new Date();
+        if (now >= this.quizStartTime) {
+          this.hasStarted.set(true);
+          this.isWaiting.set(false);
+          this.navigateToQuiz();
+        } else {
+          // Start countdown timer
+          this.startCountdown();
+          
+          // Initialize SignalR connection
+          this.initializeSignalR();
+        }
       } else {
-        // Start countdown timer
-        this.startCountdown();
-        
-        // Initialize SignalR connection
-        this.initializeSignalR();
+        this.snackBar.open('Quiz start time not available. Please try again.', 'Close', { duration: 3000 });
+        this.router.navigate(['/participant']);
       }
     }
   }
@@ -170,7 +200,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
   }
 
   get formattedStartTime(): string {
-    if (!this.quizStartTime) return '';
+    if (!this.quizStartTime || isNaN(this.quizStartTime.getTime())) return 'Not set';
     return this.quizStartTime.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
@@ -179,7 +209,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
   }
 
   get formattedEndTime(): string {
-    if (!this.quizEndTime) return '';
+    if (!this.quizEndTime || isNaN(this.quizEndTime.getTime())) return 'Not set';
     return this.quizEndTime.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
@@ -188,7 +218,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
   }
 
   get formattedStartDate(): string {
-    if (!this.quizStartTime) return '';
+    if (!this.quizStartTime || isNaN(this.quizStartTime.getTime())) return 'Not set';
     return this.quizStartTime.toLocaleDateString('en-US', { 
       month: 'long', 
       day: 'numeric', 

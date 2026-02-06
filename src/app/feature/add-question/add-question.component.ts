@@ -141,7 +141,7 @@ export class AddQuestionComponent implements AfterViewInit {
     difficulty: this.fb.nonNullable.control<Difficulty>('Medium'),
     category: this.fb.nonNullable.control<string>(''),
     tags: this.fb.array<FormControl<string>>([]),
-    timerSeconds: this.fb.control<number | null>(null, { validators: [Validators.min(0)] }),
+    timerSeconds: this.fb.control<number | null>(30, { validators: [Validators.min(5), Validators.max(300)] }),
   });
 
   /** typed getters for template */

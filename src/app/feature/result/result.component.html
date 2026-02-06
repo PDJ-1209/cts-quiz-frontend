@@ -101,17 +101,17 @@
                 @for (quiz of hostQuizzes(); track quiz.quizId) {
                   <tr>
                     <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
-                    <td><strong>{{ quiz.quizName }}</strong></td>
+                    <td><strong>{{ quiz.quizName || '(Unnamed Quiz)' }}</strong></td>
                     <td><span class="badge bg-secondary">{{ quiz.category }}</span></td>
                     <td><span class="badge bg-info">{{ quiz.questionCount }}</span></td>
-                    <td>
+                    <td class="text-center">
                       <span 
                         class="badge" 
                         [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
                         [class.bg-success]="quiz.status.toLowerCase() === 'active'"
                         [class.bg-info]="quiz.status.toLowerCase() === 'completed'"
                         [class.bg-primary]="quiz.status.toLowerCase() === 'live'">
-                        {{ quiz.status }}
+                        {{ quiz.status || 'N/A' }}
                       </span>
                     </td>
                     <td>{{ quiz.createdAt | date:'short' }}</td>

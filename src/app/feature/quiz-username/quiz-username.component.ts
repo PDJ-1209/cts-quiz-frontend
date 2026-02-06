@@ -59,6 +59,7 @@ export class QuizUsernameComponent implements OnInit {
       } else {
         // Store session data for countdown
         localStorage.setItem('sessionData', JSON.stringify(validation));
+        localStorage.setItem('quizTitle', validation.quizTitle || 'Quiz');
       }
     } catch (error: any) {
       this.snackBar.open('❌ Failed to validate quiz code', 'Close', {

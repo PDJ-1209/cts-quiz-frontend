@@ -5,7 +5,6 @@ import { AddQuestionService } from '../../services/add-question.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
-import { QuizCalendarComponent } from '../quiz-calendar/quiz-calendar.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -30,7 +29,7 @@ interface QuickAction {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, QuizCalendarComponent],
+  imports: [CommonModule, RouterModule],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })

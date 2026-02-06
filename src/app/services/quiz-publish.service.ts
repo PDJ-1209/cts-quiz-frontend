@@ -350,10 +350,20 @@ export class QuizPublishService {
     const url = `${environment.apiUrl}/api/Host/QuizSession/by-code/${encodeURIComponent(sessionCode)}`;
     
     try {
-      const response = await firstValueFrom(
-        this.http.get<CreateQuizSessionResponse>(url)
+      const response: any = await firstValueFrom(
+        this.http.get<any>(url)
       );
-      return response;
+      
+      // Map to handle both PascalCase and camelCase
+      return {
+        sessionId: response.SessionId || response.sessionId,
+        quizId: response.QuizId || response.quizId,
+        hostId: response.HostId || response.hostId,
+        sessionCode: response.SessionCode || response.sessionCode,
+        startedAt: response.StartedAt || response.startedAt,
+        endedAt: response.EndedAt || response.endedAt,
+        status: response.Status || response.status
+      };
     } catch (error: any) {
       // Don't log 404 errors as they're expected when sessions are completed/deleted
       if (error.status !== 404) {
