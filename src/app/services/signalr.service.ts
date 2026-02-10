@@ -23,6 +23,13 @@ interface SessionStatusData {
   [key: string]: unknown;
 }
 
+interface ReceiveQuestionData {
+  sessionCode?: string;
+  participantId?: number;
+  currentQuestion: number;
+  serverTimeUtc?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -35,6 +42,16 @@ export class SignalrService {
   public participantJoined$ = new Subject<ParticipantData>();
   public sessionStatusChanged$ = new Subject<SessionStatusData>();
   public sessionEnded$ = new Subject<{ sessionId: number; [key: string]: unknown }>();
+  public receiveQuestion$ = new Subject<ReceiveQuestionData>();
+  
+  // Leaderboard Event Streams
+  public leaderboardUpdated$ = new Subject<any>();
+  public hostLeaderboardUpdated$ = new Subject<any>();
+  public participantCountUpdated$ = new Subject<number>();
+  public leaderboardVisibilityChanged$ = new Subject<boolean>();
+  public scoreUpdated$ = new Subject<any>();
+  public showLeaderboard$ = new Subject<any>();
+  public showHostLeaderboard$ = new Subject<any>();
   
   // Connection state
   public connectionEstablished$ = new BehaviorSubject<boolean>(false);
@@ -44,7 +61,7 @@ export class SignalrService {
   /**
    * Initializes connection and joins the specific session group
    */
-  public initHubConnection(sessionId: number, participantId: number): void {
+  public initHubConnection(sessionCode: string): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${environment.signalRUrl}`, {
         skipNegotiation: true,
@@ -56,11 +73,11 @@ export class SignalrService {
     this.hubConnection
       .start()
       .then(() => {
-        console.log(`[SignalR] Connected to Hub for Session ${sessionId}`);
+        console.log(`[SignalR] Connected to Hub for Session ${sessionCode}`);
         this.connectionEstablished$.next(true);
         
         // Invoke the JoinSession method on your C# Hub
-        this.joinSession(sessionId, participantId);
+        this.joinSession(sessionCode);
         this.registerHandlers();
       })
       .catch((err: Error) => {
@@ -69,8 +86,8 @@ export class SignalrService {
       });
   }
 
-  private joinSession(sessionId: number, participantId: number): void {
-    this.hubConnection.invoke('JoinSession', sessionId, participantId)
+  private joinSession(sessionCode: string): void {
+    this.hubConnection.invoke('JoinSession', sessionCode)
       .catch((err: Error) => console.error('[SignalR] JoinSession Error: ', err));
   }
 
@@ -103,14 +120,51 @@ export class SignalrService {
     this.hubConnection.on('SessionEnded', (data: { sessionId: number; [key: string]: unknown }) => {
       this.sessionEnded$.next(data);
     });
+
+    this.hubConnection.on('ReceiveQuestion', (data: ReceiveQuestionData | number) => {
+      if (typeof data === 'number') {
+        this.receiveQuestion$.next({ currentQuestion: data });
+      } else {
+        this.receiveQuestion$.next(data);
+      }
+    });
+
+    // Leaderboard event handlers
+    this.hubConnection.on('LeaderboardUpdated', (data: any) => {
+      this.leaderboardUpdated$.next(data);
+    });
+
+    this.hubConnection.on('HostLeaderboardUpdated', (data: any) => {
+      this.hostLeaderboardUpdated$.next(data);
+    });
+
+    this.hubConnection.on('ParticipantCountUpdated', (count: number) => {
+      this.participantCountUpdated$.next(count);
+    });
+
+    this.hubConnection.on('LeaderboardVisibilityChanged', (isVisible: boolean) => {
+      this.leaderboardVisibilityChanged$.next(isVisible);
+    });
+
+    this.hubConnection.on('ScoreUpdated', (data: any) => {
+      this.scoreUpdated$.next(data);
+    });
+
+    this.hubConnection.on('ShowLeaderboard', (data: any) => {
+      this.showLeaderboard$.next(data);
+    });
+
+    this.hubConnection.on('ShowHostLeaderboard', (data: any) => {
+      this.showHostLeaderboard$.next(data);
+    });
   }
 
   /**
    * Hub Invocations (Client to Server)
    */
-  public async leaveSession(sessionId: string): Promise<void> {
+  public async leaveSession(sessionCode: string): Promise<void> {
     if (this.hubConnection) {
-      await this.hubConnection.invoke('LeaveSessionGroup', sessionId);
+      await this.hubConnection.invoke('LeaveSession', sessionCode);
     }
   }
 

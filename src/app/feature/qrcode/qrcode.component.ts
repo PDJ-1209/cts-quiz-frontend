@@ -14,6 +14,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 export class QrcodeComponent {
   @Input() quizNumber: string = '';
   @Input() quizId: string | number = '';
+  @Input() surveyNumber: string = '';
+  @Input() surveyId: string | number = '';
+  @Input() pollNumber: string = '';
+  @Input() pollId: string | number = '';
+  @Input() contentType: 'quiz' | 'survey' | 'poll' = 'quiz'; // New input to specify content type
   @Input() showActions: boolean = true; // Show "Create Another Quiz" and download buttons
   @Output() newQuizClick = new EventEmitter<void>();
   
@@ -33,9 +38,27 @@ export class QrcodeComponent {
   }
 
   private updateQrData() {
-    if (this.quizNumber) {
-      this.qrData.set(`http://localhost:4200/participant?quizNumber=${encodeURIComponent(this.quizNumber)}`);
+    let url = '';
+    
+    switch(this.contentType) {
+      case 'quiz':
+        if (this.quizNumber) {
+          url = `http://localhost:4200/participant?quizNumber=${encodeURIComponent(this.quizNumber)}`;
+        }
+        break;
+      case 'survey':
+        if (this.surveyNumber) {
+          url = `http://localhost:4200/participant?surveyNumber=${encodeURIComponent(this.surveyNumber)}`;
+        }
+        break;
+      case 'poll':
+        if (this.pollNumber) {
+          url = `http://localhost:4200/participant?pollNumber=${encodeURIComponent(this.pollNumber)}`;
+        }
+        break;
     }
+    
+    this.qrData.set(url);
   }
 
   /** Download QR card as PNG image */
@@ -63,7 +86,9 @@ export class QrcodeComponent {
       }).then(canvas => canvas.toDataURL('image/png'));
       
       const link = document.createElement('a');
-      link.download = `Quiz_QR_${this.quizNumber}.png`;
+      const number = this.quizNumber || this.surveyNumber || this.pollNumber || 'Unknown';
+      const type = this.contentType.charAt(0).toUpperCase() + this.contentType.slice(1);
+      link.download = `${type}_QR_${number}.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
@@ -78,7 +103,9 @@ export class QrcodeComponent {
         });
         
         const link = document.createElement('a');
-        link.download = `Quiz_QR_${this.quizNumber}.png`;
+        const number = this.quizNumber || this.surveyNumber || this.pollNumber || 'Unknown';
+        const type = this.contentType.charAt(0).toUpperCase() + this.contentType.slice(1);
+        link.download = `${type}_QR_${number}.png`;
         link.href = dataUrl;
         link.click();
       } catch (fallbackError) {

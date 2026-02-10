@@ -1,0 +1,205 @@
+<div class="container-fluid d-flex align-items-center justify-content-center min-vh-100 bg-light py-4">
+  <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+    <div class="card shadow-lg border-0 position-relative">
+      <!-- Close/X Button -->
+      <button
+        type="button"
+        class="btn-close position-absolute top-0 end-0 m-3"
+        aria-label="Cancel and go back to Login"
+        (click)="goToLogin()"
+        title="Cancel and go back to Login">
+      </button>
+
+      <div class="card-body p-4 p-md-5">
+        <!-- Cognizant Logo -->
+        <div class="text-center mb-4">
+          <img src="Cognizant_logo.png" alt="Cognizant" class="cognizant-logo" style="max-height: 80px; width: auto;">
+        </div>
+        
+        <h2 class="text-center mb-4 fw-bold">Employee Registration</h2>
+
+        <!-- Success alert -->
+        @if (success) {
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            Registration successful! Redirecting to Login…
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+          <!-- First Name & Last Name Row -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="firstName" class="form-label">First Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white">
+                  <i class="bi bi-person-badge"></i>
+                </span>
+                <input 
+                  id="firstName" 
+                  type="text" 
+                  class="form-control"
+                  [class.is-invalid]="f.firstName.touched && f.firstName.invalid"
+                  formControlName="firstName" 
+                  placeholder="Enter first name" 
+                />
+              </div>
+              @if (f.firstName.touched && f.firstName.invalid) {
+                <div class="invalid-feedback d-block">
+                  @if (f.firstName.errors?.['required']) { <div>First name is required.</div> }
+                  @if (f.firstName.errors?.['maxlength']) { <div>Max 50 characters.</div> }
+                </div>
+              }
+            </div>
+
+            <div class="col-md-6">
+              <label for="lastName" class="form-label">Last Name</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white">
+                  <i class="bi bi-person-badge"></i>
+                </span>
+                <input 
+                  id="lastName" 
+                  type="text" 
+                  class="form-control"
+                  [class.is-invalid]="f.lastName.touched && f.lastName.invalid"
+                  formControlName="lastName" 
+                  placeholder="Enter last name" 
+                />
+              </div>
+              @if (f.lastName.touched && f.lastName.invalid) {
+                <div class="invalid-feedback d-block">
+                  @if (f.lastName.errors?.['required']) { <div>Last name is required.</div> }
+                  @if (f.lastName.errors?.['maxlength']) { <div>Max 50 characters.</div> }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Employee ID -->
+          <div class="mb-3">
+            <label for="empId" class="form-label">Employee ID</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-person-vcard"></i>
+              </span>
+              <input 
+                id="empId" 
+                type="text" 
+                class="form-control"
+                [class.is-invalid]="f.empId.touched && f.empId.invalid"
+                formControlName="empId" 
+                placeholder="e.g., CTS-12345" 
+              />
+            </div>
+            @if (f.empId.touched && f.empId.invalid) {
+              <div class="invalid-feedback d-block">
+                @if (f.empId.errors?.['required']) { <div>Employee ID is required.</div> }
+                @if (f.empId.errors?.['maxlength']) { <div>Max 20 characters.</div> }
+                @if (f.empId.errors?.['pattern']) { <div>Only letters, digits, dashes and underscores are allowed.</div> }
+              </div>
+            }
+          </div>
+
+          <!-- Employee Email -->
+          <div class="mb-3">
+            <label for="email" class="form-label">Employee Email</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-envelope"></i>
+              </span>
+              <input 
+                id="email" 
+                type="email" 
+                class="form-control"
+                [class.is-invalid]="f.email.touched && f.email.invalid"
+                formControlName="email" 
+                placeholder="name@company.com" 
+              />
+            </div>
+            @if (f.email.touched && f.email.invalid) {
+              <div class="invalid-feedback d-block">
+                @if (f.email.errors?.['required']) { <div>Email is required.</div> }
+                @if (f.email.errors?.['email']) { <div>Enter a valid email address.</div> }
+              </div>
+            }
+          </div>
+
+          <!-- Password -->
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-lock"></i>
+              </span>
+              <input 
+                id="password" 
+                type="password" 
+                class="form-control"
+                [class.is-invalid]="f.password.touched && f.password.invalid"
+                formControlName="password" 
+                placeholder="••••••••" 
+              />
+            </div>
+            <small class="form-text text-muted">
+              8–12 chars, include at least 1 uppercase, 1 number, and 1 special character.
+            </small>
+            @if (f.password.touched && f.password.invalid) {
+              <div class="invalid-feedback d-block">
+                @if (f.password.errors?.['required']) { <div>Password is required.</div> }
+                @if (f.password.errors?.['minlength']) { <div>Minimum 8 characters.</div> }
+                @if (f.password.errors?.['maxlength']) { <div>Maximum 12 characters.</div> }
+                @if (f.password.errors?.['uppercase']) { <div>At least one uppercase letter required.</div> }
+                @if (f.password.errors?.['digit']) { <div>At least one number required.</div> }
+                @if (f.password.errors?.['special']) { <div>At least one special character required.</div> }
+              </div>
+            }
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="mb-4">
+            <label for="confirmPassword" class="form-label">Confirm Password</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white">
+                <i class="bi bi-lock-fill"></i>
+              </span>
+              <input 
+                id="confirmPassword" 
+                type="password" 
+                class="form-control"
+                [class.is-invalid]="(f.confirmPassword.touched || f.password.touched) && (f.confirmPassword.invalid || form.errors?.['passwordMismatch'])"
+                formControlName="confirmPassword" 
+                placeholder="Re-type password" 
+              />
+            </div>
+            @if ((f.confirmPassword.touched || f.password.touched) &&
+                 (f.confirmPassword.invalid || form.errors?.['passwordMismatch'])) {
+              <div class="invalid-feedback d-block">
+                @if (f.confirmPassword.errors?.['required']) { <div>Please confirm the password.</div> }
+                @if (form.errors?.['passwordMismatch']) { <div>Passwords do not match.</div> }
+              </div>
+            }
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-grid gap-2">
+            <button 
+              type="submit" 
+              class="btn btn-primary btn-lg" 
+              [disabled]="form.invalid">
+              Register
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-outline-secondary" 
+              (click)="form.reset()">
+              Reset
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

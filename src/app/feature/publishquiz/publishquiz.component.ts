@@ -56,7 +56,7 @@ export class PublishquizComponent implements OnInit {
         throw new Error('Quiz number missing from server response.');
       }
       // Deep link to participant entry with quizNumber prefilled
-      this.qrData = `http://localhost:4200/participant?quizNumber=${encodeURIComponent(this.quizId)}`;
+      this.qrData = `http:// localhost:4200/participant?quizNumber=${encodeURIComponent(this.quizId)}`;
       this.isPublished = true;
       console.log('[Publishquiz] QR generated for quiz', this.quizId, 'qrData=', this.qrData);
     } catch (err: any) {

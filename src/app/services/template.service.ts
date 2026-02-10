@@ -2,20 +2,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { tap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { temp } from '../models/temp';
-import { environment } from '../../environments/environment';
-
-export interface Question {
-  id?: number;
-  questionId?: number;
-  text?: string;
-  question_text?: string;
-}
+import { Question } from '../models/question';
 
 @Injectable({ providedIn: 'root' })
-export default class TemplateService {
+export class TemplateService {
   private apiUrl = `${environment.apiUrl}${environment.apiEndpoints.template}`;
   private apiUrlQuestions = `${environment.apiUrl}${environment.apiEndpoints.questions}`;
 
@@ -115,5 +109,26 @@ export default class TemplateService {
     console.log('📤 DELETE Request:', url);
     
     return this.http.delete<void>(url, { headers: this.jsonHeaders });
+  }
+
+  // Category-based template methods
+  getQuestionCountByCategory(category: string): Observable<any> {
+    const url = `${environment.apiUrl}/Host/Question/category/${category}/count`;
+    return this.http.get<any>(url, { headers: this.jsonHeaders });
+  }
+
+  getAvailableCategories(): Observable<string[]> {
+    const url = `${environment.apiUrl}/Host/Question/categories`;
+    return this.http.get<string[]>(url, { headers: this.jsonHeaders });
+  }
+
+  getTagsByCategory(category: string): Observable<string[]> {
+    const url = `${environment.apiUrl}/Host/Question/category/${category}/tags`;
+    return this.http.get<string[]>(url, { headers: this.jsonHeaders });
+  }
+
+  getRandomQuestionsByCategory(request: any): Observable<Question[]> {
+    const url = `${environment.apiUrl}/Host/Question/random`;
+    return this.http.post<Question[]>(url, request, { headers: this.jsonHeaders });
   }
 }

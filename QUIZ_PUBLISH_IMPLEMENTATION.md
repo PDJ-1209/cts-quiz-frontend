@@ -323,8 +323,8 @@ Ensure `environment.ts` has:
 
 ```typescript
 export const environment = {
-  apiUrl: "http://localhost:5195/api",
-  signalRUrl: "http://localhost:5195/hubs",
+  apiUrl: "http:// localhost:5195/api",
+  signalRUrl: "http:// localhost:5195/hubs",
 };
 ```
 

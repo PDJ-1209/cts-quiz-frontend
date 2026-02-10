@@ -193,3 +193,46 @@
   }
 </div>
 }
+
+<!-- QR Code Modal -->
+@if (showQrCode) {
+<div class="qr-modal-overlay" (click)="showQrCode = false">
+  <div class="qr-modal" (click)="$event.stopPropagation()">
+    <div class="qr-modal-header">
+      <h5 class="mb-0">🎯 Poll Created Successfully!</h5>
+      <button type="button" class="btn-close" (click)="showQrCode = false"></button>
+    </div>
+    <div class="qr-modal-body text-center">
+      <p class="mb-4">Share this QR code for participants to join your poll:</p>
+      
+      <div class="qr-code-container">
+        <qrcode [qrdata]="qrCodeValue" 
+                [width]="200" 
+                [errorCorrectionLevel]="'M'"
+                [colorDark]="'#000000'"
+                [colorLight]="'#ffffff'">
+        </qrcode>
+      </div>
+      
+      <div class="mt-4">
+        <p class="text-muted small mb-2">Or share this link:</p>
+        <div class="input-group">
+          <input type="text" class="form-control" [value]="pollUrl" readonly>
+          <button class="btn btn-outline-secondary" type="button" (click)="copyToClipboard()">
+            📋 Copy
+          </button>
+        </div>
+      </div>
+      
+      <div class="mt-4 d-flex gap-2 justify-content-center">
+        <button type="button" class="btn btn-secondary" (click)="showQrCode = false">
+          Create Another Poll
+        </button>
+        <button type="button" class="btn btn-primary" (click)="goBackToHost()">
+          Back to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+}

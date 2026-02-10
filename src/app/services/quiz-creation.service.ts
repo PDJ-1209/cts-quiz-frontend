@@ -2,6 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { 
   QuizQuestion, 
   QuizMeta, 
@@ -11,15 +12,17 @@ import {
 } from '../models/quiz.models';
 
 export interface CreateQuizPayload {
-  quizTitle: string;
-  quizDescription: string;
+  quizName: string;
   category: string;
-  difficulty: string;
-  timeLimit: number;
   createdBy: string;
+  status: string;
   questions: {
     questionText: string;
     questionType: string;
+    category?: string;
+    difficultyLevel?: string;
+    tags?: string;
+    timerSeconds?: number;
     options: {
       optionText: string;
       isCorrect: boolean;
@@ -31,7 +34,7 @@ export interface CreateQuizPayload {
   providedIn: 'root'
 })
 export class QuizCreationService {
-  private readonly apiBase = 'http://localhost:5195/api/Host/Quiz';
+  private readonly apiBase = `${environment.apiUrl}/Host/Quiz`;
 
   constructor(private http: HttpClient) {}
 
@@ -91,7 +94,21 @@ export class QuizCreationService {
       console.log('Raw API response:', response);
       const quizzes = response.data || response;
       console.log('Parsed quizzes:', quizzes);
-      return quizzes;
+      
+      // Map to handle both PascalCase and camelCase property names
+      return quizzes.map((quiz: any) => ({
+        quizId: quiz.QuizId || quiz.quizId,
+        quizName: quiz.QuizName || quiz.quizName,
+        quizNumber: quiz.QuizNumber || quiz.quizNumber,
+        category: quiz.Category || quiz.category,
+        questionCount: quiz.QuestionCount || quiz.questionCount,
+        templateId: quiz.TemplateId || quiz.templateId,
+        createdBy: quiz.CreatedBy || quiz.createdBy,
+        updatedBy: quiz.UpdatedBy || quiz.updatedBy,
+        createdAt: quiz.CreatedAt || quiz.createdAt,
+        updatedAt: quiz.UpdatedAt || quiz.updatedAt,
+        status: quiz.Status || quiz.status
+      }));
     } catch (error: any) {
       console.error('Error fetching host quizzes:', error);
       throw new Error(`Failed to fetch quizzes: ${error?.message || 'Unknown error'}`);
@@ -104,7 +121,7 @@ export class QuizCreationService {
    * Get quiz details with questions for editing
    */
   async getQuizForEdit(quizId: number): Promise<QuizDetailsResponse> {
-    const url = `${this.apiBase}/GetForEdit?quizId=${quizId}`;
+    const url = `${this.apiBase}/${quizId}`;
     try {
       return await firstValueFrom(this.http.get<QuizDetailsResponse>(url));
     } catch (error: any) {
@@ -130,7 +147,7 @@ export class QuizCreationService {
    * Update a single question
    */
   async updateQuestion(questionId: number, questionData: any): Promise<any> {
-    const url = `http://localhost:5195/api/Host/Question/${questionId}`;
+    const url = `${environment.apiUrl}/Host/Question/${questionId}`;
     try {
       console.log('Updating question:', questionId, questionData);
       const response = await firstValueFrom(this.http.put<any>(url, questionData));
@@ -173,15 +190,16 @@ export class QuizCreationService {
    */
   private mapToBackendPayload(quiz: QuizMeta, questions: QuizQuestion[]): CreateQuizPayload {
     return {
-      quizTitle: quiz.quizName,
-      quizDescription: '',
+      quizName: quiz.quizName,
       category: quiz.category,
-      difficulty: 'Medium',
-      timeLimit: 0,
       createdBy: '2463579',
+      status: 'Draft',
       questions: questions.map(q => ({
         questionText: q.text,
         questionType: this.mapQuestionType(q.type),
+        category: quiz.category,
+        difficultyLevel: 'Medium',
+        timerSeconds: q.timerSeconds ?? 30,
         options: q.options.map(o => ({ 
           optionText: o.text, 
           isCorrect: o.isCorrect 

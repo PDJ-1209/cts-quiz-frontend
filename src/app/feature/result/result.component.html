@@ -2,14 +2,15 @@
   <!-- Header -->
   <div class="result-header">
     <div>
-      <h2 class="mb-2">📊 Quiz Analytics Dashboard</h2>
+      <h2 class="mb-2">{{ pageTitle() }}</h2>
       <p class="text-muted mb-0">Host ID: {{ currentHostId }}</p>
+      <small class="text-muted">Debug: {{ debugInfo().selectedType }} - Q:{{ debugInfo().quizCount }} S:{{ debugInfo().surveyCount }} P:{{ debugInfo().pollCount }}</small>
     </div>
     <div class="d-flex gap-2 align-items-center">
       <button class="btn btn-outline-light btn-sm" (click)="resetTutorial()">
         🎯 Tutorial
       </button>
-      <button class="btn btn-primary" (click)="loadQuizzes()">
+      <button class="btn btn-primary" (click)="loadAllContent()">
         🔄 Refresh Data
       </button>
     </div>
@@ -74,13 +75,40 @@
       </div>
     </div>
 
-    <!-- Quiz List -->
+    <!-- Content Management Section -->
     <div class="card shadow-sm">
       <div class="card-header bg-light">
-        <h5 class="mb-0">📋 All Quizzes Created</h5>
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">📋 Content Management</h5>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" 
+                    class="btn" 
+                    [class.btn-primary]="selectedContentType() === 'quizzes'"
+                    [class.btn-outline-primary]="selectedContentType() !== 'quizzes'"
+                    (click)="selectContentType('quizzes')">
+              <i class="fas fa-brain me-1"></i>Quizzes ({{ analytics().totalQuizzes }})
+            </button>
+            <button type="button" 
+                    class="btn" 
+                    [class.btn-primary]="selectedContentType() === 'surveys'"
+                    [class.btn-outline-primary]="selectedContentType() !== 'surveys'"
+                    (click)="selectContentType('surveys')">
+              <i class="fas fa-clipboard-list me-1"></i>Surveys ({{ analytics().totalSurveys }})
+            </button>
+            <button type="button" 
+                    class="btn" 
+                    [class.btn-primary]="selectedContentType() === 'polls'"
+                    [class.btn-outline-primary]="selectedContentType() !== 'polls'"
+                    (click)="selectContentType('polls')">
+              <i class="fas fa-poll me-1"></i>Polls ({{ analytics().totalPolls }})
+            </button>
+          </div>
+        </div>
       </div>
       <div class="card-body">
-        @if (hostQuizzes().length > 0) {
+        
+        <!-- Quizzes Tab -->
+        @if (selectedContentType() === 'quizzes') {
           <div class="table-responsive">
             <table class="table table-hover">
               <thead>
@@ -101,17 +129,17 @@
                 @for (quiz of hostQuizzes(); track quiz.quizId) {
                   <tr>
                     <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
-                    <td><strong>{{ quiz.quizName }}</strong></td>
+                    <td><strong>{{ quiz.quizName || '(Unnamed Quiz)' }}</strong></td>
                     <td><span class="badge bg-secondary">{{ quiz.category }}</span></td>
                     <td><span class="badge bg-info">{{ quiz.questionCount }}</span></td>
-                    <td>
+                    <td class="text-center">
                       <span 
                         class="badge" 
                         [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
                         [class.bg-success]="quiz.status.toLowerCase() === 'active'"
                         [class.bg-info]="quiz.status.toLowerCase() === 'completed'"
                         [class.bg-primary]="quiz.status.toLowerCase() === 'live'">
-                        {{ quiz.status }}
+                        {{ quiz.status || 'N/A' }}
                       </span>
                     </td>
                     <td>{{ quiz.createdAt | date:'short' }}</td>
@@ -184,10 +212,138 @@
             <p class="text-muted">You haven't created any quizzes yet.</p>
           </div>
         }
+        
+        <!-- Surveys Tab -->
+        @if (selectedContentType() === 'surveys') {
+          @if (hostSurveys().length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Survey ID</th>
+                    <th>Title</th>
+                    <th>Questions</th>
+                    <th>Status</th>
+                    <th>Anonymous</th>
+                    <th>Session ID</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (survey of hostSurveys(); track survey.surveyId) {
+                    <tr>
+                      <td><code class="text-primary">{{ survey.surveyId }}</code></td>
+                      <td><strong>{{ survey.title }}</strong></td>
+                      <td><span class="badge bg-info">{{ survey.questions?.length || 0 }}</span></td>
+                      <td>
+                        <span 
+                          class="badge" 
+                          [class.bg-warning]="survey.status.toLowerCase() === 'draft'"
+                          [class.bg-success]="survey.status.toLowerCase() !== 'draft'">
+                          {{ survey.status || 'Draft' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge" [class.bg-success]="survey.isAnonymous" [class.bg-secondary]="!survey.isAnonymous">
+                          {{ survey.isAnonymous ? 'Yes' : 'No' }}
+                        </span>
+                      </td>
+                      <td>{{ survey.sessionId || 'N/A' }}</td>
+                      <td>
+                        <div class="btn-group btn-group-sm">
+                          <button class="btn btn-outline-primary" title="View Survey">
+                            <i class="fas fa-eye"></i>
+                          </button>
+                          <button class="btn btn-outline-warning" title="Edit Survey">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-outline-danger" title="Delete Survey">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="text-center py-5">
+              <div class="mb-3" style="font-size: 3rem;">📝</div>
+              <h5>No Surveys Found</h5>
+              <p class="text-muted">You haven't created any surveys yet.</p>
+            </div>
+          }
+        }
+        
+        <!-- Polls Tab -->
+        @if (selectedContentType() === 'polls') {
+          @if (hostPolls().length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Poll ID</th>
+                    <th>Title</th>
+                    <th>Question</th>
+                    <th>Options</th>
+                    <th>Status</th>
+                    <th>Anonymous</th>
+                    <th>Session ID</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (poll of hostPolls(); track poll.pollId) {
+                    <tr>
+                      <td><code class="text-primary">{{ poll.pollId }}</code></td>
+                      <td><strong>{{ poll.pollTitle }}</strong></td>
+                      <td>{{ poll.pollQuestion }}</td>
+                      <td><span class="badge bg-info">{{ poll.options.length || 0 }}</span></td>
+                      <td>
+                        <span 
+                          class="badge" 
+                          [class.bg-warning]="poll.pollStatus.toLowerCase() === 'draft'"
+                          [class.bg-success]="poll.pollStatus.toLowerCase() !== 'draft'">
+                          {{ poll.pollStatus || 'Draft' }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge" [class.bg-success]="poll.pollAnonymous" [class.bg-secondary]="!poll.pollAnonymous">
+                          {{ poll.pollAnonymous ? 'Yes' : 'No' }}
+                        </span>
+                      </td>
+                      <td>{{ poll.sessionId || 'N/A' }}</td>
+                      <td>
+                        <div class="btn-group btn-group-sm">
+                          <button class="btn btn-outline-primary" title="View Poll">
+                            <i class="fas fa-eye"></i>
+                          </button>
+                          <button class="btn btn-outline-warning" title="Edit Poll">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-outline-danger" title="Delete Poll">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="text-center py-5">
+              <div class="mb-3" style="font-size: 3rem;">🗳️</div>
+              <h5>No Polls Found</h5>
+              <p class="text-muted">You haven't created any polls yet.</p>
+            </div>
+          }
+        }
+        
       </div>
     </div>
   }
-</div>
 
 <!-- TUTORIAL OVERLAY -->
 @if (tutorialActive()) {

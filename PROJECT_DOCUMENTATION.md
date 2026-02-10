@@ -994,7 +994,7 @@ const PARTICIPATE_API_BASE = '/api/Participate';
 // Update proxy.conf.json
 {
   "/api/*": {
-    "target": "https://localhost:7000",
+    "target": "https:// localhost:7000",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"
@@ -1182,7 +1182,7 @@ public class QuizController : ControllerBase
 ```json
 {
   "/api/*": {
-    "target": "https://localhost:7000",
+    "target": "https:// localhost:7000",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug",
@@ -1649,7 +1649,7 @@ _"Add a feature where participants can see live question updates during a quiz s
 ```typescript
 @Injectable({ providedIn: "root" })
 export class QuizSocketService {
-  private socket = io("ws://localhost:3000");
+  private socket = io("ws:// localhost:3000");
 
   questionUpdates$ = new Observable((observer) => {
     this.socket.on("question-update", (data) => observer.next(data));

@@ -1,20 +1,20 @@
 // src/app/template/template.component.ts
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { temp } from '../../models/temp';
-import TemplateService, { Question } from '../../services/template.service';
+import { Question } from '../../models/question';
+import { TemplateService } from '../../services/template.service';
 
 @Component({
   selector: 'app-template',
   standalone: true,
   imports: [CommonModule, FormsModule],
+  providers: [TemplateService],
   templateUrl: './template.component.html',
   styleUrls: ['./template.component.css'] // 👈 plural
 })
 export class TemplateComponent implements OnInit {
-
-  @Output() switchToQuestionsTab = new EventEmitter<void>();
 
   showModal = false;
   isEditing = false;
@@ -29,6 +29,17 @@ export class TemplateComponent implements OnInit {
     createdBy: 1
   };
 
+  // Enhanced template properties
+  templateCategories = [
+    'Java', 'JavaScript', 'Python', 'React', 'Angular', 
+    'Node.js', 'Spring Boot', 'Database', 'DevOps', 'General'
+  ];
+  
+  selectedCategory = '';
+  requestedQuestionCount = 15;
+  availableQuestions = 0;
+  showCategoryForm = false;
+  
   templates: temp[] = [];
   selectedTemplate: temp | null = null;
 
@@ -43,6 +54,19 @@ export class TemplateComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTemplates();
+    this.loadCategories();
+  }
+
+  private async loadCategories(): Promise<void> {
+    try {
+      const categories = await this.templateService.getAvailableCategories().toPromise();
+      if (categories && categories.length > 0) {
+        this.templateCategories = categories;
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      // Keep default categories if backend fails
+    }
   }
 
   // READ - Load all templates
@@ -50,12 +74,12 @@ export class TemplateComponent implements OnInit {
     this.isLoading = true;
     setTimeout(() => {
       this.templateService.getAllTemplates().subscribe({
-        next: (data) => {
+        next: (data: temp[]) => {
           console.log('✅ Templates loaded:', data);
           this.templates = data || [];
           this.isLoading = false;
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Error loading templates:', error);
           this.templates = [];
           this.isLoading = false;
@@ -69,7 +93,7 @@ export class TemplateComponent implements OnInit {
   // ===== Card click → load questions =====
   viewQuestions(t: temp): void {
     this.selectedTemplate = t;
-    const templateId = t.templateId || (t as any).id || (t as any).template_id;
+    const templateId = t.templateId;
     if (!templateId) {
       alert('Template ID is missing');
       console.log('Template object:', t);
@@ -78,15 +102,15 @@ export class TemplateComponent implements OnInit {
 
     this.showQuestionsPanel = true;
     this.questionLoading = true;
-    this.activeTemplateName = t.templateName || (t as any).template_name || '';
+    this.activeTemplateName = t.templateName;
 
     this.templateService.getQuestionsByTemplateId(templateId, 100).subscribe({
-      next: (qs) => {
+      next: (qs: Question[]) => {
         this.questions = qs || [];
         this.questionLoading = false;
         console.log('Questions loaded:', this.questions);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading questions:', error);
         const msg = this.normalizeHttpError(error);
         this.questions = [];
@@ -102,7 +126,7 @@ export class TemplateComponent implements OnInit {
       alert('Select a template first');
       return;
     }
-    const templateId = this.selectedTemplate.templateId || (this.selectedTemplate as any).id || (this.selectedTemplate as any).template_id;
+    const templateId = this.selectedTemplate.templateId;
     const text = (this.newQuestionText || '').trim();
 
     if (!templateId) {
@@ -115,11 +139,11 @@ export class TemplateComponent implements OnInit {
     }
 
     this.templateService.addQuestion(templateId, text).subscribe({
-      next: (_) => {
+      next: (_: any) => {
         this.newQuestionText = '';
         this.viewQuestions(this.selectedTemplate!);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error adding question:', error);
         const msg = this.normalizeHttpError(error);
         alert('Failed to add question. ' + msg);
@@ -130,14 +154,14 @@ export class TemplateComponent implements OnInit {
   // ===== Edit question =====
   editQuestion(question: Question): void {
     console.log('✏️ Edit question called:', question);
-    const newText = prompt('Edit question:', question.text || (question as any).question_text || '');
+    const newText = prompt('Edit question:', question.questionText || '');
     if (newText === null || newText.trim() === '') {
       console.log('⚠️ Edit cancelled by user');
       return;
     }
 
-    const questionId = question.questionId || (question as any).id || (question as any).question_id;
-    const templateId = this.selectedTemplate?.templateId || (this.selectedTemplate as any)?.id || (this.selectedTemplate as any)?.template_id;
+    const questionId = question.questionId;
+    const templateId = this.selectedTemplate?.templateId;
     
     if (!questionId) {
       alert('Question ID is missing');
@@ -147,12 +171,12 @@ export class TemplateComponent implements OnInit {
 
     console.log('🔄 Sending update request for question ID:', questionId, 'template ID:', templateId, 'with text:', newText);
     this.templateService.updateQuestion(questionId, newText, templateId).subscribe({
-      next: (_) => {
+      next: (_: any) => {
         console.log('✅ Question updated successfully!');
         alert('Question updated!');
         if (this.selectedTemplate) this.viewQuestions(this.selectedTemplate);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Error updating question:', error);
         const msg = this.normalizeHttpError(error);
         alert('Failed to update question. ' + msg);
@@ -163,8 +187,8 @@ export class TemplateComponent implements OnInit {
   // ===== Delete question =====
   deleteQuestion(question: Question): void {
     console.log('🗑️ Delete question called:', question);
-    const questionId = question.questionId || (question as any).id || (question as any).question_id;
-    const templateId = this.selectedTemplate?.templateId || (this.selectedTemplate as any)?.id || (this.selectedTemplate as any)?.template_id;
+    const questionId = question.questionId;
+    const templateId = this.selectedTemplate?.templateId;
     
     if (!questionId) {
       alert('Question ID is missing');
@@ -178,12 +202,12 @@ export class TemplateComponent implements OnInit {
 
     console.log('🔄 Sending delete request for question ID:', questionId, 'template ID:', templateId);
     this.templateService.deleteQuestion(questionId, templateId).subscribe({
-      next: (_) => {
+      next: (_: any) => {
         console.log('✅ Question deleted successfully!');
         alert('Question deleted!');
         if (this.selectedTemplate) this.viewQuestions(this.selectedTemplate);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('❌ Error deleting question:', error);
         const msg = this.normalizeHttpError(error);
         alert('Failed to delete question. ' + msg);
@@ -197,9 +221,10 @@ export class TemplateComponent implements OnInit {
     this.activeTemplateName = '';
   }
 
-  openModal(type: 'template' = 'template'): void {
+  openModal(type: 'template' | 'category' = 'template'): void {
     if (type === 'template') {
       this.showModal = true;
+      this.showCategoryForm = false;
       this.isEditing = false;
       this.newTemplate = {
         templateName: '',
@@ -207,6 +232,105 @@ export class TemplateComponent implements OnInit {
         templateConfig: '',
         createdBy: 1
       };
+    } else if (type === 'category') {
+      this.showModal = true;
+      this.showCategoryForm = true;
+      this.selectedCategory = '';
+      this.requestedQuestionCount = 15;
+    }
+  }
+
+  openCategoryTemplate(category: string): void {
+    this.selectedCategory = category;
+    this.showCategoryForm = true;
+    this.checkAvailableQuestions(category);
+  }
+
+  async checkAvailableQuestions(category: string): Promise<void> {
+    try {
+      // Connect to backend to get actual question count
+      const response = await this.templateService.getQuestionCountByCategory(category).toPromise();
+      this.availableQuestions = response?.availableQuestions || 0;
+    } catch (error) {
+      console.error('Error checking available questions:', error);
+      // Fallback to mock data if backend is not available
+      const mockCounts: { [key: string]: number } = {
+        'Java': 150,
+        'JavaScript': 120,
+        'Python': 100,
+        'React': 80,
+        'Angular': 75,
+        'Node.js': 60,
+        'Spring Boot': 90,
+        'Database': 110,
+        'DevOps': 45,
+        'General': 200
+      };
+      this.availableQuestions = mockCounts[category] || 0;
+    }
+  }
+
+  async createCategoryTemplate(): Promise<void> {
+    if (!this.selectedCategory || this.requestedQuestionCount <= 0) {
+      alert('Please select a category and valid question count');
+      return;
+    }
+
+    if (this.requestedQuestionCount > this.availableQuestions) {
+      alert(`Only ${this.availableQuestions} questions available for ${this.selectedCategory}. Please adjust the count.`);
+      return;
+    }
+
+    this.isSubmitting = true;
+
+    try {
+      // Create template with category configuration
+      const categoryTemplate: temp = {
+        templateName: `${this.selectedCategory} Quiz Template`,
+        templateType: 'CATEGORY',
+        templateConfig: JSON.stringify({
+          category: this.selectedCategory,
+          questionCount: this.requestedQuestionCount,
+          autoGenerated: true,
+          createdAt: new Date().toISOString()
+        }),
+        createdBy: this.currentUserId || 1
+      };
+
+      // Generate random questions for this category
+      await this.generateRandomQuestions(categoryTemplate);
+      
+      this.showCategoryForm = false;
+      this.showModal = false;
+      this.loadTemplates(); // Refresh templates
+      
+    } catch (error) {
+      console.error('Error creating category template:', error);
+      alert('Failed to create template');
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  async generateRandomQuestions(template: temp): Promise<void> {
+    try {
+      // First create the template
+      await this.templateService.createTemplate(template).toPromise();
+      
+      // Then generate random questions using backend API
+      const questionRequest = {
+        category: this.selectedCategory,
+        questionCount: this.requestedQuestionCount,
+        tags: '', // Could be expanded to support tag filtering
+        difficulty: '' // Could be expanded to support difficulty filtering
+      };
+
+      const randomQuestions = await this.templateService.getRandomQuestionsByCategory(questionRequest).toPromise();
+      console.log(`Generated ${randomQuestions?.length || 0} random questions for ${this.selectedCategory}`);
+      
+    } catch (error) {
+      console.error('Error generating random questions:', error);
+      throw error;
     }
   }
 
@@ -219,6 +343,7 @@ export class TemplateComponent implements OnInit {
 
   closeModal(): void {
     this.showModal = false;
+    this.showCategoryForm = false;
     this.selectedTemplate = null;
     this.newTemplate = {
       templateName: '',
@@ -226,8 +351,22 @@ export class TemplateComponent implements OnInit {
       templateConfig: '',
       createdBy: 1
     };
+    this.selectedCategory = '';
+    this.requestedQuestionCount = 15;
     this.isEditing = false;
     this.isSubmitting = false;
+  }
+
+  resetForm(): void {
+    this.newTemplate = {
+      templateName: '',
+      templateType: 'PDF',
+      templateConfig: '',
+      createdBy: 1
+    };
+    this.selectedCategory = '';
+    this.requestedQuestionCount = 15;
+    this.showCategoryForm = false;
   }
 
   // CREATE - Add new template
@@ -238,14 +377,12 @@ export class TemplateComponent implements OnInit {
     }
     this.isSubmitting = true;
 
-    const templateData: temp = {
-      templateName: this.newTemplate.templateName.trim(),
-      templateType: this.newTemplate.templateType || 'PDF',
-      templateConfig: this.newTemplate.templateConfig?.trim() || '',
-      createdBy: Number(this.newTemplate.createdBy || 1)
-    };
-
-    console.log('Creating template:', templateData);
+  const templateData: temp = {
+    templateName: this.newTemplate.templateName.trim(),
+    templateType: this.newTemplate.templateType || 'PDF',
+    templateConfig: this.newTemplate.templateConfig?.trim() || '',
+    createdBy: Number(this.newTemplate.createdBy || 1)
+  };    console.log('Creating template:', templateData);
 
     this.templateService.createTemplate(templateData).subscribe({
       next: (response: any) => {

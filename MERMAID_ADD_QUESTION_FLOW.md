@@ -220,7 +220,7 @@ sequenceDiagram
 
     Service->>HTTP: Observable HTTP POST with timeout(10000)
     HTTP->>Proxy: /api/Host/Quiz/CreateBulk
-    Proxy->>Backend: http://localhost:5195/api/Host/Quiz/CreateBulk
+    Proxy->>Backend: http:// localhost:5195/api/Host/Quiz/CreateBulk
 
     alt Backend Available & Endpoint Exists
         Backend-->>Proxy: JSON Response

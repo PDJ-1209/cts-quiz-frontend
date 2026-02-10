@@ -48,6 +48,40 @@ export interface CreatePollOptionRequest {
   option_order?: number;
 }
 
+// v2 API payloads (camelCase)
+export interface CreatePollApiRequest {
+  sessionId: number;
+  pollTitle: string;
+  pollQuestion: string;
+  pollAnonymous: boolean;
+  pollStatus?: string;
+  selectionType?: string;
+  options: CreatePollOptionApiRequest[];
+}
+
+export interface CreatePollOptionApiRequest {
+  optionLabel: string;
+  optionOrder?: number;
+}
+
+// v2 API responses (camelCase)
+export interface PollOverview {
+  pollId: number;
+  sessionId: number;
+  pollTitle: string;
+  pollQuestion: string;
+  pollAnonymous: boolean;
+  pollStatus: string;
+  selectionType: string;
+  options: PollOptionOverview[];
+}
+
+export interface PollOptionOverview {
+  optionId: number;
+  optionLabel: string;
+  optionOrder?: number;
+}
+
 export interface CreatePollResponse {
   pollId: number;
   message: string;

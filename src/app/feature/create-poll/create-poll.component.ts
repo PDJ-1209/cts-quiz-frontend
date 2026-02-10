@@ -2,6 +2,7 @@ import { Component, OnInit, Output, EventEmitter, AfterViewInit, inject, signal,
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { PollService } from '../../services/poll.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { Poll, CreatePollRequest } from '../../models/ipoll';
@@ -10,7 +11,7 @@ import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 @Component({
   selector: 'app-create-poll',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, QRCodeComponent],
   templateUrl: './create-poll.component.html',
   styleUrls: ['./create-poll.component.css']
 })
@@ -21,6 +22,12 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
   successMessage = '';
   errorMessage = '';
   sessionId: number | null = null;
+  
+  // QR Code properties
+  showQrCode = false;
+  pollUrl = '';
+  qrCodeValue = '';
+  createdPollId: number | null = null;
 
   // Header properties
   hostName = 'Poll Host'; // You can make this dynamic later
@@ -212,33 +219,41 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
     // Use a default user ID since authService might not be available
     const employeeId = 1;
 
-    // Build the payload matching backend expectations (PascalCase)
-    const payload = {
-      SessionId: this.sessionId || 1,
-      Title: formValue.pollTitle.trim(),
-      Question: formValue.pollQuestion.trim(),
-      IsAnonymous: formValue.pollAnonymous,
-      SelectionType: 'single',
-      Options: formValue.options.map((opt: any, index: number) => ({
-        Label: opt.optionLabel.trim(),
-        Order: index + 1  // Backend expects positive number starting from 1
+    // Build the payload matching the CreatePollRequest interface (snake_case)
+    const payload: CreatePollRequest = {
+      session_id: this.sessionId || 1,
+      poll_title: formValue.pollTitle.trim(),
+      poll_question: formValue.pollQuestion.trim(),
+      poll_anonymous: formValue.pollAnonymous,
+      selection_type: 'single',
+      options: formValue.options.map((opt: any, index: number) => ({
+        option_label: opt.optionLabel.trim(),
+        option_order: index + 1  // Backend expects positive number starting from 1
       }))
     };
 
-    console.log(' Poll Payload:', payload);
-    console.log(' Form Value Before Send:', formValue);
+    console.log('✅ Corrected Poll Payload (snake_case):', payload);
+    console.log('📝 Form Value Before Send:', formValue);
 
-    this.pollService.createPoll(payload as any).subscribe({
+    this.pollService.createPoll(payload).subscribe({
       next: (response) => {
-        this.successMessage = 'Poll created successfully!';
+        this.successMessage = '🎉 Poll Created and Published Successfully!';
         this.loading = false;
+        this.createdPollId = response.pollId;
+        
+        // Generate QR code
+        this.generateQrCode();
         
         // Update dashboard stats
         this.dashboardStatsService.incrementPollCount();
         
-        setTimeout(() => {
-          this.router.navigate(['/host']);
-        }, 2000);
+        // Show success alert in addition to the message
+        alert('🎉 Poll Created and Published Successfully!\n\nYour poll is now ready for participants. Use the QR code or URL to share it.');
+        
+        // Don't auto-navigate, let user see QR code
+        // setTimeout(() => {
+        //   this.router.navigate(['/host']);
+        // }, 2000);
       },
       error: (error) => {
         console.error('Error creating poll:', error);
@@ -252,6 +267,27 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
     const questionType = this.pollForm.get('questionType')?.value;
     const typeInfo = this.questionTypes.find(t => t.value === questionType);
     return typeInfo ? typeInfo.label : 'Custom';
+  }
+
+  generateQrCode(): void {
+    if (this.createdPollId) {
+      // Generate participation URL
+      const baseUrl = window.location.origin;
+      this.pollUrl = `${baseUrl}/participate/poll/${this.createdPollId}`;
+      this.qrCodeValue = this.pollUrl;
+      this.showQrCode = true;
+    }
+  }
+
+  copyToClipboard(): void {
+    navigator.clipboard.writeText(this.pollUrl).then(() => {
+      this.successMessage = 'Poll URL copied to clipboard!';
+      setTimeout(() => this.successMessage = '', 3000);
+    });
+  }
+
+  goBackToHost(): void {
+    this.router.navigate(['/host']);
   }
 
   convertToQuiz(): void {

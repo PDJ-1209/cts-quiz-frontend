@@ -62,6 +62,63 @@ export interface CreateSurveyResponse {
   status: string;
 }
 
+// v2 API payloads (camelCase)
+export interface CreateSurveyApiRequest {
+  sessionId?: number | null;
+  title: string;
+  description?: string;
+  isAnonymous: boolean;
+  status?: string;
+  questions: CreateSurveyQuestionApiRequest[];
+}
+
+export interface CreateSurveyQuestionApiRequest {
+  sessionId: number;
+  questionText: string;
+  questionType: string;
+  questionOrder: number;
+  isRequired: boolean;
+  scaleMin?: number;
+  scaleMax?: number;
+  options?: CreateSurveyQuestionOptionApiRequest[];
+}
+
+export interface CreateSurveyQuestionOptionApiRequest {
+  optionText: string;
+  displayOrder: number;
+  scoreValue?: number;
+}
+
+// v2 API responses (camelCase)
+export interface SurveyOverview {
+  surveyId: number;
+  sessionId?: number | null;
+  title: string;
+  description?: string | null;
+  isAnonymous: boolean;
+  status: string;
+  questions?: SurveyQuestionOverview[];
+}
+
+export interface SurveyQuestionOverview {
+  surveyQuestionId: number;
+  sessionId: number;
+  questionText: string;
+  questionType: string;
+  questionOrder: number;
+  isRequired: boolean;
+  scaleMin?: number | null;
+  scaleMax?: number | null;
+  options?: SurveyQuestionOptionOverview[];
+}
+
+export interface SurveyQuestionOptionOverview {
+  optionId: number;
+  optionText: string;
+  displayOrder: number;
+  scoreValue?: number | null;
+}
+
 // 3. Publishing & Management
 export interface PublishSurveyRequest {
   surveyId: number;

@@ -2,17 +2,18 @@ import { Component, OnInit, OnDestroy, Output, EventEmitter, AfterViewInit, inje
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { SurveyService } from '../../services/survey.service';
 import { SignalrService } from '../../services/signalr.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
-import { CreateSurveyRequest, CreateQuestionRequest, CreateSessionRequest, PublishSurveyRequest } from '../../Models/isurvey';
+import { CreateSurveyRequest, CreateQuestionRequest, CreateSessionRequest, PublishSurveyRequest } from '../../models/isurvey';
 import { AddQuestionService, QuizQuestion, QuestionType } from '../../services/add-question.service';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 
 @Component({
   selector: 'app-create-survey',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, QRCodeComponent],
   templateUrl: './create-survey.component.html',
   styleUrls: ['./create-survey.component.css']
 })
@@ -22,6 +23,12 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
   loading = false;
   isPreviewMode = false;
   employeeId = 1; // Map this to your actual Auth user ID
+  
+  // QR Code properties
+  showQrCode = false;
+  surveyUrl = '';
+  qrCodeValue = '';
+  createdSurveyId: number | null = null;
   
   // Header properties
   hostName = 'Survey Host'; // You can make this dynamic later
@@ -166,7 +173,7 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
     const end = new Date(now.getTime() + (2 * 60 * 60 * 1000)); // +2 hours
 
     // Step 1: Create Session
-    const sessionPayload: CreateSessionRequest = {
+    const sessionPayload = {
       title: title,
       employeeId: this.employeeId,
       startAt: now.toISOString(),
@@ -176,7 +183,17 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
 
     console.log('Step 1: Creating session with payload:', sessionPayload);
 
-    this.surveyService.createSession(sessionPayload).subscribe({
+    // Create a proper quiz session request for the service
+    // Note: For surveys, we'll use null quizId since surveys are independent of quizzes
+    const quizSessionPayload = {
+      quizId: null, // ✅ FIXED: Survey doesn't have quizId, using null instead of 0
+      hostId: this.employeeId.toString(),
+      sessionCode: this.generateSessionCode(),
+      startedAt: now.toISOString(),
+      status: 'Waiting'
+    };
+
+    this.surveyService.createSession(quizSessionPayload).subscribe({
       next: (sessionRes: any) => {
         console.log('Step 1 SUCCESS - Full response:', sessionRes);
         
@@ -281,21 +298,32 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
               next: (publishRes: any) => {
                 console.log('Step 3 SUCCESS - Published:', publishRes);
                 
+                // Store the survey ID for QR generation
+                this.createdSurveyId = surveyId;
+                
+                // Generate QR code
+                this.generateQrCode(sessionId);
+                
                 // Update dashboard stats
                 this.dashboardStatsService.incrementSurveyCount();
                 
+                // Show success message
+                alert('🎉 Survey Created and Published Successfully!\n\nYour survey is now ready for participants. Use the QR code or URL to share it.');
+                
                 // Step 5: Initialize SignalR and Navigate
                 console.log('Step 4: Initializing SignalR for sessionId:', sessionId);
-                this.signalrService.initHubConnection(sessionId, this.employeeId);
+                this.signalrService.initHubConnection(sessionId.toString());
                 
-                console.log('Step 5: Navigating to dashboard');
-                this.router.navigate(['/host/dashboard', sessionId]).then(() => {
-                  console.log('Navigation completed successfully');
-                  this.loading = false;
-                }).catch((err) => {
-                  console.error('Navigation error:', err);
-                  this.loading = false;
-                });
+                // Don't auto-navigate immediately, let user see QR code
+                // console.log('Step 5: Navigating to dashboard');
+                // this.router.navigate(['/host/dashboard', sessionId]).then(() => {
+                //   console.log('Navigation completed successfully');
+                //   this.loading = false;
+                // }).catch((err) => {
+                //   console.error('Navigation error:', err);
+                //   this.loading = false;
+                // });
+                this.loading = false;
               },
               error: (err) => {
                 console.error('Step 3 FAILED - Publish Error:', err);
@@ -387,6 +415,28 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
     } else {
       alert('Please fill in the survey title and add at least one question.');
     }
+  }
+
+  generateQrCode(sessionId: number): void {
+    if (sessionId) {
+      // Generate participation URL for survey
+      const baseUrl = window.location.origin;
+      this.surveyUrl = `${baseUrl}/participate/survey/${sessionId}`;
+      this.qrCodeValue = this.surveyUrl;
+      this.showQrCode = true;
+    }
+  }
+
+  copyToClipboard(): void {
+    navigator.clipboard.writeText(this.surveyUrl).then(() => {
+      alert('Survey URL copied to clipboard!');
+    }).catch(() => {
+      alert('Failed to copy URL to clipboard. Please copy it manually.');
+    });
+  }
+
+  goBackToHost(): void {
+    this.router.navigate(['/host/dashboard']);
   }
 
   ngAfterViewInit(): void {
@@ -486,6 +536,11 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
       top: `${top}px`,
       left: `${left}px`
     };
+  }
+
+  // Generate a unique session code
+  private generateSessionCode(): string {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
 
   ngOnDestroy(): void {

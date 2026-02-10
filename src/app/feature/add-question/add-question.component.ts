@@ -141,7 +141,7 @@ export class AddQuestionComponent implements AfterViewInit {
     difficulty: this.fb.nonNullable.control<Difficulty>('Medium'),
     category: this.fb.nonNullable.control<string>(''),
     tags: this.fb.array<FormControl<string>>([]),
-    timerSeconds: this.fb.control<number | null>(null, { validators: [Validators.min(0)] }),
+    timerSeconds: this.fb.control<number | null>(30, { validators: [Validators.min(5), Validators.max(300)] }),
   });
 
   /** typed getters for template */
@@ -160,7 +160,7 @@ export class AddQuestionComponent implements AfterViewInit {
         this.options.clear();
         this.options.push(this.fb.group({
           text: this.fb.nonNullable.control<string>('True', { validators: [Validators.required] }),
-          correct: this.fb.nonNullable.control<boolean>(false),
+          correct: this.fb.nonNullable.control<boolean>(true), // Default True as correct
         }));
         this.options.push(this.fb.group({
           text: this.fb.nonNullable.control<string>('False', { validators: [Validators.required] }),
@@ -168,7 +168,9 @@ export class AddQuestionComponent implements AfterViewInit {
         }));
       } else if (type === 'Multiple Choice' && this.options.length < 2) {
         this.options.clear();
-        this.options.push(this.newOption('Option 1'));
+        const option1 = this.newOption('Option 1');
+        option1.controls.correct.setValue(true); // Set first option as correct by default
+        this.options.push(option1);
         this.options.push(this.newOption('Option 2'));
       } else if (type === 'Short Answer') {
         // Short Answer does not require options; keep UI hidden
@@ -417,16 +419,24 @@ export class AddQuestionComponent implements AfterViewInit {
     const type = this.form.controls.type.value;
     if (type === 'Short Answer') return true;
 
-    const hasCorrect = this.options.controls.some((opt) => opt.controls.correct.value === true);
+    const correctValues = this.options.controls.map((opt, idx) => {
+      const correctValue = opt.controls.correct.value;
+      const textValue = opt.controls.text.value;
+      return { index: idx, text: textValue, correct: correctValue, actualValue: correctValue };
+    });
+
+    const hasCorrect = this.options.controls.some((opt) => {
+      const value = opt.controls.correct.value;
+      return value === true;
+    });
+
     console.log('[DEBUG] hasAtLeastOneCorrect check:', {
       type,
       optionsCount: this.options.controls.length,
-      correctOptions: this.options.controls.map((opt, idx) => ({
-        index: idx,
-        text: opt.controls.text.value,
-        correct: opt.controls.correct.value
-      })),
-      hasCorrect
+      correctOptions: correctValues,
+      hasCorrect,
+      formArrayValue: this.options.value,
+      rawFormValue: this.form.value
     });
 
     return hasCorrect;

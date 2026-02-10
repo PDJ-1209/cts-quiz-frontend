@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, inject, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CalendarService } from '../../services/calendar.service';
+import { AuthService } from '../../services/auth.service';
 import { CalendarDate, QuizCalendar } from '../../models/calendar.models';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, format, addMonths, subMonths } from 'date-fns';
 
@@ -25,6 +26,7 @@ export class QuizCalendarComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
   
   private calendarService = inject(CalendarService);
+  private authService = inject(AuthService);
   
   currentMonth = signal<Date>(new Date());
   calendarDays = signal<CalendarDay[]>([]);
@@ -32,7 +34,9 @@ export class QuizCalendarComponent implements OnInit {
   selectedDateQuizzes = signal<QuizCalendar[]>([]);
   loading = signal(false);
   
-  currentHostId = '2463579'; // This should match the host dashboard
+  // Get current user info
+  currentUser = this.authService.currentUser;
+  currentHostId = this.currentUser()?.employeeId || '2463579';
   
   weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   
@@ -40,24 +44,26 @@ export class QuizCalendarComponent implements OnInit {
     this.loadCalendarData();
   }
   
-  loadCalendarData(): void {
+  async loadCalendarData(): Promise<void> {
     this.loading.set(true);
-    this.calendarService.getCalendarData(this.currentHostId).subscribe({
-      next: (response) => {
-        console.log('Calendar response:', response);
-        this.generateCalendar(response.dates, response.quizzes);
-        this.loading.set(false);
-      },
-      error: (error) => {
-        console.error('Error loading calendar data:', error);
-        // Generate empty calendar even on error
-        this.generateCalendar([], []);
-        this.loading.set(false);
-      }
-    });
+    try {
+      console.log('[QuizCalendar] Loading published quiz data for host:', this.currentHostId);
+      
+      // Get published quizzes from the Publish table
+      const publishedQuizzes = await this.calendarService.getPublishedQuizzes(this.currentHostId);
+      console.log('[QuizCalendar] Published quizzes:', publishedQuizzes);
+      
+      // Generate calendar dates based on current month
+      this.generateCalendarFromQuizzes(publishedQuizzes);
+      this.loading.set(false);
+    } catch (error) {
+      console.error('[QuizCalendar] Error loading calendar data:', error);
+      this.generateCalendarFromQuizzes([]);
+      this.loading.set(false);
+    }
   }
   
-  generateCalendar(dates: CalendarDate[], quizzes: QuizCalendar[]): void {
+  generateCalendarFromQuizzes(quizzes: QuizCalendar[]): void {
     const month = this.currentMonth();
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
@@ -68,26 +74,27 @@ export class QuizCalendarComponent implements OnInit {
     let currentDate = startDate;
     
     while (currentDate <= endDate) {
-      const dateStr = format(currentDate, 'yyyy-MM-dd');
-      const dateData = dates.find(d => format(new Date(d.date), 'yyyy-MM-dd') === dateStr);
       const dateQuizzes = quizzes.filter(q => 
-        q.publishedDate && format(new Date(q.publishedDate), 'yyyy-MM-dd') === dateStr
+        q.publishedDate && isSameDay(new Date(q.publishedDate), currentDate)
       );
+      
+      const currentHostQuizzes = dateQuizzes.filter(q => q.isCurrentHost);
+      const otherHostQuizzes = dateQuizzes.filter(q => !q.isCurrentHost);
       
       days.push({
         date: new Date(currentDate),
         isCurrentMonth: isSameMonth(currentDate, month),
         isToday: isSameDay(currentDate, new Date()),
-        hasQuizzes: (dateData?.quizCount || 0) > 0,
-        currentHostQuizCount: dateData?.currentHostQuizCount || 0,
-        otherHostsQuizCount: dateData?.otherHostsQuizCount || 0,
+        hasQuizzes: dateQuizzes.length > 0,
+        currentHostQuizCount: currentHostQuizzes.length,
+        otherHostsQuizCount: otherHostQuizzes.length,
         quizzes: dateQuizzes
       });
       
       currentDate = addDays(currentDate, 1);
     }
     
-    console.log('Generated calendar days:', days.length, days);
+    console.log('[QuizCalendar] Generated calendar days:', days);
     this.calendarDays.set(days);
   }
   

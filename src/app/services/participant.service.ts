@@ -2,7 +2,15 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ValidateSessionResponse, JoinSessionRequest, ParticipantResponse } from '../models/participant.models';
+import { environment } from '../../environments/environment';
+import { 
+  ValidateSessionResponse, 
+  JoinSessionRequest, 
+  ParticipantResponse,
+  SessionQuestionsResponse,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse
+} from '../models/participant.models';
 
 /** ===== Participant Domain Models ===== */
 
@@ -63,7 +71,7 @@ export interface QuizResultsResponse {
 
 @Injectable({ providedIn: 'root' })
 export class ParticipantService {
-  private readonly apiBase = '/api/Participate';
+  private readonly apiBase = `${environment.apiUrl}/participate`;
   private http = inject(HttpClient);
 
   // Current session state
@@ -204,17 +212,28 @@ export class ParticipantService {
    * Validate session code - check if it's active
    */
   async validateSessionCode(sessionCode: string): Promise<ValidateSessionResponse> {
-    const url = 'http://localhost:5195/api/Participate/Session/validate';
+    const url = `${this.apiBase}/session/validate`;
     
     try {
       console.log(`[ParticipantService] Validating session code: ${sessionCode}`);
-      const response = await firstValueFrom(
-        this.http.post<ValidateSessionResponse>(url, JSON.stringify(sessionCode), {
+      const response: any = await firstValueFrom(
+        this.http.post<any>(url, JSON.stringify(sessionCode), {
           headers: { 'Content-Type': 'application/json' }
         })
       );
       console.log('[ParticipantService] Validation response:', response);
-      return response;
+      
+      // Map to handle both PascalCase and camelCase
+      return {
+        isValid: response.IsValid ?? response.isValid,
+        sessionId: response.SessionId ?? response.sessionId,
+        quizId: response.QuizId ?? response.quizId,
+        quizTitle: response.QuizTitle ?? response.quizTitle,
+        startedAt: response.StartedAt ?? response.startedAt,
+        endedAt: response.EndedAt ?? response.endedAt,
+        status: response.Status ?? response.status,
+        message: response.Message ?? response.message
+      };
     } catch (error: any) {
       console.error('Validate session failed:', error);
       throw new Error(`Failed to validate session: ${error?.error?.message || error?.message || 'Unknown error'}`);
@@ -225,18 +244,100 @@ export class ParticipantService {
    * Join session - create participant entry
    */
   async joinSession(request: JoinSessionRequest): Promise<ParticipantResponse> {
-    const url = 'http://localhost:5195/api/Participate/Session/join';
+    const url = `${this.apiBase}/session/join`;
     
     try {
       console.log('[ParticipantService] Joining session:', request);
-      const response = await firstValueFrom(
-        this.http.post<ParticipantResponse>(url, request)
+      const response: any = await firstValueFrom(
+        this.http.post<any>(url, request)
       );
       console.log('[ParticipantService] Join response:', response);
-      return response;
+      
+      // Map to handle both PascalCase and camelCase
+      return {
+        participantId: response.ParticipantId ?? response.participantId,
+        sessionId: response.SessionId ?? response.sessionId,
+        nickname: response.Nickname ?? response.nickname,
+        employeeId: response.EmployeeId ?? response.employeeId,
+        totalScore: response.TotalScore ?? response.totalScore,
+        joinedAt: response.JoinedAt ?? response.joinedAt
+      };
     } catch (error: any) {
       console.error('Join session failed:', error);
       throw new Error(`Failed to join session: ${error?.error?.message || error?.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get all questions for a session
+   */
+  async getSessionQuestions(sessionId: number): Promise<SessionQuestionsResponse> {
+    const url = `${this.apiBase}/session/${sessionId}/questions`;
+    
+    try {
+      console.log(`[ParticipantService] Fetching questions for session: ${sessionId}`);
+      const response: any = await firstValueFrom(
+        this.http.get<any>(url)
+      );
+      console.log('[ParticipantService] Questions response:', response);
+      
+      // Map to handle both PascalCase and camelCase
+      return {
+        sessionId: response.SessionId ?? response.sessionId,
+        quizId: response.QuizId ?? response.quizId,
+        quizTitle: response.QuizTitle ?? response.quizTitle,
+        totalQuestions: response.TotalQuestions ?? response.totalQuestions,
+        questions: (response.Questions ?? response.questions)?.map((q: any) => ({
+          questionId: q.QuestionId ?? q.questionId,
+          questionText: q.QuestionText ?? q.questionText,
+          questionType: q.QuestionType ?? q.questionType,
+          timerSeconds: q.TimerSeconds ?? q.timerSeconds ?? 30,
+          options: (q.Options ?? q.options)?.map((o: any) => ({
+            optionId: o.OptionId ?? o.optionId,
+            optionText: o.OptionText ?? o.optionText
+          })) ?? []
+        })) ?? []
+      };
+    } catch (error: any) {
+      console.error('Get session questions failed:', error);
+      throw new Error(`Failed to get questions: ${error?.error?.message || error?.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Submit participant's answer for a question
+   */
+  async submitParticipantAnswer(request: SubmitAnswerRequest): Promise<SubmitAnswerResponse> {
+    const url = `${this.apiBase}/session/submit-answer`;
+    
+    try {
+      console.log('[ParticipantService] Submitting answer:', request);
+      console.log('[ParticipantService] Request URL:', url);
+      console.log('[ParticipantService] Request body:', JSON.stringify(request));
+      
+      const response: any = await firstValueFrom(
+        this.http.post<any>(url, request)
+      );
+      console.log('[ParticipantService] Submit answer response:', response);
+      
+      // Map to handle both PascalCase and camelCase
+      return {
+        isCorrect: response.IsCorrect ?? response.isCorrect,
+        correctOptionId: response.CorrectOptionId ?? response.correctOptionId,
+        explanation: response.Explanation ?? response.explanation
+      };
+    } catch (error: any) {
+      console.error('Submit answer failed:', error);
+      console.error('Error status:', error?.status);
+      console.error('Error response:', error?.error);
+      console.error('Error message:', error?.message);
+      
+      // If backend returned HTML error, try to extract useful info
+      if (error?.error && typeof error.error === 'string') {
+        console.error('HTML Error Response (first 500 chars):', error.error.substring(0, 500));
+      }
+      
+      throw new Error(`Failed to submit answer: ${error?.error?.message || error?.message || 'Unknown error'}`);
     }
   }
 }

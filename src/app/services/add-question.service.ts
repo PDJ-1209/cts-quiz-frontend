@@ -235,6 +235,13 @@ export class AddQuestionService {
       category: quizDetails.category
     });
 
+    // Check if questions exist before mapping
+    if (!quizDetails.questions || !Array.isArray(quizDetails.questions)) {
+      console.warn('No questions found in quiz details, setting empty array');
+      this._questions.set([]);
+      return;
+    }
+
     const questions: QuizQuestion[] = quizDetails.questions.map(q => ({
       questionId: parseInt(q.questionId),  // Keep the question ID for updates
       text: q.questionText,
@@ -243,11 +250,11 @@ export class AddQuestionService {
       category: q.category,
       timerSeconds: q.timeLimit || null,
       tags: [],
-      options: q.options.map(opt => ({
+      options: q.options?.map(opt => ({
         optionId: parseInt(opt.optionId),  // Keep the option ID for updates
         text: opt.optionText,
         isCorrect: opt.isCorrect
-      }))
+      })) || []
     }));
 
     this._questions.set(questions);

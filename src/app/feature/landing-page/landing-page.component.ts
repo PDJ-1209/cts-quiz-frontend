@@ -1,14 +1,16 @@
 import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { trigger, state, style, transition, animate, keyframes } from '@angular/animations';
 import { Subject, takeUntil, catchError, of } from 'rxjs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-landing-page',
   standalone: true,
-  imports: [CommonModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, MatSnackBarModule],
   templateUrl: './landing-page.component.html',
   styleUrl: './landing-page.component.css',
   animations: [
@@ -39,9 +41,31 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   ]
 })
 export class LandingPageComponent implements OnInit, OnDestroy {
-  private router = inject(Router);
+  public router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private authService = inject(AuthService);
   private destroy$ = new Subject<void>();
+  
+  // Authentication state
+  isAuthenticated = signal(false);
+  userRole = signal<string | null>(null);
+  showLoginForm = signal(false);
+  showRegistrationForm = signal(false);
+  
+  // Login form data
+  loginData = {
+    employeeId: '',
+    password: ''
+  };
+  
+  // Registration form data
+  registrationData = {
+    employeeId: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    password: ''
+  };
   
   // Signals for animations
   showHero = signal(false);
@@ -130,6 +154,12 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Initialize component with error handling
     try {
+      // Check if user is already authenticated and redirect them
+      if (this.authService.isAuthenticated()) {
+        this.authService.navigateToDashboard();
+        return;
+      }
+      
       this.initializeAnimations();
       this.loadInitialData();
     } catch (error) {
@@ -253,6 +283,78 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.handleError(error, 'navigateToHost');
     }
+  }
+  
+  // Authentication methods
+  toggleLoginForm() {
+    this.showLoginForm.set(!this.showLoginForm());
+    this.showRegistrationForm.set(false);
+  }
+  
+  toggleRegistrationForm() {
+    this.showRegistrationForm.set(!this.showRegistrationForm());
+    this.showLoginForm.set(false);
+  }
+  
+  async onLogin() {
+    if (!this.loginData.employeeId || !this.loginData.password) {
+      this.snackBar.open('Please fill in all required fields', 'Close', { duration: 3000 });
+      return;
+    }
+    
+    try {
+      this.isLoading.set(true);
+      const response = await this.authService.login({
+        employeeId: this.loginData.employeeId,
+        password: this.loginData.password
+      });
+      
+      if (response.user) {
+        this.isAuthenticated.set(true);
+        this.userRole.set(response.user.role.toString());
+        this.showLoginForm.set(false);
+        
+        this.snackBar.open(`Welcome back! Redirecting to ${response.user.role} dashboard...`, 'Close', { duration: 2000 });
+        
+        // Let the AuthService handle the navigation since it already has redirect logic
+        // Remove the duplicate setTimeout redirect to prevent double redirects
+      }
+      
+    } catch (error: any) {
+      this.snackBar.open(error.message || 'Login failed. Please check your credentials.', 'Close', { duration: 5000 });
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+  
+  async onRegister() {
+    try {
+      this.isLoading.set(true);
+      await this.authService.register(this.registrationData);
+      this.showRegistrationForm.set(false);
+      this.snackBar.open('Registration successful! Please login with your credentials.', 'Close', { duration: 5000 });
+      this.toggleLoginForm();
+    } catch (error: any) {
+      this.snackBar.open(error.message || 'Registration failed. Please try again.', 'Close', { duration: 5000 });
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+  
+  logout() {
+    this.authService.logout();
+    this.isAuthenticated.set(false);
+    this.userRole.set(null);
+    this.snackBar.open('Logged out successfully', 'Close', { duration: 3000 });
+  }
+  
+  // Role-based navigation methods
+  canAccessAdmin(): boolean {
+    return this.isAuthenticated() && this.userRole() === 'Admin';
+  }
+  
+  canAccessHost(): boolean {
+    return this.isAuthenticated() && (this.userRole() === 'Host' || this.userRole() === 'Admin');
   }
   
   navigateToParticipant() {

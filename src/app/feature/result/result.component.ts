@@ -6,10 +6,14 @@ import { QuizCreationService } from '../../services/quiz-creation.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { QuizPublishService } from '../../services/quiz-publish.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
+import { PollService } from '../../services/poll.service';
+import { SurveyService } from '../../services/survey.service';
 import { Subscription } from 'rxjs';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
+import { PollOverview } from '../../models/ipoll';
+import { Survey, SurveyOverview } from '../../models/isurvey';
 
 export interface Analytics {
   totalParticipants: number;
@@ -38,9 +42,13 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   private snackBar = inject(MatSnackBar);
   private quizPublishService = inject(QuizPublishService);
   private dashboardStatsService = inject(DashboardStatsService);
+  private pollService = inject(PollService);
+  private surveyService = inject(SurveyService);
   private subscriptions: Subscription[] = [];
   
   hostQuizzes = signal<QuizListItem[]>([]);
+  hostPolls = signal<PollOverview[]>([]);
+  hostSurveys = signal<SurveyOverview[]>([]);
   quizAnalytics: { [key: number]: Analytics } = {};
   startTimes: { [key: number]: string } = {};
   endTimes: { [key: number]: string } = {};
@@ -48,6 +56,9 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   currentHostId = '2463579';
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
   private statusCheckInterval: any;
+
+  // Content type selection
+  selectedContentType = signal<'quizzes' | 'surveys' | 'polls'>('quizzes');
 
   // Tutorial properties
   private tutorialService = inject(TutorialService);
@@ -58,32 +69,40 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   private tutorialStepDefinitions: TutorialStep[] = [
     {
       id: 'analytics-overview',
-      title: '📊 Analytics Overview',
-      description: 'View key metrics about your quizzes: total quizzes, questions, drafts, and published content.',
+      title: '📊 Content Analytics',
+      description: 'View key metrics about your content: total quizzes, surveys, polls, questions, and their status.',
       targetElement: '.analytics-grid',
       position: 'bottom',
       skipable: true
     },
     {
+      id: 'content-types',
+      title: '📋 Content Types',
+      description: 'Switch between different content types to manage your quizzes, surveys, and polls separately.',
+      targetElement: '.btn-group',
+      position: 'bottom',
+      skipable: true
+    },
+    {
       id: 'quiz-list',
-      title: '📋 Quiz Management',
-      description: 'See all your quizzes here. You can view details, edit, publish, or schedule them from this list.',
-      targetElement: '.quiz-list-section',
+      title: '📝 Content Management',
+      description: 'View, edit, publish, or schedule your content. Each item shows status, participant count, and available actions.',
+      targetElement: '.table-responsive',
       position: 'left',
       skipable: true
     },
     {
       id: 'publish-actions',
       title: '🚀 Publishing Options',
-      description: 'Use these buttons to publish quizzes, schedule them, or generate QR codes for easy participant access.',
-      targetElement: '.publish-actions',
+      description: 'Use these buttons to publish content, schedule them, or generate QR codes for easy participant access.',
+      targetElement: '.publish-btn',
       position: 'top',
       skipable: true
     },
     {
       id: 'refresh-data',
       title: '🔄 Refresh Data',
-      description: 'Click here to reload your quiz data and see the latest updates and analytics.',
+      description: 'Click here to reload your content data and see the latest updates and analytics.',
       targetElement: '.btn-primary',
       position: 'left',
       skipable: true
@@ -92,6 +111,9 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   analytics = computed(() => {
     const quizzes = this.hostQuizzes();
+    const polls = this.hostPolls();
+    const surveys = this.hostSurveys();
+    
     const draftQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'draft');
     const activeQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'active');
     const completedQuizzes = quizzes.filter(q => q.status?.toLowerCase() === 'completed');
@@ -101,10 +123,27 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       draftQuizzes: draftQuizzes.length,
       publishedQuizzes: activeQuizzes.length + completedQuizzes.length,
       totalQuestions: quizzes.reduce((sum, q) => sum + (q.questionCount || 0), 0),
-      totalSurveys: 0, // Add survey counting logic when available
-      totalPolls: 0, // Add poll counting logic when available
+      totalSurveys: surveys.length,
+      totalPolls: polls.length,
     };
   });
+
+  pageTitle = computed(() => {
+    const currentUrl = this.router.url;
+    return currentUrl.includes('/host/manage-content') 
+      ? '🔧 Content Management Dashboard'
+      : '📊 Quiz Analytics Dashboard';
+  });
+
+  debugInfo = computed(() => ({
+    selectedType: this.selectedContentType(),
+    quizCount: this.hostQuizzes().length,
+    surveyCount: this.hostSurveys().length,
+    pollCount: this.hostPolls().length,
+    hasQuizzes: this.hostQuizzes().length > 0,
+    hasSurveys: this.hostSurveys().length > 0,
+    hasPolls: this.hostPolls().length > 0
+  }));
 
   getCategoryList = computed(() => {
     const categoryMap = new Map<string, number>();
@@ -123,6 +162,21 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       this.showQRForQuizId.set(null);
     } else {
       this.showQRForQuizId.set(quizId);
+    }
+  }
+
+  selectContentType(type: 'quizzes' | 'surveys' | 'polls') {
+    this.selectedContentType.set(type);
+  }
+
+  async loadAllContent() {
+    this.loading.set(true);
+    try {
+      await this.loadQuizzes();
+      await this.loadSurveys(); 
+      await this.loadPolls();
+    } finally {
+      this.loading.set(false);
     }
   }
 
@@ -154,9 +208,17 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async ngOnInit() {
+    console.log('ResultComponent ngOnInit - Loading all content...');
     await this.loadQuizzes();
+    await this.loadSurveys();
+    await this.loadPolls();
     this.initializeQuizPublishService();
     this.startStatusPolling();
+    
+    console.log('Loaded data summary:');
+    console.log('- Quizzes:', this.hostQuizzes().length);
+    console.log('- Surveys:', this.hostSurveys().length); 
+    console.log('- Polls:', this.hostPolls().length);
   }
 
   private startStatusPolling() {
@@ -199,16 +261,16 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         // Check current quiz status in our list
         const currentQuiz = this.hostQuizzes().find(q => q.quizNumber === quizNumber);
         const currentStatus = currentQuiz?.status?.toLowerCase();
-        const newStatus = session.status.toLowerCase();
+        const newStatus = session?.status?.toLowerCase();
 
         // If status changed, mark for refresh
-        if (currentStatus !== newStatus) {
+        if (newStatus && currentStatus !== newStatus) {
           console.log(`Status changed for ${quizNumber}: ${currentStatus} -> ${newStatus}`);
           statusChanged = true;
         }
 
         // If status changed to Completed, remove from tracking
-        if (session.status === 'Completed') {
+        if (session?.status?.toLowerCase() === 'completed') {
           this.activeSessionIds.delete(quizNumber);
           
           this.snackBar.open(
@@ -308,7 +370,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.endTimes[quiz.quizId] = this.formatDateTimeLocal(endDate);
               }
               // Track active sessions only
-              if (status === 'active') {
+              if (status === 'active' && session.sessionId) {
                 this.activeSessionIds.set(quiz.quizNumber, session.sessionId);
               }
             }
@@ -358,6 +420,38 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       this.snackBar.open('Failed to load quizzes', 'Close', { duration: 3000 });
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async loadSurveys() {
+    try {
+      const surveys = await new Promise<SurveyOverview[]>((resolve, reject) => {
+        this.surveyService.getAllSurveysV2().subscribe({
+          next: (data) => resolve(data || []),
+          error: (error) => reject(error)
+        });
+      });
+      this.hostSurveys.set(surveys);
+      console.log('Loaded surveys:', surveys?.length || 0, 'surveys');
+    } catch (error) {
+      console.error('Failed to load surveys:', error);
+      this.hostSurveys.set([]);
+    }
+  }
+
+  async loadPolls() {
+    try {
+      const polls = await new Promise<PollOverview[]>((resolve, reject) => {
+        this.pollService.getAllPolls().subscribe({
+          next: (data) => resolve(data || []),
+          error: (error) => reject(error)
+        });
+      });
+      this.hostPolls.set(polls);
+      console.log('Loaded polls:', polls?.length || 0, 'polls');
+    } catch (error) {
+      console.error('Failed to load polls:', error);
+      this.hostPolls.set([]);
     }
   }
 
@@ -688,7 +782,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onStartTimeChange(quizId: number, event: Event) {
     const input = event.target as HTMLInputElement;
-    this.startTimes[quizId] = input.value;
+    this.startTimes![quizId] = input.value;
     console.log(`Start time for quiz ${quizId}:`, input.value);
     
     // Convert to ISO string for backend
@@ -731,17 +825,28 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Tutorial methods
   startTutorial(): void {
-    if (this.tutorialService.shouldAutoStart('results')) {
-      console.log('Auto-starting tutorial for results component');
-      this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'results');
+    const componentName = this.getComponentContext();
+    if (this.tutorialService.shouldAutoStart(componentName)) {
+      console.log(`Auto-starting tutorial for ${componentName} component`);
+      this.tutorialService.startTutorial(this.tutorialStepDefinitions, componentName);
     } else {
-      console.log('Tutorial already seen for results component');
+      console.log(`Tutorial already seen for ${componentName} component`);
     }
   }
 
   resetTutorial(): void {
-    this.tutorialService.resetTutorial('results');
-    this.tutorialService.startTutorial(this.tutorialStepDefinitions, 'results');
+    const componentName = this.getComponentContext();
+    this.tutorialService.resetTutorial(componentName);
+    this.tutorialService.startTutorial(this.tutorialStepDefinitions, componentName);
+  }
+
+  private getComponentContext(): string {
+    // Determine the context based on the current route
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('/host/manage-content')) {
+      return 'manage-content';
+    }
+    return 'results';
   }
 
   nextTutorialStep(): void {

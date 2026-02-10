@@ -13,6 +13,10 @@ export interface QuizCalendar {
   publishedBy?: string;
   hostName?: string;
   isCurrentHost: boolean;
+  sessionCode?: string;
+  sessionId?: number;
+  status?: string;
+  quizStatus?: string;
 }
 
 export interface CalendarResponse {

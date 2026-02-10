@@ -65,7 +65,8 @@ export class PreviewComponent {
   startNewQuiz(): void {
     this.store.clearAll();
     this.cancelEdit();
-    this.switchToQuestionsTab.emit();
+    // Navigate to quiz creation page instead of just emitting event
+    this.router.navigate(['/host/addquestion'], { queryParams: { tab: 'questions' } });
   }
 
   backToQuizList(): void {

@@ -88,6 +88,33 @@
             </small>
           </div>
         </div>
+        
+        <!-- QR Code Section -->
+        <div class="survey-qr-card card shadow-sm mt-4" *ngIf="showQrCode">
+          <div class="card-body p-4 text-center">
+            <h6 class="fw-bold border-bottom pb-2 text-success">🎉 Survey Published Successfully!</h6>
+            <div class="qr-code-container mt-3 mb-3">
+              <qrcode [qrdata]="qrCodeValue" [width]="200" [errorCorrectionLevel]="'M'" [elementType]="'canvas'"></qrcode>
+            </div>
+            <div class="survey-url-section">
+              <label class="form-label small text-muted">Survey Participation URL:</label>
+              <div class="input-group input-group-sm mb-3">
+                <input type="text" class="form-control" [value]="surveyUrl" readonly>
+                <button class="btn btn-outline-secondary" (click)="copyToClipboard()" title="Copy URL">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </div>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary btn-sm" (click)="goBackToHost()">
+                <i class="fas fa-arrow-left me-1"></i> Back to Host Dashboard
+              </button>
+            </div>
+            <small class="text-muted d-block mt-2">
+              Share this QR code or URL with participants to join your survey
+            </small>
+          </div>
+        </div>
       </div>
     </div>
 

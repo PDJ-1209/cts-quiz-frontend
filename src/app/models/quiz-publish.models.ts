@@ -61,7 +61,7 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 
 // Request payload for creating a QuizSession from result component
 export interface CreateQuizSessionRequest {
-  quizId: number;
+  quizId: number | null;  // ✅ FIXED: Made nullable to support surveys
   hostId: string;
   sessionCode: string; // This will be the quizNumber
   startedAt?: string;
