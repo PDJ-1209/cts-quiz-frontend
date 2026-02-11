@@ -417,39 +417,48 @@
 }
 
 .btn-sm {
-  padding: 0.5rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: 1px solid;
+  font-weight: 500;
 }
 
 .btn-outline {
-  background: transparent;
+  background: white;
   border: 1px solid #e9ecef;
   color: #6b7280;
 }
 
 .btn-outline:hover {
   background: #f3f4f6;
+  border-color: #d1d5db;
 }
 
 .btn-danger {
+  background: #fee2e2;
   border-color: #dc2626;
-  color: #dc2626;
+  color: #dc2626 !important;
 }
 
 .btn-danger:hover {
-  background: #fef2f2;
+  background: #fecaca;
+  border-color: #b91c1c;
+  color: #b91c1c !important;
 }
 
 .btn-success {
+  background: #dcfce7;
   border-color: #16a34a;
-  color: #16a34a;
+  color: #16a34a !important;
 }
 
 .btn-success:hover {
-  background: #f0fff4;
+  background: #bbf7d0;
+  border-color: #15803d;
+  color: #15803d !important;
 }
 
 /* Coming Soon Placeholder */

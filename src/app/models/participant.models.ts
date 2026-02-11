@@ -42,6 +42,8 @@ export interface SessionQuestionsResponse {
   quizId: number;
   quizTitle: string;
   totalQuestions: number;
+  startedAt?: string;
+  serverTime?: string;
   questions: QuestionDetail[];
 }
 

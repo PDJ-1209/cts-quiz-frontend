@@ -84,8 +84,8 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   
   // Get current user info from auth service
   currentUser = this.authService.currentUser;
-  currentHostId = this.currentUser()?.employeeId || '2463579';
-  hostName = this.currentUser() ? `${this.currentUser()?.firstName} ${this.currentUser()?.lastName}` : 'Host User';
+  currentHostId = computed(() => this.currentUser()?.employeeId || '2463579');
+  hostName = computed(() => this.currentUser() ? `${this.currentUser()?.firstName} ${this.currentUser()?.lastName}` : 'Host User');
   
   currentDateTime = signal('Loading...');
 
@@ -230,7 +230,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   async loadQuizzes() {
     try {
       this.loading.set(true);
-      const quizzes = await this.quizCreationService.getHostQuizzes(this.currentHostId);
+      const quizzes = await this.quizCreationService.getHostQuizzes(this.currentHostId());
       this.hostQuizzes.set(quizzes);
       
       // Update shared dashboard stats with real data
@@ -291,14 +291,14 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private async loadCalendarData(): Promise<void> {
     try {
-      console.log('[Calendar] Loading quiz session data for host:', this.currentHostId);
+      console.log('[Calendar] Loading quiz session data for host:', this.currentHostId());
       
       // Get quiz sessions from QuizSession table joined with Quiz table
-      const publishedQuizzes = await this.calendarService.getPublishedQuizzes(this.currentHostId);
+      const publishedQuizzes = await this.calendarService.getPublishedQuizzes(this.currentHostId());
       console.log('[Calendar] Quiz sessions from QuizSession table:', publishedQuizzes);
       
       if (publishedQuizzes.length === 0) {
-        console.log('[Calendar] No quiz sessions found for host:', this.currentHostId);
+        console.log('[Calendar] No quiz sessions found for host:', this.currentHostId());
         console.log('[Calendar] Note: Only quizzes that have active sessions will appear in the calendar');
       }
       
@@ -307,7 +307,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         id: quiz.quizId.toString(),
         name: quiz.quizTitle || `Quiz ${quiz.quizId}`,
         category: 'General', // TODO: Get category from quiz details if needed
-        hostName: quiz.hostName || this.hostName,
+        hostName: quiz.hostName || this.hostName(),
         time: quiz.publishedDate ? new Date(quiz.publishedDate).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 

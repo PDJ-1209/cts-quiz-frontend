@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -17,6 +17,7 @@ export class QuizUsernameComponent implements OnInit {
   showWarning = false;
   sessionCode = '';
   isValidating = false;
+  private lastBackWarnAt = 0;
 
   constructor(
     private router: Router, 
@@ -26,6 +27,7 @@ export class QuizUsernameComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.lockBackNavigation();
     // Get session code from query params
     this.route.queryParams.subscribe(params => {
       this.sessionCode = params['code'] || '';
@@ -39,6 +41,27 @@ export class QuizUsernameComponent implements OnInit {
         this.router.navigate(['/participant']);
       }
     });
+  }
+
+  @HostListener('window:popstate', ['$event'])
+  onPopState(): void {
+    this.lockBackNavigation();
+
+    const now = Date.now();
+    if (now - this.lastBackWarnAt > 2000) {
+      this.lastBackWarnAt = now;
+      this.snackBar.open('Back navigation is disabled while joining the quiz.', 'Close', { duration: 2000 });
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  private lockBackNavigation(): void {
+    window.history.pushState(null, '', window.location.href);
   }
 
   async validateSession() {
@@ -96,13 +119,15 @@ export class QuizUsernameComponent implements OnInit {
         localStorage.setItem('participantName', cleaned);
         localStorage.setItem('participantId', participant.participantId.toString());
         localStorage.setItem('sessionId', participant.sessionId.toString());
+        localStorage.setItem('sessionCode', this.sessionCode);
 
         // Go to waiting room (countdown) before quiz starts
         this.router.navigate(['/countdown'], { 
           queryParams: { code: this.sessionCode }
         });
       } catch (error: any) {
-        this.snackBar.open(`⚠️ ${error.message}`, 'Close', {
+        const friendlyMessage = this.getJoinErrorMessage(error);
+        this.snackBar.open(`⚠️ ${friendlyMessage}`, 'Close', {
           duration: 5000,
           panelClass: ['error-snackbar'],
           horizontalPosition: 'center',
@@ -117,5 +142,14 @@ export class QuizUsernameComponent implements OnInit {
         verticalPosition: 'top'
       });
     }
+  }
+
+  private getJoinErrorMessage(error: any): string {
+    const rawMessage = error?.message || 'Failed to join quiz.';
+    const prefix = 'Failed to join session:';
+    if (rawMessage.startsWith(prefix)) {
+      return rawMessage.replace(prefix, '').trim();
+    }
+    return rawMessage;
   }
 }

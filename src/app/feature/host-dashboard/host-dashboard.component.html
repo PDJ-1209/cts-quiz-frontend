@@ -36,7 +36,7 @@
           <span class="d-none d-lg-inline">Logout</span>
         </button>
         <div class="user-info text-end text-white ms-2">
-          <div class="fw-bold user-name">{{ hostName }}</div>
+          <div class="fw-bold user-name">{{ hostName() }}</div>
           <div class="datetime-display">
             <small class="opacity-75">{{ currentDay() }} - {{ currentDateTime() }}</small>
           </div>
@@ -53,7 +53,7 @@
       <div class="col-12">
         <div class="welcome-card">
           <div class="welcome-content">
-            <h1 class="welcome-title">Welcome, {{ hostName }}!</h1>
+            <h1 class="welcome-title">Welcome, {{ hostName() }}!</h1>
             <h3 class="welcome-subtitle">{{ welcomeMessage() }}</h3>
             <p class="welcome-description">Create, manage, and deploy your learning content with our professional platform.</p>
           </div>

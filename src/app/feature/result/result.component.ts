@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { QuizCreationService } from '../../services/quiz-creation.service';
+import { AuthService } from '../../services/auth.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { QuizPublishService } from '../../services/quiz-publish.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
@@ -44,6 +45,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   private dashboardStatsService = inject(DashboardStatsService);
   private pollService = inject(PollService);
   private surveyService = inject(SurveyService);
+  private authService = inject(AuthService);
   private subscriptions: Subscription[] = [];
   
   hostQuizzes = signal<QuizListItem[]>([]);
@@ -53,7 +55,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   startTimes: { [key: number]: string } = {};
   endTimes: { [key: number]: string } = {};
   loading = signal(false);
-  currentHostId = '2463579';
+  currentHostId = computed(() => this.authService.currentUser()?.employeeId || '2463579');
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
   private statusCheckInterval: any;
 
@@ -341,7 +343,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   async loadQuizzes() {
     try {
       this.loading.set(true);
-      const quizzes = await this.store.getHostQuizzes(this.currentHostId);
+      const quizzes = await this.store.getHostQuizzes(this.currentHostId());
       
       console.log('Loaded quizzes:', quizzes.map(q => ({
         id: q.quizId,
@@ -596,7 +598,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       // Create QuizSession using the new method designed for SignalR
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
-        this.currentHostId,
+        this.currentHostId(),
         quizNumber,
         startTime,
         endTime,
@@ -726,7 +728,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       // Create a new QuizSession with Active status
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
-        this.currentHostId,
+        this.currentHostId(),
         quizNumber,
         startTime,
         endTime,

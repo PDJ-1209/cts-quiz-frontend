@@ -27,18 +27,29 @@
         </div>
       </div>
 
-      <app-question *ngIf="currentQuestion" [question]="{ id: currentQuestion.id, text: currentQuestion.text }"></app-question>
+      <ng-container *ngIf="waitingForNext; else questionBlock">
+        <div class="card shadow-sm text-center">
+          <div class="card-body">
+            <h5 class="mb-2">✅ Answer submitted</h5>
+            <p class="text-muted mb-0">Waiting for the next question...</p>
+          </div>
+        </div>
+      </ng-container>
 
-      <app-options *ngIf="currentQuestion"
-                   [options]="currentQuestion.options"
-                   [selected]="selected"
-                   (selectedChange)="onSelectedChange($event)">
-      </app-options>
+      <ng-template #questionBlock>
+        <app-question *ngIf="currentQuestion" [question]="{ id: currentQuestion.id, text: currentQuestion.text }"></app-question>
 
-      <app-submit [disabled]="!selected || submitting"
-                  label="Submit Answer"
-                  (clicked)="submitAnswer(false)">
-      </app-submit>
+        <app-options *ngIf="currentQuestion"
+                     [options]="currentQuestion.options"
+                     [selected]="selected"
+                     (selectedChange)="onSelectedChange($event)">
+        </app-options>
+
+        <app-submit [disabled]="!selected || submitting"
+                    label="Submit Answer"
+                    (clicked)="submitAnswer(false)">
+        </app-submit>
+      </ng-template>
     </ng-container>
 
     <!-- Results Block -->

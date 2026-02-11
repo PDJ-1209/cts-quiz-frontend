@@ -1,8 +1,9 @@
 // src/app/services/quiz-creation.service.ts
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../environments/environment';
+import { AuthService } from './auth.service';
 import { 
   QuizQuestion, 
   QuizMeta, 
@@ -35,6 +36,7 @@ export interface CreateQuizPayload {
 })
 export class QuizCreationService {
   private readonly apiBase = `${environment.apiUrl}/Host/Quiz`;
+  private authService = inject(AuthService);
 
   constructor(private http: HttpClient) {}
 
@@ -86,32 +88,134 @@ export class QuizCreationService {
    * Get all quizzes created by a specific host
    */
   async getHostQuizzes(hostName: string): Promise<QuizListItem[]> {
+    if (!hostName) {
+      console.warn('[QuizCreationService] No host name provided');
+      return [];
+    }
+
     // Add timestamp to prevent caching
     const timestamp = new Date().getTime();
     const url = `${this.apiBase}/GetByHost?createdBy=${encodeURIComponent(hostName)}&_t=${timestamp}`;
+    console.log('[QuizCreationService] Fetching quizzes from:', url);
+    
     try {
       const response: any = await firstValueFrom(this.http.get<any>(url));
-      console.log('Raw API response:', response);
-      const quizzes = response.data || response;
-      console.log('Parsed quizzes:', quizzes);
+      console.log('[QuizCreationService] Raw API response:', response);
+      
+      // Handle different response formats
+      let quizzes = [];
+      if (Array.isArray(response)) {
+        quizzes = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        quizzes = response.data;
+      } else if (response.$values && Array.isArray(response.$values)) {
+        quizzes = response.$values;
+      } else {
+        console.warn('[QuizCreationService] Unexpected response format:', response);
+        return [];
+      }
+      
+      console.log('[QuizCreationService] Parsed quizzes:', quizzes);
       
       // Map to handle both PascalCase and camelCase property names
       return quizzes.map((quiz: any) => ({
-        quizId: quiz.QuizId || quiz.quizId,
-        quizName: quiz.QuizName || quiz.quizName,
-        quizNumber: quiz.QuizNumber || quiz.quizNumber,
+        quizId: quiz.QuizId || quiz.quizId || quiz.quiz_id,
+        quizName: quiz.QuizName || quiz.quizName || quiz.quiz_name,
+        quizNumber: quiz.QuizNumber || quiz.quizNumber || quiz.quiz_number,
         category: quiz.Category || quiz.category,
-        questionCount: quiz.QuestionCount || quiz.questionCount,
-        templateId: quiz.TemplateId || quiz.templateId,
-        createdBy: quiz.CreatedBy || quiz.createdBy,
-        updatedBy: quiz.UpdatedBy || quiz.updatedBy,
-        createdAt: quiz.CreatedAt || quiz.createdAt,
-        updatedAt: quiz.UpdatedAt || quiz.updatedAt,
-        status: quiz.Status || quiz.status
+        questionCount: quiz.QuestionCount || quiz.questionCount || quiz.question_count || 0,
+        templateId: quiz.TemplateId || quiz.templateId || quiz.template_id,
+        createdBy: quiz.CreatedBy || quiz.createdBy || quiz.created_by,
+        updatedBy: quiz.UpdatedBy || quiz.updatedBy || quiz.updated_by,
+        createdAt: quiz.CreatedAt || quiz.createdAt || quiz.created_at,
+        updatedAt: quiz.UpdatedAt || quiz.updatedAt || quiz.updated_at,
+        status: quiz.Status || quiz.status || 'draft'
       }));
     } catch (error: any) {
-      console.error('Error fetching host quizzes:', error);
-      throw new Error(`Failed to fetch quizzes: ${error?.message || 'Unknown error'}`);
+      console.error('[QuizCreationService] Error fetching host quizzes:', error);
+      console.error('[QuizCreationService] Error details:', {
+        status: error?.status,
+        message: error?.message,
+        url: url
+      });
+      
+      // Try fallback: get all quizzes and filter by host
+      console.log('[QuizCreationService] Trying fallback: fetching all quizzes');
+      try {
+        const allQuizzes = await this.getAllQuizzes();
+        console.log(`[QuizCreationService] Total quizzes fetched: ${allQuizzes.length}`);
+        console.log('[QuizCreationService] Filtering for hostName:', hostName);
+        
+        // Log first few quizzes to see createdBy format
+        if (allQuizzes.length > 0) {
+          console.log('[QuizCreationService] Sample quiz createdBy values:', 
+            allQuizzes.slice(0, 3).map(q => q.createdBy));
+        }
+        
+        const filteredQuizzes = allQuizzes.filter(q => {
+          const match = q.createdBy === hostName || 
+                       q.createdBy?.toLowerCase() === hostName?.toLowerCase() ||
+                       q.createdBy === String(hostName) ||
+                       String(q.createdBy) === String(hostName);
+          
+          if (match) {
+            console.log(`[QuizCreationService] Match found: ${q.quizName} (createdBy: ${q.createdBy})`);
+          }
+          
+          return match;
+        });
+        
+        console.log('[QuizCreationService] Fallback result - filtered quizzes:', filteredQuizzes.length);
+        console.log('[QuizCreationService] Filtered quiz details:', filteredQuizzes);
+        return filteredQuizzes;
+      } catch (fallbackError) {
+        console.error('[QuizCreationService] Fallback also failed:', fallbackError);
+        return [];
+      }
+    }
+  }
+
+  /**
+   * Get all quizzes (fallback method using admin endpoint)
+   */
+  async getAllQuizzes(): Promise<QuizListItem[]> {
+    const timestamp = new Date().getTime();
+    // Use the admin endpoint that actually works
+    const url = `${environment.apiUrl}/admin/QuizManagement/quizzes?_t=${timestamp}`;
+    console.log('[QuizCreationService] Fetching all quizzes from:', url);
+    
+    try {
+      const response: any = await firstValueFrom(this.http.get<any>(url));
+      console.log('[QuizCreationService] All quizzes response:', response);
+      
+      // Handle different response formats
+      let quizzes = [];
+      if (Array.isArray(response)) {
+        quizzes = response;
+      } else if (response.data && Array.isArray(response.data)) {
+        quizzes = response.data;
+      } else if (response.$values && Array.isArray(response.$values)) {
+        quizzes = response.$values;
+      }
+      
+      console.log(`[QuizCreationService] Found ${quizzes.length} total quizzes`);
+      
+      return quizzes.map((quiz: any) => ({
+        quizId: quiz.QuizId || quiz.quizId || quiz.quiz_id,
+        quizName: quiz.QuizName || quiz.quizName || quiz.quiz_name,
+        quizNumber: quiz.QuizNumber || quiz.quizNumber || quiz.quiz_number,
+        category: quiz.Category || quiz.category,
+        questionCount: quiz.QuestionCount || quiz.questionCount || quiz.question_count || 0,
+        templateId: quiz.TemplateId || quiz.templateId || quiz.template_id,
+        createdBy: quiz.CreatedBy || quiz.createdBy || quiz.created_by,
+        updatedBy: quiz.UpdatedBy || quiz.updatedBy || quiz.updated_by,
+        createdAt: quiz.CreatedAt || quiz.createdAt || quiz.created_at,
+        updatedAt: quiz.UpdatedAt || quiz.updatedAt || quiz.updated_at,
+        status: quiz.Status || quiz.status || 'draft'
+      }));
+    } catch (error: any) {
+      console.error('[QuizCreationService] Error fetching all quizzes:', error);
+      return [];
     }
   }
 
@@ -189,10 +293,14 @@ export class QuizCreationService {
    * Map frontend model to backend format
    */
   private mapToBackendPayload(quiz: QuizMeta, questions: QuizQuestion[]): CreateQuizPayload {
+    const currentUser = this.authService.currentUser();
+    const employeeId = currentUser?.employeeId || 'UNKNOWN';
+    console.log('[QuizCreationService] Creating quiz with employeeId:', employeeId);
+    
     return {
       quizName: quiz.quizName,
       category: quiz.category,
-      createdBy: '2463579',
+      createdBy: employeeId,
       status: 'Draft',
       questions: questions.map(q => ({
         questionText: q.text,

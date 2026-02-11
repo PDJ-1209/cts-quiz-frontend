@@ -1,9 +1,11 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { NgIf, NgClass, NgFor } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
 import { QuestionDetail, SubmitAnswerRequest } from '../../models/participant.models';
+import { environment } from '../../environments/environment';
+import * as signalR from '@microsoft/signalr';
 
 import { HeaderComponent } from '../header/header.component';
 import { QuestionComponent } from '../question/question.component';
@@ -36,11 +38,20 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   participantId: number = 0;
   sessionId: number = 0;
   quizTitle: string = '';
-  startTime: number = 0;
+  sessionCode: string = '';
 
   // Timer properties
   timeRemaining: number = 30;
-  timerInterval: any = null;
+  syncInterval: any = null;
+  serverTimeOffsetMs: number = 0;
+  startedAtMs: number = 0;
+  currentQuestionStartMs: number = 0;
+  currentQuestionEndMs: number = 0;
+  waitingForNext: boolean = false;
+  submittedIndex: number | null = null;
+  private lastBackWarnAt = 0;
+
+  private hubConnection?: signalR.HubConnection;
 
   private snackBar = inject(MatSnackBar);
   private participantService = inject(ParticipantService);
@@ -51,6 +62,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     const participantIdStr = localStorage.getItem('participantId');
     const sessionIdStr = localStorage.getItem('sessionId');
     const quizTitleStr = localStorage.getItem('quizTitle');
+    const sessionCodeStr = localStorage.getItem('sessionCode');
 
     if (!participantIdStr || !sessionIdStr) {
       this.snackBar.open('No session found. Please join a quiz first.', 'Close', { duration: 3000 });
@@ -61,8 +73,74 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.participantId = parseInt(participantIdStr);
     this.sessionId = parseInt(sessionIdStr);
     this.quizTitle = quizTitleStr || 'Quiz';
+    this.sessionCode = sessionCodeStr || '';
+
+    this.blockBackNavigation();
 
     await this.loadQuestions();
+  }
+
+  @HostListener('window:popstate', ['$event'])
+  onPopState(): void {
+    this.blockBackNavigation();
+    void this.refreshSessionSync();
+
+    const now = Date.now();
+    if (now - this.lastBackWarnAt > 2000) {
+      this.lastBackWarnAt = now;
+      this.snackBar.open('Back navigation is disabled during the quiz.', 'Close', { duration: 2000 });
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      void this.refreshSessionSync();
+    }
+  }
+
+  @HostListener('window:pageshow', ['$event'])
+  onPageShow(event: PageTransitionEvent): void {
+    if (event.persisted) {
+      void this.refreshSessionSync();
+    }
+  }
+
+  private async refreshSessionSync(): Promise<void> {
+    try {
+      if (!this.sessionId) return;
+      const response = await this.participantService.getSessionQuestions(this.sessionId);
+
+      if (this.questions.length === 0 && response.questions?.length) {
+        this.questionDetails = response.questions;
+        this.questions = response.questions.map(q => ({
+          id: q.questionId.toString(),
+          text: q.questionText,
+          options: q.options.map(o => o.optionText),
+          answer: '',
+          timerSeconds: q.timerSeconds || 30
+        }));
+      }
+
+      const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
+      this.serverTimeOffsetMs = serverTimeMs - Date.now();
+      this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
+      this.updateQuestionState();
+    } catch (error) {
+      console.error('[QuizPage] Failed to refresh session sync:', error);
+    }
+  }
+
+  private blockBackNavigation(): void {
+    const currentUrl = window.location.href;
+    window.history.pushState(null, '', currentUrl);
+    window.history.pushState(null, '', currentUrl);
   }
 
   async loadQuestions() {
@@ -82,11 +160,16 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         timerSeconds: q.timerSeconds || 30
       }));
 
-      this.startTime = Date.now();
+      const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
+      this.serverTimeOffsetMs = serverTimeMs - Date.now();
+      this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
       this.loading = false;
 
-      // Start timer for first question
-      this.startTimer();
+      // Start synchronized timer for quiz
+      this.startSyncTimer();
+
+      // Initialize SignalR live sync
+      this.initializeSignalR();
 
       console.log(`[QuizPage] Loaded ${this.questions.length} questions for session ${this.sessionId}`);
     } catch (error: any) {
@@ -106,59 +189,145 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.selected = value; // enables submit button
   }
 
-  startTimer() {
-    // Clear any existing timer
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
+  private getServerNowMs(): number {
+    return Date.now() + this.serverTimeOffsetMs;
+  }
 
-    // Set initial time from current question
-    const currentQ = this.questions[this.currentIndex];
-    this.timeRemaining = currentQ?.timerSeconds || 30;
+  private startSyncTimer(): void {
+    this.stopSyncTimer();
+    this.updateQuestionState();
 
-    // Start countdown
-    this.timerInterval = setInterval(() => {
-      this.timeRemaining--;
-
-      if (this.timeRemaining <= 0) {
-        // Auto-submit when timer expires
-        this.autoSubmitAnswer();
-      }
+    this.syncInterval = setInterval(() => {
+      this.updateQuestionState();
     }, 1000);
   }
 
-  stopTimer() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
+  private stopSyncTimer(): void {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
     }
   }
 
-  async autoSubmitAnswer() {
-    console.log('[QuizPage] Auto-submitting due to timer expiration');
-    this.stopTimer();
-    
-    // If no answer selected, submit without selection
-    if (!this.selected && this.currentQuestion) {
-      this.snackBar.open('⏱️ Time\'s up! Moving to next question...', 'Close', { duration: 2000 });
-      await this.moveToNextQuestion();
-    } else {
-      await this.submitAnswer(true);
+  private calculateQuestionState(serverNowMs: number): {
+    index: number;
+    remainingSeconds: number;
+    questionStartMs: number;
+    questionEndMs: number;
+    finished: boolean;
+  } {
+    if (this.questions.length === 0) {
+      return {
+        index: 0,
+        remainingSeconds: 0,
+        questionStartMs: serverNowMs,
+        questionEndMs: serverNowMs,
+        finished: true
+      };
+    }
+
+    const effectiveStartMs = this.startedAtMs || serverNowMs;
+    const normalizedNowMs = Math.max(serverNowMs, effectiveStartMs);
+    const elapsedSeconds = Math.max(0, Math.floor((normalizedNowMs - effectiveStartMs) / 1000));
+
+    let cumulativeSeconds = 0;
+    for (let i = 0; i < this.questions.length; i++) {
+      const duration = this.questions[i]?.timerSeconds || 30;
+      const questionStartMs = effectiveStartMs + cumulativeSeconds * 1000;
+      const questionEndMs = questionStartMs + duration * 1000;
+
+      if (elapsedSeconds < cumulativeSeconds + duration) {
+        const remainingSeconds = Math.max(0, Math.ceil((questionEndMs - normalizedNowMs) / 1000));
+        return {
+          index: i,
+          remainingSeconds,
+          questionStartMs,
+          questionEndMs,
+          finished: false
+        };
+      }
+
+      cumulativeSeconds += duration;
+    }
+
+    return {
+      index: this.questions.length - 1,
+      remainingSeconds: 0,
+      questionStartMs: effectiveStartMs + cumulativeSeconds * 1000,
+      questionEndMs: effectiveStartMs + cumulativeSeconds * 1000,
+      finished: true
+    };
+  }
+
+  private initializeSignalR(): void {
+    if (!this.sessionCode || this.hubConnection) return;
+
+    this.hubConnection = new signalR.HubConnectionBuilder()
+      .withUrl(environment.signalRUrl, {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    this.hubConnection.on('SessionSync', (payload: any) => {
+      const serverTime = payload?.ServerTime ?? payload?.serverTime;
+      const startedAt = payload?.StartedAt ?? payload?.startedAt;
+
+      if (serverTime) {
+        const serverTimeMs = new Date(serverTime).getTime();
+        this.serverTimeOffsetMs = serverTimeMs - Date.now();
+      }
+
+      if (startedAt) {
+        this.startedAtMs = new Date(startedAt).getTime();
+      }
+
+      this.updateQuestionState();
+    });
+
+    this.hubConnection.start()
+      .then(() => {
+        this.hubConnection?.invoke('JoinSession', this.sessionCode);
+      })
+      .catch((err: unknown) => console.error('[QuizPage] SignalR connection error:', err));
+  }
+
+  private updateQuestionState(): void {
+    const serverNowMs = this.getServerNowMs();
+    const state = this.calculateQuestionState(serverNowMs);
+
+    if (state.finished) {
+      if (!this.finished) {
+        this.finished = true;
+        this.stopSyncTimer();
+        localStorage.setItem('finalScore', this.score.toString());
+        localStorage.setItem('totalQuestions', this.questions.length.toString());
+      }
+      return;
+    }
+
+    this.currentQuestionStartMs = state.questionStartMs;
+    this.currentQuestionEndMs = state.questionEndMs;
+    this.timeRemaining = state.remainingSeconds;
+
+    if (this.currentIndex !== state.index) {
+      this.currentIndex = state.index;
+      this.selected = null;
+      this.submittedIndex = null;
+      this.waitingForNext = false;
+    }
+
+    if (this.submittedIndex === this.currentIndex) {
+      this.waitingForNext = true;
     }
   }
 
   async submitAnswer(isAutoSubmit: boolean = false) {
     console.log('[QuizPage] submitAnswer called. selected =', this.selected, 'isAutoSubmit =', isAutoSubmit);
-    if (!this.currentQuestion || this.submitting) return;
+    if (!this.currentQuestion || this.submitting || this.waitingForNext || this.submittedIndex === this.currentIndex) return;
 
-    // Stop the timer
-    this.stopTimer();
-
-    // If no selection, just move to next question
-    if (!this.selected) {
-      await this.moveToNextQuestion();
-      return;
-    }
+    if (!this.selected) return;
 
     try {
       const currentQuestionDetail = this.questionDetails[this.currentIndex];
@@ -169,7 +338,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const timeSpent = Math.floor((Date.now() - this.startTime) / 1000);
+      const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
 
       const request: SubmitAnswerRequest = {
         participantId: this.participantId,
@@ -199,10 +368,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Move to next question after a brief delay
-      setTimeout(() => {
-        this.moveToNextQuestion();
-      }, isAutoSubmit ? 0 : 1000);
+      this.submittedIndex = this.currentIndex;
+      this.waitingForNext = true;
+      this.selected = null;
 
     } catch (error: any) {
       this.submitting = false;
@@ -211,27 +379,17 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  async moveToNextQuestion() {
-    // advance
-    this.selected = null;
-    if (this.currentIndex < this.questions.length - 1) {
-      this.currentIndex++;
-      this.startTime = Date.now(); // Reset timer for next question
-      this.startTimer(); // Start timer for next question
-      console.log('[QuizPage] advanced to index', this.currentIndex);
-    } else {
-      this.finished = true;
-      console.log('[QuizPage] finished with score:', this.score);
-      
-      // Store final score
-      localStorage.setItem('finalScore', this.score.toString());
-      localStorage.setItem('totalQuestions', this.questions.length.toString());
-    }
-  }
-
   ngOnDestroy() {
     // Clean up timer on component destroy
-    this.stopTimer();
+    this.stopSyncTimer();
+
+    if (this.hubConnection) {
+      if (this.sessionCode) {
+        this.hubConnection.invoke('LeaveSession', this.sessionCode);
+      }
+      this.hubConnection.stop();
+      this.hubConnection = undefined;
+    }
   }
 
   getScorePercentage(): number {
@@ -255,8 +413,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.score = 0;
     this.selected = null;
     this.finished = false;
-    this.stopTimer();
-    this.startTimer();
+    this.stopSyncTimer();
+    this.startSyncTimer();
     console.log('[QuizPage] restart');
   }
 }

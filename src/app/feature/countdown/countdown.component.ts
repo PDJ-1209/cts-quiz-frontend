@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener, inject, signal } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,9 +43,12 @@ export class CountdownComponent implements OnInit, OnDestroy {
   private platformId = inject(PLATFORM_ID);
   
   private hubConnection?: signalR.HubConnection;
+  private lastBackWarnAt = 0;
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    this.lockBackNavigation();
 
     // Load session data from localStorage
     const sessionDataStr = localStorage.getItem('sessionData');
@@ -115,6 +118,27 @@ export class CountdownComponent implements OnInit, OnDestroy {
     }
   }
 
+  @HostListener('window:popstate', ['$event'])
+  onPopState(): void {
+    this.lockBackNavigation();
+
+    const now = Date.now();
+    if (now - this.lastBackWarnAt > 2000) {
+      this.lastBackWarnAt = now;
+      this.snackBar.open('Back navigation is disabled while waiting for the quiz.', 'Close', { duration: 2000 });
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  private lockBackNavigation(): void {
+    window.history.pushState(null, '', window.location.href);
+  }
+
   private initializeSignalR(): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('http:// localhost:5195/quizSessionHub', {
@@ -140,7 +164,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
           this.hubConnection?.invoke('JoinSession', this.sessionCode);
         }
       })
-      .catch((err: any) => console.error('Error connecting to SignalR:', err));
+      .catch((err: unknown) => console.error('Error connecting to SignalR:', err));
   }
 
   private startCountdown(): void {

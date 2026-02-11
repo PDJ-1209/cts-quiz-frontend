@@ -33,7 +33,11 @@ export interface QuizListItem {
   quizName: string;
   category: string;
   questionCount: number;
+  templateId?: number;
+  createdBy?: string;
+  updatedBy?: string;
   createdAt: string;
+  updatedAt?: string;
   status: string;
 }
 
