@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { isPlatformBrowser, DOCUMENT } from '@angular/common';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../environments/environment';
 import { 
   User, 
   LoginRequest, 
@@ -139,8 +139,17 @@ export class AuthService {
   /**
    * Register new user
    */
-  register(payload: RegisterRequest) {
-    return this.http.post<any>(`${environment.apiUrl}/auth/register`, payload);
+  async register(payload: RegisterRequest): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<any>(`${environment.apiUrl}/auth/register`, payload)
+      );
+      console.log('Registration successful:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      throw error;
+    }
   }
 
   /**

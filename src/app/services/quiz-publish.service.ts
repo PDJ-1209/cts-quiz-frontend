@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Subject, Observable, firstValueFrom } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../environments/environment';
 import {
   QuizPublishData,
   QuizPublishRequest,
@@ -58,7 +58,7 @@ export class QuizPublishService {
         }
       })
       .withAutomaticReconnect({
-        nextRetryDelayInMilliseconds: retryContext => {
+        nextRetryDelayInMilliseconds: (retryContext: any) => {
           // Exponential backoff: 0s, 2s, 10s, 30s
           if (retryContext.previousRetryCount === 0) return 0;
           if (retryContext.previousRetryCount === 1) return 2000;
@@ -85,7 +85,7 @@ export class QuizPublishService {
       this.joinHostGroup(hostId);
     });
 
-    this.hubConnection.onclose((error) => {
+    this.hubConnection.onclose((error: any) => {
       console.error('[QuizPublish] Connection closed', error);
       this.connectionState$.next('disconnected');
     });

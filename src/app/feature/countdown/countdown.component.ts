@@ -140,7 +140,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
           this.hubConnection?.invoke('JoinSession', this.sessionCode);
         }
       })
-      .catch(err => console.error('Error connecting to SignalR:', err));
+      .catch((err: any) => console.error('Error connecting to SignalR:', err));
   }
 
   private startCountdown(): void {

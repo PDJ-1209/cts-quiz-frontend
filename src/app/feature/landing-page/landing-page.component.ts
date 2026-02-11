@@ -330,12 +330,16 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   async onRegister() {
     try {
       this.isLoading.set(true);
-      await this.authService.register(this.registrationData);
+      console.log('Attempting registration with:', this.registrationData);
+      const result = await this.authService.register(this.registrationData);
+      console.log('Registration result:', result);
       this.showRegistrationForm.set(false);
       this.snackBar.open('Registration successful! Please login with your credentials.', 'Close', { duration: 5000 });
       this.toggleLoginForm();
     } catch (error: any) {
-      this.snackBar.open(error.message || 'Registration failed. Please try again.', 'Close', { duration: 5000 });
+      console.error('Registration failed:', error);
+      const errorMsg = error?.error?.message || error?.message || 'Registration failed. Please try again.';
+      this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
     } finally {
       this.isLoading.set(false);
     }
