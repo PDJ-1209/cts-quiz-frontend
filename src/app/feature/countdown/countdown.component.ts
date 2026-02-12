@@ -97,23 +97,37 @@ export class CountdownComponent implements OnInit, OnDestroy {
         console.warn('[Countdown] No endedAt in session data');
       }
       
-      // Check if quiz has already started
+      // Check if quiz has a valid start time and if it's in the future
+      // Only check if quiz has started if there's a future start time
       if (this.quizStartTime) {
         const now = new Date();
-        if (now >= this.quizStartTime) {
+        const timeDiff = this.quizStartTime.getTime() - now.getTime();
+        
+        // Only consider quiz as "already started" if start time is more than 5 seconds in the past
+        // This prevents treating newly created sessions as "already started"
+        if (timeDiff < -5000) {
+          console.log('[Countdown] Quiz already started, navigating to quiz');
+          this.hasStarted.set(true);
+          this.isWaiting.set(false);
+          this.navigateToQuiz();
+        } else if (timeDiff < 0) {
+          // If within 5 seconds, treat as starting now
+          console.log('[Countdown] Quiz starting now');
           this.hasStarted.set(true);
           this.isWaiting.set(false);
           this.navigateToQuiz();
         } else {
-          // Start countdown timer
+          // Start countdown timer for future start time
+          console.log('[Countdown] Waiting for quiz to start');
           this.startCountdown();
           
           // Initialize SignalR connection
           this.initializeSignalR();
         }
       } else {
-        this.snackBar.open('Quiz start time not available. Please try again.', 'Close', { duration: 3000 });
-        this.router.navigate(['/participant']);
+        // No start time set - wait for host to start via SignalR
+        console.log('[Countdown] No start time set, waiting for host to start quiz');
+        this.initializeSignalR();
       }
     }
   }

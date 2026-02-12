@@ -109,12 +109,38 @@ export class QuizUsernameComponent implements OnInit {
     if (!this.showWarning && this.userName.trim()) {
       const cleaned = this.userName.trim();
       
+      // Get employee ID from logged-in user (stored during authentication)
+      let employeeId = '';
+      const authUserStr = localStorage.getItem('auth_user');
+      
+      if (authUserStr) {
+        try {
+          const authUser = JSON.parse(authUserStr);
+          employeeId = authUser.employeeId || authUser.userId || '';
+        } catch (e) {
+          console.error('Failed to parse auth_user:', e);
+        }
+      }
+      
+      if (!employeeId) {
+        this.snackBar.open('⚠️ No user session found. Please login first.', 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar'],
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+        this.router.navigate(['/']);
+        return;
+      }
+      
+      console.log('[QuizUsername] Joining with employeeId:', employeeId);
+      
       try {
         // Join session and create participant entry
         const participant = await this.participantService.joinSession({
           sessionCode: this.sessionCode,
           nickname: cleaned,
-          employeeId: this.authService.currentUser()?.employeeId
+          employeeId: employeeId
         });
 
         // Store participant data

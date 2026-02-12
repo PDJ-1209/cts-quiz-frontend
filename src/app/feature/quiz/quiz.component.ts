@@ -116,8 +116,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
       if (this.questions.length === 0 && response.questions?.length) {
         this.questionDetails = response.questions;
-        this.questions = response.questions.map(q => ({
-          id: q.questionId.toString(),
+        this.questions = response.questions.map((q, index) => ({
+          id: (index + 1).toString(),
           text: q.questionText,
           options: q.options.map(o => o.optionText),
           answer: '',
@@ -149,8 +149,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       this.quizTitle = response.quizTitle;
 
       // Convert to the format expected by the existing components
-      this.questions = response.questions.map(q => ({
-        id: q.questionId.toString(),
+      this.questions = response.questions.map((q, index) => ({
+        id: (index + 1).toString(),
         text: q.questionText,
         options: q.options.map(o => o.optionText),
         answer: '', // We don't show the answer to participants
@@ -324,10 +324,34 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     console.log('[QuizPage] submitAnswer called. selected =', this.selected, 'isAutoSubmit =', isAutoSubmit);
     if (!this.currentQuestion || this.submitting || this.waitingForNext || this.submittedIndex === this.currentIndex) return;
 
-    if (!this.selected) return;
-
     try {
       const currentQuestionDetail = this.questionDetails[this.currentIndex];
+      
+      // Handle unanswered question
+      if (!this.selected) {
+        console.log('[QuizPage] No answer selected - submitting as unanswered');
+        const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
+        
+        const request: SubmitAnswerRequest = {
+          participantId: this.participantId,
+          questionId: currentQuestionDetail.questionId,
+          selectedOptionId: 0, // 0 indicates unanswered
+          timeSpentSeconds: timeSpent
+        };
+
+        this.submitting = true;
+        const response = await this.participantService.submitParticipantAnswer(request);
+        this.submitting = false;
+
+        if (isAutoSubmit) {
+          this.snackBar.open('⏰ Time\'s up! Question marked as unanswered.', 'Close', { duration: 2000 });
+        }
+
+        this.submittedIndex = this.currentIndex;
+        this.waitingForNext = true;
+        return;
+      }
+      
       const selectedOption = currentQuestionDetail.options.find(o => o.optionText === this.selected);
 
       if (!selectedOption) {
