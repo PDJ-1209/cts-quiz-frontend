@@ -1,5 +1,5 @@
-/* Cognizant Landing Page - Enterprise Design */
-/* Official Cognizant Brand Colors and Design System */
+/* Cognizant Landing Page - Material UI Enhanced Design */
+/* Official Cognizant Brand Colors with Modern Material Design */
 
 /* ============================================ */
 /* Cognizant Brand Variables */
@@ -20,11 +20,12 @@
   --cognizant-accent: #FF6B35;
   --cognizant-success: #28A745;
   
-  /* Shadows & Effects */
-  --cognizant-shadow-sm: 0 2px 8px rgba(0, 102, 204, 0.1);
-  --cognizant-shadow-md: 0 8px 25px rgba(0, 102, 204, 0.15);
-  --cognizant-shadow-lg: 0 20px 40px rgba(0, 102, 204, 0.2);
-  --cognizant-shadow-xl: 0 30px 60px rgba(0, 102, 204, 0.25);
+  /* Material UI Elevation Shadows */
+  --shadow-1: 0 2px 4px rgba(0, 102, 204, 0.08);
+  --shadow-2: 0 4px 8px rgba(0, 102, 204, 0.12);
+  --shadow-4: 0 8px 16px rgba(0, 102, 204, 0.16);
+  --shadow-8: 0 16px 32px rgba(0, 102, 204, 0.2);
+  --shadow-16: 0 24px 48px rgba(0, 102, 204, 0.25);
   
   /* Spacing System */
   --space-xs: 0.5rem;
@@ -40,11 +41,52 @@
   line-height: 1.6;
   color: var(--cognizant-dark-gray);
   
-  /* Modern Animations */
-  --animation-fast: 0.2s ease-out;
-  --animation-medium: 0.4s ease-out;
-  --animation-slow: 0.6s ease-out;
+  /* Material Design Animations */
+  --animation-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-medium: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-slow: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   --animation-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Enhanced Background */
+  background: linear-gradient(135deg, #F0F7FF 0%, #E8F4FD 50%, #F8FBFF 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Animated Background Elements */
+.cognizant-landing::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(0, 102, 204, 0.05) 0%, transparent 70%);
+  animation: bgRotate 20s linear infinite;
+  pointer-events: none;
+}
+
+.cognizant-landing::after {
+  content: '';
+  position: fixed;
+  bottom: -50%;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(0, 168, 232, 0.05) 0%, transparent 70%);
+  animation: bgRotate 25s linear infinite reverse;
+  pointer-events: none;
+}
+
+@keyframes bgRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Global Animations */
@@ -79,13 +121,25 @@
 /* Enhanced Header Section */
 /* ============================================ */
 .cognizant-header {
-  background: linear-gradient(135deg, var(--cognizant-blue) 0%, var(--cognizant-dark-blue) 100%);
+  background: linear-gradient(135deg, #0066CC 0%, #004499 25%, #1B365D 100%);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: var(--cognizant-shadow-lg);
+  box-shadow: 0 8px 32px rgba(0, 102, 204, 0.3);
+  animation: headerSlideDown 0.6s ease-out;
+}
+
+@keyframes headerSlideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Enhanced Brand Logo */
@@ -95,38 +149,102 @@
   gap: var(--space-sm);
 }
 
+.cognizant-logo {
+  position: relative;
+  animation: logoFadeIn 1s ease-out;
+}
+
+@keyframes logoFadeIn {
+  from {
+    transform: scale(0.5) rotate(-180deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
 .cognizant-logo svg {
-  transition: var(--animation-medium);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.3));
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 6px 20px rgba(255, 255, 255, 0.6));
+  }
 }
 
 .cognizant-logo:hover svg {
-  transform: rotate(5deg) scale(1.1);
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  transform: rotate(360deg) scale(1.15);
+  filter: drop-shadow(0 8px 24px rgba(255, 255, 255, 0.8));
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
   color: var(--cognizant-white);
+  animation: brandTextSlideIn 0.8s ease-out 0.3s backwards;
+}
+
+@keyframes brandTextSlideIn {
+  from {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .brand-name {
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background: linear-gradient(45deg, #FFFFFF, #E8F4FD);
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #FFFFFF 0%, #00F5FF 50%, #FFFFFF 100%);
+  background-size: 200% auto;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: brandGradientFlow 4s linear infinite;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.3);
+}
+
+@keyframes brandGradientFlow {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 .brand-tagline {
-  font-size: 0.75rem;
-  opacity: 0.8;
-  font-weight: 500;
+  font-size: 0.8rem;
+  opacity: 0.95;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
+  color: #00F5FF;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+  animation: taglinePulse 2s ease-in-out infinite;
+}
+
+@keyframes taglinePulse {
+  0%, 100% {
+    opacity: 0.95;
+    text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.8);
+  }
 }
 
 /* ============================================ */
@@ -138,22 +256,113 @@
   gap: var(--space-sm);
 }
 
+.cognizant-btn-login {
+  padding: 0.75rem 1.75rem;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F7FF 100%);
+  border: 2px solid rgba(0, 102, 204, 0.3);
+  color: #0066CC;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 15px rgba(0, 102, 204, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cognizant-btn-login::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 102, 204, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.cognizant-btn-login:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.cognizant-btn-login:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 102, 204, 0.35);
+  border-color: #0066CC;
+}
+
+.cognizant-btn-register {
+  padding: 0.75rem 1.75rem;
+  background: linear-gradient(135deg, #0066CC 0%, #004499 100%);
+  border: 2px solid transparent;
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cognizant-btn-register::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.cognizant-btn-register:hover::after {
+  left: 100%;
+}
+
+.cognizant-btn-register:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(0, 102, 204, 0.5);
+  background: linear-gradient(135deg, #004499 0%, #0066CC 100%);
+}
+
 .cognizant-btn-user {
-  padding: var(--space-xs) var(--space-md);
-  background: linear-gradient(135deg, var(--cognizant-success), #20c997);
+  padding: 0.7rem 1.5rem;
+  background: linear-gradient(135deg, #00C853 0%, #00E676 100%);
   border: none;
   color: white;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  box-shadow: var(--cognizant-shadow-sm);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cognizant-btn-user::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform 0.5s;
+}
+
+.cognizant-btn-user:hover::before {
+  transform: scale(2);
 }
 
 .cognizant-btn-user:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--cognizant-shadow-md);
-  background: linear-gradient(135deg, #20c997, var(--cognizant-success));
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 200, 83, 0.5);
+  background: linear-gradient(135deg, #00E676 0%, #00C853 100%);
 }
 
 .host-access-group {
@@ -161,21 +370,45 @@
 }
 
 .cognizant-btn-host {
-  padding: var(--space-sm) var(--space-lg);
-  background: linear-gradient(135deg, var(--cognizant-blue) 0%, var(--cognizant-dark-blue) 50%, var(--cognizant-navy) 100%);
-  border: none;
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #0066CC 0%, #004499 50%, #1B365D 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   color: white;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 700;
-  font-size: 0.9rem;
-  box-shadow: 0 6px 20px rgba(0, 102, 204, 0.25);
+  font-size: 0.95rem;
+  box-shadow: 0 6px 25px rgba(0, 102, 204, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
   position: relative;
   overflow: hidden;
-  letter-spacing: 0.5px;
+}
+
+.cognizant-btn-host::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: hostGlow 3s linear infinite;
+}
+
+@keyframes hostGlow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.cognizant-btn-host:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 35px rgba(0, 102, 204, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .cognizant-btn-host::before {
@@ -187,12 +420,6 @@
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   transition: left 0.5s ease;
-}
-
-.cognizant-btn-host:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.35);
-  background: linear-gradient(135deg, var(--cognizant-dark-blue) 0%, var(--cognizant-navy) 50%, var(--cognizant-blue) 100%);
 }
 
 .cognizant-btn-host:hover::before {
@@ -1917,15 +2144,16 @@
 }
 
 .cognizant-feature-card {
-  background: var(--cognizant-white);
-  border: 1px solid rgba(0, 102, 204, 0.1);
-  border-radius: 20px;
-  padding: var(--space-xl);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FBFF 100%);
+  border: 1px solid rgba(0, 102, 204, 0.15);
+  border-radius: 24px;
+  padding: 2.5rem;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100%;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.08);
 }
 
 .cognizant-feature-card::before {
@@ -1934,10 +2162,21 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--cognizant-blue), var(--cognizant-cyan));
+  height: 5px;
+  background: linear-gradient(90deg, #0066CC, #00F5FF, #0066CC);
+  background-size: 200% 100%;
   transform: scaleX(0);
-  transition: transform 0.3s ease;
+  transition: transform 0.4s ease;
+  animation: shimmerGradient 3s linear infinite;
+}
+
+@keyframes shimmerGradient {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .cognizant-feature-card:hover::before {
@@ -1945,15 +2184,25 @@
 }
 
 .cognizant-feature-card:hover {
-  transform: translateY(-10px);
-  box-shadow: var(--cognizant-shadow-lg);
-  border-color: var(--cognizant-blue);
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(0, 102, 204, 0.2), 0 0 0 1px rgba(0, 102, 204, 0.1);
+  border-color: rgba(0, 102, 204, 0.3);
 }
 
 .feature-icon-wrapper {
   position: relative;
   display: inline-flex;
-  margin-bottom: var(--space-lg);
+  margin-bottom: 2rem;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .icon-bg {
@@ -1962,34 +2211,41 @@
   left: -10px;
   width: calc(100% + 20px);
   height: calc(100% + 20px);
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.1), rgba(0, 168, 232, 0.1));
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.2), rgba(0, 245, 255, 0.2));
   border-radius: 50%;
-  animation: pulse 3s ease-in-out infinite;
+  animation: iconBgPulse 3s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes iconBgPulse {
   0%, 100% {
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
     opacity: 0.7;
   }
   50% {
-    transform: scale(1.1);
-    opacity: 0.3;
+    transform: scale(1.15) rotate(180deg);
+    opacity: 0.4;
   }
 }
 
 .feature-icon {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, var(--cognizant-blue), var(--cognizant-cyan));
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #0066CC 0%, #00A8E8 50%, #00F5FF 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   position: relative;
   z-index: 2;
+  box-shadow: 0 8px 25px rgba(0, 102, 204, 0.3), inset 0 -3px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.cognizant-feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(360deg);
+  box-shadow: 0 12px 35px rgba(0, 102, 204, 0.5), inset 0 -3px 8px rgba(0, 0, 0, 0.3);
 }
 
 .feature-title {

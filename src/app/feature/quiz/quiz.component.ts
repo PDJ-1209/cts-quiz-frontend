@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
-import { NgIf, NgClass, NgFor } from '@angular/common';
+import { NgIf, NgFor } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
@@ -7,19 +7,13 @@ import { QuestionDetail, SubmitAnswerRequest } from '../../models/participant.mo
 import { environment } from '../../environments/environment';
 import * as signalR from '@microsoft/signalr';
 
-import { HeaderComponent } from '../header/header.component';
-import { QuestionComponent } from '../question/question.component';
-import { OptionsComponent } from '../options/options.component';
-import { SubmitComponent } from '../submit/submit.component';
-
 type Question = { id: string; text: string; options: string[]; answer: string; timerSeconds: number; };
 
 @Component({
   selector: 'app-quiz-page',
   standalone: true,
   imports: [
-    HeaderComponent, QuestionComponent, OptionsComponent, SubmitComponent,
-    NgIf, NgClass, NgFor, MatSnackBarModule
+    NgIf, NgFor, MatSnackBarModule
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.css']
@@ -32,13 +26,14 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   score = 0;
   selected: string | null = null;
   finished = false;
-  loading = true;
+  loading = true; 
   submitting = false; // Separate flag for answer submission
 
   participantId: number = 0;
   sessionId: number = 0;
   quizTitle: string = '';
   sessionCode: string = '';
+  participantName: string = '';
 
   // Timer properties
   timeRemaining: number = 30;
@@ -63,6 +58,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     const sessionIdStr = localStorage.getItem('sessionId');
     const quizTitleStr = localStorage.getItem('quizTitle');
     const sessionCodeStr = localStorage.getItem('sessionCode');
+    const participantNameStr = localStorage.getItem('participantName') || localStorage.getItem('userName');
 
     if (!participantIdStr || !sessionIdStr) {
       this.snackBar.open('No session found. Please join a quiz first.', 'Close', { duration: 3000 });
@@ -74,13 +70,14 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.sessionId = parseInt(sessionIdStr);
     this.quizTitle = quizTitleStr || 'Quiz';
     this.sessionCode = sessionCodeStr || '';
+    this.participantName = participantNameStr || '';
 
     this.blockBackNavigation();
 
     await this.loadQuestions();
   }
 
-  @HostListener('window:popstate', ['$event'])
+  @HostListener('window:popstate')
   onPopState(): void {
     this.blockBackNavigation();
     void this.refreshSessionSync();

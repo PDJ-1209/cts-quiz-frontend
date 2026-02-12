@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-quiz-username',
@@ -23,7 +24,8 @@ export class QuizUsernameComponent implements OnInit {
     private router: Router, 
     private route: ActivatedRoute,
     private snackBar: MatSnackBar,
-    private participantService: ParticipantService
+    private participantService: ParticipantService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
