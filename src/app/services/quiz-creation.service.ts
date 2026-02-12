@@ -305,8 +305,9 @@ export class QuizCreationService {
       questions: questions.map(q => ({
         questionText: q.text,
         questionType: this.mapQuestionType(q.type),
-        category: quiz.category,
-        difficultyLevel: 'Medium',
+        category: q.category || quiz.category,
+        difficultyLevel: q.difficulty || 'Medium',
+        tags: q.tags && q.tags.length > 0 ? q.tags.join(',') : '',
         timerSeconds: q.timerSeconds ?? 30,
         options: q.options.map(o => ({ 
           optionText: o.text, 
