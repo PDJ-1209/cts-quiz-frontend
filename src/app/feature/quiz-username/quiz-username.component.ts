@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-quiz-username',
@@ -23,7 +24,8 @@ export class QuizUsernameComponent implements OnInit {
     private router: Router, 
     private route: ActivatedRoute,
     private snackBar: MatSnackBar,
-    private participantService: ParticipantService
+    private participantService: ParticipantService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -112,7 +114,7 @@ export class QuizUsernameComponent implements OnInit {
         const participant = await this.participantService.joinSession({
           sessionCode: this.sessionCode,
           nickname: cleaned,
-          employeeId: undefined // Could be added later if needed
+          employeeId: this.authService.currentUser()?.employeeId
         });
 
         // Store participant data
