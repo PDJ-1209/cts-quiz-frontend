@@ -88,6 +88,11 @@
 .chart-container {
   position: relative;
   height: 350px;
+  width: 100%;
+}
+
+canvas {
+  max-height: 350px;
 }
 
 @media (max-width: 1024px) {
