@@ -77,6 +77,9 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   error = signal<string | null>(null);
   
+  // Fancy popup for validation messages
+  popup = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  
   // Quiz statistics
   stats = {
     totalQuizzes: 1250,
@@ -296,50 +299,84 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     this.showLoginForm.set(false);
   }
   
+  // Enhanced login method with employee ID pre-validation to show specific error messages
   async onLogin() {
     if (!this.loginData.employeeId || !this.loginData.password) {
-      this.snackBar.open('Please fill in all required fields', 'Close', { duration: 3000 });
+      this.showPopup('Please fill in all required fields', 'warning');
       return;
     }
     
     try {
       this.isLoading.set(true);
+      
+      // Pre-check if employee ID exists in database
+      const employeeExists = await this.authService.checkEmployeeExists(this.loginData.employeeId);
+      
+      // If employee ID doesn't exist, show specific error message
+      if (!employeeExists) {
+        this.showPopup('Employee ID does not exist.', 'error');
+        return;
+      }
+      
+      // Employee ID exists, now attempt login
       const response = await this.authService.login({
         employeeId: this.loginData.employeeId,
         password: this.loginData.password
       });
       
-      if (response.user) {
+      if (response.success && response.user) {
         this.isAuthenticated.set(true);
         this.userRole.set(response.user.role.toString());
         this.showLoginForm.set(false);
         
-        this.snackBar.open(`Welcome back! Redirecting to ${response.user.role} dashboard...`, 'Close', { duration: 2000 });
+        this.showPopup(`Welcome back! Redirecting to ${response.user.role} dashboard...`, 'success');
         
         // Let the AuthService handle the navigation since it already has redirect logic
         // Remove the duplicate setTimeout redirect to prevent double redirects
+      } else {
+        // If employee ID exists but login failed, it must be wrong password
+        this.showPopup('Incorrect password.', 'error');
       }
       
     } catch (error: any) {
-      this.snackBar.open(error.message || 'Login failed. Please check your credentials.', 'Close', { duration: 5000 });
+      // If employee ID exists but login failed with error, it must be wrong password
+      const errorMessage = error?.error?.message || error?.message || 'Login failed. Please check your credentials.';
+      
+      if (errorMessage.toLowerCase().includes('invalid credentials')) {
+        this.showPopup('Incorrect password.', 'error');
+      } else {
+        this.showPopup(errorMessage, 'error');
+      }
     } finally {
       this.isLoading.set(false);
     }
   }
   
   async onRegister() {
+    // Validate password length
+    if (this.registrationData.password && this.registrationData.password.length < 8) {
+      this.showPopup('Invalid password. Password must be at least 8 characters long.', 'error');
+      return;
+    }
+    
     try {
       this.isLoading.set(true);
       console.log('Attempting registration with:', this.registrationData);
       const result = await this.authService.register(this.registrationData);
       console.log('Registration result:', result);
       this.showRegistrationForm.set(false);
-      this.snackBar.open('Registration successful! Please login with your credentials.', 'Close', { duration: 5000 });
+      this.showPopup('Registration successful! Please login with your credentials.', 'success');
       this.toggleLoginForm();
     } catch (error: any) {
       console.error('Registration failed:', error);
       const errorMsg = error?.error?.message || error?.message || 'Registration failed. Please try again.';
-      this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+      
+      // Check for specific error: Employee ID and email already exist
+      if (errorMsg.toLowerCase().includes('employee') && errorMsg.toLowerCase().includes('email') && errorMsg.toLowerCase().includes('exist')) {
+        this.showPopup('Employee ID and email already exist.', 'error');
+      } else {
+        this.showPopup(errorMsg, 'error');
+      }
     } finally {
       this.isLoading.set(false);
     }
@@ -412,5 +449,16 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   scrollToSection(sectionId: string) {
     const element = document.getElementById(sectionId);
     element?.scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  // Method to show fancy popup with auto-hide
+  private showPopup(message: string, type: 'success' | 'error' | 'warning'): void {
+    this.popup.set({ message, type });
+    setTimeout(() => this.popup.set(null), 4000);
+  }
+  
+  // Method to manually close popup
+  closePopup(): void {
+    this.popup.set(null);
   }
 }
