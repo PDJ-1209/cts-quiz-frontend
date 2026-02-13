@@ -167,185 +167,89 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.loading = true;
-    console.log('All validations passed. Starting publish process...');
+    console.log('All validations passed. Creating survey as draft...');
 
-    const now = new Date();
-    const end = new Date(now.getTime() + (2 * 60 * 60 * 1000)); // +2 hours
+    // Build Survey Questions
+    const surveyQuestions: CreateQuestionRequest[] = questions.map((q: any, i: number) => {
+      const questionPayload: any = {
+        question_text: q.text.trim(),
+        question_type: q.type,
+        is_required: q.isRequired !== undefined ? q.isRequired : true,
+        question_order: i + 1
+      };
 
-    // Step 1: Create Session
-    const sessionPayload = {
+      // Add scale for rating
+      if (q.type === 'rating') {
+        questionPayload.scale_min = 1;
+        questionPayload.scale_max = 5;
+      }
+
+      // Add options for choices
+      if ((q.type === 'single_choice' || q.type === 'multiple_choice') && q.options) {
+        const validOptions = q.options
+          .filter((opt: string) => opt && opt.trim().length > 0)
+          .map((opt: string, oi: number) => ({
+            option_text: opt.trim(),
+            display_order: oi + 1
+          }));
+
+        if (validOptions.length > 0) {
+          questionPayload.options = validOptions;
+        }
+      }
+
+      return questionPayload;
+    });
+
+    // Create Survey without session (draft mode)
+    const surveyPayload: CreateSurveyRequest = {
+      session_id: 0, // No session yet - will be created when published from Manage Content
       title: title,
-      employeeId: this.employeeId,
-      startAt: now.toISOString(),
-      endAt: end.toISOString(),
-      status: 'Waiting'
+      description: formValue.description?.trim() || '',
+      is_anonymous: formValue.isAnonymous === true,
+      questions: surveyQuestions
     };
 
-    console.log('Step 1: Creating session with payload:', sessionPayload);
+    console.log('Creating survey as draft with payload:', JSON.stringify(surveyPayload, null, 2));
 
-    // Create a proper quiz session request for the service
-    // Note: For surveys, we'll use null quizId since surveys are independent of quizzes
-    const quizSessionPayload = {
-      quizId: null, // ✅ FIXED: Survey doesn't have quizId, using null instead of 0
-      hostId: this.employeeId.toString(),
-      sessionCode: this.generateSessionCode(),
-      startedAt: now.toISOString(),
-      status: 'Waiting'
-    };
+    this.surveyService.createSurvey(surveyPayload).subscribe({
+      next: (surveyRes: any) => {
+        console.log('Survey created successfully - Full response:', surveyRes);
 
-    this.surveyService.createSession(quizSessionPayload).subscribe({
-      next: (sessionRes: any) => {
-        console.log('Step 1 SUCCESS - Full response:', sessionRes);
+        // Extract surveyId
+        let surveyId = surveyRes?.surveyId || surveyRes?.id;
         
-        // Extract sessionId with fallback
-        let sessionId = sessionRes?.sessionId || sessionRes?.id;
+        if (!surveyId && surveyRes?.data) {
+          surveyId = surveyRes.data.surveyId || surveyRes.data.id;
+        }
+
+        if (surveyId) {
+          surveyId = parseInt(surveyId, 10);
+        }
+
+        console.log('Extracted surveyId:', surveyId, 'Type:', typeof surveyId);
+
+        if (!surveyId || isNaN(surveyId)) {
+          console.warn('Survey created but ID extraction failed:', surveyRes);
+        }
+
+        // Update dashboard stats
+        this.dashboardStatsService.incrementSurveyCount();
+
+        this.loading = false;
         
-        // Try to get from nested data property
-        if (!sessionId && sessionRes?.data) {
-          sessionId = sessionRes.data.sessionId || sessionRes.data.id;
-        }
-
-        // Try to convert to number if it's a string
-        if (sessionId) {
-          sessionId = parseInt(sessionId, 10);
-        }
-
-        console.log('Extracted sessionId:', sessionId, 'Type:', typeof sessionId);
-
-        if (!sessionId || isNaN(sessionId)) {
-          console.error('Session response invalid:', sessionRes);
-          this.loading = false;
-          alert('Session creation failed: Invalid session ID');
-          return;
-        }
-
-        // Step 2: Build Survey Payload
-        const surveyQuestions: CreateQuestionRequest[] = questions.map((q: any, i: number) => {
-          const questionPayload: any = {
-            question_text: q.text.trim(),
-            question_type: q.type,
-            is_required: q.isRequired !== undefined ? q.isRequired : true,
-            question_order: i + 1
-          };
-
-          // Add scale for rating
-          if (q.type === 'rating') {
-            questionPayload.scale_min = 1;
-            questionPayload.scale_max = 5;
-          }
-
-          // Add options for choices
-          if ((q.type === 'single_choice' || q.type === 'multiple_choice') && q.options) {
-            const validOptions = q.options
-              .filter((opt: string) => opt && opt.trim().length > 0)
-              .map((opt: string, oi: number) => ({
-                option_text: opt.trim(),
-                display_order: oi + 1
-              }));
-
-            if (validOptions.length > 0) {
-              questionPayload.options = validOptions;
-            }
-          }
-
-          return questionPayload;
-        });
-
-        // Step 3: Create Survey
-        const surveyPayload: CreateSurveyRequest = {
-          session_id: sessionId,
-          title: title,
-          description: formValue.description?.trim() || '',
-          is_anonymous: formValue.isAnonymous === true,
-          questions: surveyQuestions
-        };
-
-        console.log('Step 2: Creating survey with payload:', JSON.stringify(surveyPayload, null, 2));
-
-        this.surveyService.createSurvey(surveyPayload).subscribe({
-          next: (surveyRes: any) => {
-            console.log('Step 2 SUCCESS - Full response:', surveyRes);
-
-            // Extract surveyId
-            let surveyId = surveyRes?.surveyId || surveyRes?.id;
-            
-            if (!surveyId && surveyRes?.data) {
-              surveyId = surveyRes.data.surveyId || surveyRes.data.id;
-            }
-
-            if (surveyId) {
-              surveyId = parseInt(surveyId, 10);
-            }
-
-            console.log('Extracted surveyId:', surveyId, 'Type:', typeof surveyId);
-
-            if (!surveyId || isNaN(surveyId)) {
-              console.error('Survey response invalid:', surveyRes);
-              this.loading = false;
-              alert('Survey creation failed: Invalid survey ID');
-              return;
-            }
-
-            // Step 4: Publish Survey
-            const publishPayload: PublishSurveyRequest = {
-              surveyId: surveyId,
-              employeeId: this.employeeId
-            };
-
-            console.log('Step 3: Publishing survey with payload:', publishPayload);
-
-            this.surveyService.publishSurvey(publishPayload).subscribe({
-              next: (publishRes: any) => {
-                console.log('Step 3 SUCCESS - Published:', publishRes);
-                
-                // Store the survey ID for QR generation
-                this.createdSurveyId = surveyId;
-                
-                // Generate QR code
-                this.generateQrCode(sessionId);
-                
-                // Update dashboard stats
-                this.dashboardStatsService.incrementSurveyCount();
-                
-                // Show success message
-                alert('🎉 Survey Created and Published Successfully!\n\nYour survey is now ready for participants. Use the QR code or URL to share it.');
-                
-                // Step 5: Initialize SignalR and Navigate
-                console.log('Step 4: Initializing SignalR for sessionId:', sessionId);
-                this.signalrService.initHubConnection(sessionId.toString());
-                
-                // Don't auto-navigate immediately, let user see QR code
-                // console.log('Step 5: Navigating to dashboard');
-                // this.router.navigate(['/host/dashboard', sessionId]).then(() => {
-                //   console.log('Navigation completed successfully');
-                //   this.loading = false;
-                // }).catch((err) => {
-                //   console.error('Navigation error:', err);
-                //   this.loading = false;
-                // });
-                this.loading = false;
-              },
-              error: (err) => {
-                console.error('Step 3 FAILED - Publish Error:', err);
-                this.loading = false;
-                const errorMsg = err?.error?.message || err?.error?.error || err?.message || 'Unknown error';
-                alert(`Failed to publish survey: ${errorMsg}`);
-              }
-            });
-          },
-          error: (err) => {
-            console.error('Step 2 FAILED - Survey Creation Error:', err);
-            this.loading = false;
-            const errorMsg = err?.error?.message || err?.error?.error || err?.message || 'Unknown error';
-            alert(`Failed to create survey: ${errorMsg}`);
-          }
-        });
+        // Show success message
+        alert('🎉 Survey Created Successfully!\n\nYour survey has been saved as a draft. Go to Manage Content to publish it with a session.');
+        
+        // Reset form
+        this.surveyForm.reset();
+        this.initForm();
       },
       error: (err) => {
-        console.error('Step 1 FAILED - Session Creation Error:', err);
+        console.error('Survey Creation Error:', err);
         this.loading = false;
         const errorMsg = err?.error?.message || err?.error?.error || err?.message || 'Unknown error';
-        alert(`Failed to create session: ${errorMsg}`);
+        alert(`Failed to create survey: ${errorMsg}`);
       }
     });
   }

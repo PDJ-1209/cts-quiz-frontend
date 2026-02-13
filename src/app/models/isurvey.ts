@@ -93,10 +93,13 @@ export interface CreateSurveyQuestionOptionApiRequest {
 export interface SurveyOverview {
   surveyId: number;
   sessionId?: number | null;
+  sessionCode?: string | null;
   title: string;
   description?: string | null;
   isAnonymous: boolean;
   status: string;
+  startTime?: string | null;
+  endTime?: string | null;
   questions?: SurveyQuestionOverview[];
 }
 

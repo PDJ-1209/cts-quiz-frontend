@@ -54,6 +54,10 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   quizAnalytics: { [key: number]: Analytics } = {};
   startTimes: { [key: number]: string } = {};
   endTimes: { [key: number]: string } = {};
+  pollStartTimes: { [key: number]: string } = {};
+  pollEndTimes: { [key: number]: string } = {};
+  surveyStartTimes: { [key: number]: string } = {};
+  surveyEndTimes: { [key: number]: string } = {};
   loading = signal(false);
   currentHostId = computed(() => this.authService.currentUser()?.employeeId || '2463579');
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
@@ -61,6 +65,29 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Content type selection
   selectedContentType = signal<'quizzes' | 'surveys' | 'polls'>('quizzes');
+
+  // Empty state messages
+  emptyStateConfig = computed(() => {
+    const type = this.selectedContentType();
+    const configs = {
+      quizzes: {
+        icon: '📭',
+        title: 'No Quizzes Found',
+        message: 'Create your first quiz to get started.'
+      },
+      surveys: {
+        icon: '📝',
+        title: 'No Surveys Found',
+        message: 'Create your first survey to collect feedback.'
+      },
+      polls: {
+        icon: '🗳️',
+        title: 'No Polls Found',
+        message: 'Create your first poll to gather quick responses.'
+      }
+    };
+    return configs[type];
+  });
 
   // Tutorial properties
   private tutorialService = inject(TutorialService);
@@ -160,10 +187,28 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   showQRForQuizId = signal<number | null>(null);
 
   toggleQR(quizId: number) {
+    console.log('Toggle QR called for ID:', quizId);
+    console.log('Current showQRForQuizId:', this.showQRForQuizId());
+    
+    // Find the item to get more context
+    const poll = this.hostPolls().find(p => p.pollId === quizId);
+    const survey = this.hostSurveys().find(s => s.surveyId === quizId);
+    const quiz = this.hostQuizzes().find(q => q.quizId === quizId);
+    
+    if (poll) {
+      console.log('Poll found:', { pollId: poll.pollId, sessionCode: poll.sessionCode, status: poll.pollStatus });
+    } else if (survey) {
+      console.log('Survey found:', { surveyId: survey.surveyId, sessionCode: survey.sessionCode, status: survey.status });
+    } else if (quiz) {
+      console.log('Quiz found:', { quizId: quiz.quizId, quizNumber: quiz.quizNumber });
+    }
+    
     if (this.showQRForQuizId() === quizId) {
       this.showQRForQuizId.set(null);
+      console.log('Hiding QR');
     } else {
       this.showQRForQuizId.set(quizId);
+      console.log('Showing QR for ID:', quizId);
     }
   }
 
@@ -435,6 +480,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       });
       this.hostSurveys.set(surveys);
       console.log('Loaded surveys:', surveys?.length || 0, 'surveys');
+      console.log('Survey session codes:', surveys.map(s => ({ id: s.surveyId, code: s.sessionCode, status: s.status })));
     } catch (error) {
       console.error('Failed to load surveys:', error);
       this.hostSurveys.set([]);
@@ -451,6 +497,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       });
       this.hostPolls.set(polls);
       console.log('Loaded polls:', polls?.length || 0, 'polls');
+      console.log('Poll session codes:', polls.map(p => ({ id: p.pollId, code: p.sessionCode, status: p.pollStatus })));
     } catch (error) {
       console.error('Failed to load polls:', error);
       this.hostPolls.set([]);
@@ -782,6 +829,186 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // Publish Poll with Session Creation
+  async publishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar'],
+        });
+        return;
+      }
+
+      const startTimeInput = this.pollStartTimes[pollId];
+      const endTimeInput = this.pollEndTimes[pollId];
+
+      if (!startTimeInput || !endTimeInput) {
+        this.snackBar.open('⚠️ Please set both start and end times', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const endDate = new Date(endTimeInput);
+      const endTime = endDate.toISOString();
+
+      if (endDate <= new Date()) {
+        this.snackBar.open('⚠️ End time must be in the future', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      if (endDate <= new Date(startTimeInput)) {
+        this.snackBar.open('⚠️ End time must be after start time', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+      
+      // Use PublishPollDto structure
+      const publishPayload = {
+        pollId: pollId,
+        hostId: this.currentHostId(),
+        startedAt: startTime,
+        endedAt: endTime
+      };
+
+      const publishResponse = await this.pollService.publishPoll(publishPayload).toPromise();
+      console.log('Poll published:', publishResponse);
+
+      // Update the poll with session code immediately
+      const pollIndex = this.hostPolls().findIndex(p => p.pollId === pollId);
+      if (pollIndex !== -1 && publishResponse?.sessionCode) {
+        const updatedPolls = [...this.hostPolls()];
+        updatedPolls[pollIndex] = {
+          ...updatedPolls[pollIndex],
+          pollStatus: publishResponse.pollStatus || 'Active',
+          sessionCode: publishResponse.sessionCode
+        };
+        this.hostPolls.set(updatedPolls);
+      }
+
+      this.snackBar.open(`✅ Poll published successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+    } catch (error: any) {
+      console.error('Error publishing poll:', error);
+      
+      let errorMessage = 'Failed to publish poll';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  // Publish Survey with Session Creation
+  async publishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar'],
+        });
+        return;
+      }
+
+      const startTimeInput = this.surveyStartTimes[surveyId];
+      const endTimeInput = this.surveyEndTimes[surveyId];
+
+      if (!startTimeInput || !endTimeInput) {
+        this.snackBar.open('⚠️ Please set both start and end times', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const endDate = new Date(endTimeInput);
+      const endTime = endDate.toISOString();
+
+      if (endDate <= new Date()) {
+        this.snackBar.open('⚠️ End time must be in the future', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      if (endDate <= new Date(startTimeInput)) {
+        this.snackBar.open('⚠️ End time must be after start time', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+      
+      // Use PublishSurveyDto structure
+      const publishPayload = {
+        surveyId: surveyId,
+        hostId: this.currentHostId(),
+        startedAt: startTime,
+        endedAt: endTime
+      };
+
+      const publishResponse = await this.surveyService.publishSurvey(publishPayload).toPromise();
+      console.log('Survey published:', publishResponse);
+
+      // Update the survey with session code immediately
+      const surveyIndex = this.hostSurveys().findIndex(s => s.surveyId === surveyId);
+      if (surveyIndex !== -1 && publishResponse?.sessionCode) {
+        const updatedSurveys = [...this.hostSurveys()];
+        updatedSurveys[surveyIndex] = {
+          ...updatedSurveys[surveyIndex],
+          status: publishResponse.status || 'Active',
+          sessionCode: publishResponse.sessionCode
+        };
+        this.hostSurveys.set(updatedSurveys);
+      }
+
+      this.snackBar.open(`✅ Survey published successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+    } catch (error: any) {
+      console.error('Error publishing survey:', error);
+      
+      let errorMessage = 'Failed to publish survey';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  private generateSessionCode(): string {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
   onStartTimeChange(quizId: number, event: Event) {
     const input = event.target as HTMLInputElement;
     this.startTimes![quizId] = input.value;
@@ -806,6 +1033,32 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // Poll time handlers
+  onPollStartTimeChange(pollId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pollStartTimes[pollId] = input.value;
+    console.log(`Start time for poll ${pollId}:`, input.value);
+  }
+
+  onPollEndTimeChange(pollId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.pollEndTimes[pollId] = input.value;
+    console.log(`End time for poll ${pollId}:`, input.value);
+  }
+
+  // Survey time handlers
+  onSurveyStartTimeChange(surveyId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.surveyStartTimes[surveyId] = input.value;
+    console.log(`Start time for survey ${surveyId}:`, input.value);
+  }
+
+  onSurveyEndTimeChange(surveyId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.surveyEndTimes[surveyId] = input.value;
+    console.log(`End time for survey ${surveyId}:`, input.value);
+  }
+
   /**
    * Format Date object to datetime-local input format (YYYY-MM-DDTHH:mm)
    */
@@ -816,6 +1069,21 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  /**
+   * Format Date to display format (for UI display)
+   */
+  formatDateTime(date: Date | string | undefined | null): string {
+    if (!date) return '—';
+    const d = new Date(date);
+    return d.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   ngAfterViewInit(): void {

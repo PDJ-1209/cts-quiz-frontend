@@ -30,10 +30,25 @@ export class QrcodeComponent {
   constructor(private snackBar: MatSnackBar) {}
 
   ngOnInit() {
+    console.log('[QRCode] Component initialized:', {
+      contentType: this.contentType,
+      quizNumber: this.quizNumber,
+      surveyNumber: this.surveyNumber,
+      pollNumber: this.pollNumber,
+      quizId: this.quizId,
+      surveyId: this.surveyId,
+      pollId: this.pollId
+    });
     this.updateQrData();
   }
 
   ngOnChanges() {
+    console.log('[QRCode] Inputs changed:', {
+      contentType: this.contentType,
+      quizNumber: this.quizNumber,
+      surveyNumber: this.surveyNumber,
+      pollNumber: this.pollNumber
+    });
     this.updateQrData();
   }
 
@@ -58,6 +73,7 @@ export class QrcodeComponent {
         break;
     }
     
+    console.log('[QRCode] Generated QR URL:', url);
     this.qrData.set(url);
   }
 

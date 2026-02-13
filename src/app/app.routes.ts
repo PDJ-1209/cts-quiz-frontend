@@ -146,6 +146,18 @@ export const routes: Routes = [
     data: { roles: ['Admin'], roleIds: [1] }
   },
   { 
+    path: 'host/poll-analytics', 
+    loadComponent: () => import('./result-poll/result-poll.component').then(c => c.ResultPollComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
+  { 
+    path: 'admin/poll-analytics', 
+    loadComponent: () => import('./result-poll/result-poll.component').then(c => c.ResultPollComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Admin'], roleIds: [1] }
+  },
+  { 
     path: 'admin/user-management', 
     loadComponent: () => import('./feature/user-management/user-management.component').then(c => c.UserManagementComponent),
     canActivate: [roleGuard],

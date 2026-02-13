@@ -60,8 +60,8 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
     {
       id: 'poll-question',
       title: '❓ Poll Question',
-      description: 'Write your poll question clearly. This is what participants will see and respond to.',
-      targetElement: 'textarea[formControlName="pollQuestion"]',
+      description: 'Write your poll question clearly. This is what participants will see and respond to. You can add multiple questions.',
+      targetElement: 'textarea[formControlName="questionText"]',
       position: 'bottom',
       skipable: true
     },
@@ -106,73 +106,94 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
 
     this.pollForm = this.formBuilder.group({
       pollTitle: ['', Validators.required],
-      pollQuestion: ['', Validators.required],
       pollAnonymous: [false],
-      questionType: ['custom', Validators.required],
-      options: this.formBuilder.array([])
+      questions: this.formBuilder.array([]) // Changed from individual question/options to questions array
     });
 
-    // Add initial two options (minimum required)
-    this.addOption();
-    this.addOption();
-    this.onQuestionTypeChange();
+    // Add initial question with two options
+    this.addPollQuestion();
   }
 
   get f() {
     return this.pollForm.controls;
   }
 
-  get options(): FormArray {
-    return this.pollForm.get('options') as FormArray;
+  get questions(): FormArray {
+    return this.pollForm.get('questions') as FormArray;
   }
 
-  createOptionFormGroup(): FormGroup {
-    return this.formBuilder.group({
-      optionLabel: ['', Validators.required]
+  getOptions(questionIndex: number): FormArray {
+    return this.questions.at(questionIndex).get('options') as FormArray;
+  }
+
+  addPollQuestion(): void {
+    const questionGroup = this.formBuilder.group({
+      questionText: ['', Validators.required],
+      questionType: ['custom', Validators.required],
+      options: this.formBuilder.array([
+        this.formBuilder.group({ optionLabel: ['', Validators.required] }),
+        this.formBuilder.group({ optionLabel: ['', Validators.required] })
+      ])
     });
+    this.questions.push(questionGroup);
   }
 
-  addOption(): void {
-    if (!this.isCustomType()) {
+  removePollQuestion(index: number): void {
+    if (this.questions.length > 1) {
+      this.questions.removeAt(index);
+    }
+  }
+
+  addOption(questionIndex: number): void {
+    const questionGroup = this.questions.at(questionIndex);
+    const questionType = questionGroup.get('questionType')?.value;
+    
+    if (questionType !== 'custom') {
       return;
     }
-    this.options.push(this.createOptionFormGroup());
+    
+    const options = this.getOptions(questionIndex);
+    options.push(this.formBuilder.group({ optionLabel: ['', Validators.required] }));
   }
 
-  removeOption(index: number): void {
-    if (this.options.length > 2) {
-      this.options.removeAt(index);
+  removeOption(questionIndex: number, optionIndex: number): void {
+    const options = this.getOptions(questionIndex);
+    if (options.length > 2) {
+      options.removeAt(optionIndex);
     }
   }
 
-  onQuestionTypeChange(): void {
-    const questionType = this.pollForm.get('questionType')?.value;
+  onQuestionTypeChange(questionIndex: number): void {
+    const questionGroup = this.questions.at(questionIndex);
+    const questionType = questionGroup.get('questionType')?.value;
     const typeInfo = this.questionTypes.find(t => t.value === questionType);
+    const options = this.getOptions(questionIndex);
 
-    while (this.options.length < 2) {
-      this.options.push(this.createOptionFormGroup());
+    while (options.length < 2) {
+      options.push(this.formBuilder.group({ optionLabel: ['', Validators.required] }));
     }
 
     if (questionType !== 'custom') {
-      while (this.options.length > 2) {
-        this.options.removeAt(this.options.length - 1);
+      while (options.length > 2) {
+        options.removeAt(options.length - 1);
       }
 
       if (typeInfo) {
-        this.options.at(0).patchValue({ optionLabel: typeInfo.option1 });
-        this.options.at(1).patchValue({ optionLabel: typeInfo.option2 });
+        options.at(0).patchValue({ optionLabel: typeInfo.option1 });
+        options.at(1).patchValue({ optionLabel: typeInfo.option2 });
       }
 
-      this.options.controls.forEach((control) => control.disable({ emitEvent: false }));
-      this.options.at(0).enable({ emitEvent: false });
-      this.options.at(1).enable({ emitEvent: false });
+      options.controls.forEach((control) => control.disable({ emitEvent: false }));
+      options.at(0).enable({ emitEvent: false });
+      options.at(1).enable({ emitEvent: false });
     } else {
-      this.options.controls.forEach((control) => control.enable({ emitEvent: false }));
+      options.controls.forEach((control) => control.enable({ emitEvent: false }));
     }
   }
 
-  isCustomType(): boolean {
-    return this.pollForm.get('questionType')?.value === 'custom';
+  isCustomType(questionIndex: number): boolean {
+    const questionGroup = this.questions.at(questionIndex);
+    return questionGroup.get('questionType')?.value === 'custom';
   }
 
   onSubmit(): void {
@@ -192,68 +213,75 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // Validate Question
-    if (!formValue.pollQuestion || formValue.pollQuestion.trim().length === 0) {
-      this.errorMessage = 'Question is required and must be between 5 and 500 characters';
-      return;
-    }
-    if (formValue.pollQuestion.trim().length < 5 || formValue.pollQuestion.trim().length > 500) {
-      this.errorMessage = 'Question must be between 5 and 500 characters';
+    // Validate Questions
+    if (!formValue.questions || formValue.questions.length === 0) {
+      this.errorMessage = 'Poll must have at least 1 question';
       return;
     }
 
-    // Validate that at least 2 options exist
-    if (!formValue.options || formValue.options.length < 2) {
-      this.errorMessage = 'Poll must have at least 2 options';
-      return;
-    }
+    // Validate each question
+    for (let i = 0; i < formValue.questions.length; i++) {
+      const question = formValue.questions[i];
+      
+      if (!question.questionText || question.questionText.trim().length === 0) {
+        this.errorMessage = `Question ${i + 1}: Text is required (5-500 characters)`;
+        return;
+      }
+      if (question.questionText.trim().length < 5 || question.questionText.trim().length > 500) {
+        this.errorMessage = `Question ${i + 1}: Text must be between 5 and 500 characters`;
+        return;
+      }
 
-    // Validate all options have labels
-    const validOptions = formValue.options.every((opt: any) => opt.optionLabel && opt.optionLabel.trim().length > 0);
-    if (!validOptions) {
-      this.errorMessage = 'All options must have a label';
-      return;
+      // Validate that at least 2 options exist
+      if (!question.options || question.options.length < 2) {
+        this.errorMessage = `Question ${i + 1}: Must have at least 2 options`;
+        return;
+      }
+
+      // Validate all options have labels
+      const validOptions = question.options.every((opt: any) => opt.optionLabel && opt.optionLabel.trim().length > 0);
+      if (!validOptions) {
+        this.errorMessage = `Question ${i + 1}: All options must have a label`;
+        return;
+      }
     }
 
     this.loading = true;
-    // Use a default user ID since authService might not be available
-    const employeeId = 1;
 
-    // Build the payload matching the CreatePollRequest interface (snake_case)
+    // Build the payload - For now, we'll create a poll with the first question
+    // Note: Not creating a session yet - just saving the poll as draft
+    const firstQuestion = formValue.questions[0];
     const payload: CreatePollRequest = {
-      session_id: this.sessionId || 1,
+      session_id: 0, // No session yet - will be created when published
       poll_title: formValue.pollTitle.trim(),
-      poll_question: formValue.pollQuestion.trim(),
+      poll_question: firstQuestion.questionText.trim(),
       poll_anonymous: formValue.pollAnonymous,
       selection_type: 'single',
-      options: formValue.options.map((opt: any, index: number) => ({
+      options: firstQuestion.options.map((opt: any, index: number) => ({
         option_label: opt.optionLabel.trim(),
-        option_order: index + 1  // Backend expects positive number starting from 1
+        option_order: index + 1
       }))
     };
 
-    console.log('✅ Corrected Poll Payload (snake_case):', payload);
-    console.log('📝 Form Value Before Send:', formValue);
+    console.log('✅ Poll Payload (saving as draft):', payload);
+    console.log('📝 Total Questions:', formValue.questions.length);
 
     this.pollService.createPoll(payload).subscribe({
       next: (response) => {
-        this.successMessage = '🎉 Poll Created and Published Successfully!';
+        this.successMessage = '🎉 Poll Created Successfully!';
         this.loading = false;
         this.createdPollId = response.pollId;
-        
-        // Generate QR code
-        this.generateQrCode();
         
         // Update dashboard stats
         this.dashboardStatsService.incrementPollCount();
         
-        // Show success alert in addition to the message
-        alert('🎉 Poll Created and Published Successfully!\n\nYour poll is now ready for participants. Use the QR code or URL to share it.');
+        // Show success message
+        alert('🎉 Poll Created Successfully!\\n\\nYour poll has been saved as a draft. Go to Manage Content to publish it with a session.');
         
-        // Don't auto-navigate, let user see QR code
-        // setTimeout(() => {
-        //   this.router.navigate(['/host']);
-        // }, 2000);
+        // Reset form
+        this.pollForm.reset();
+        this.addPollQuestion();
+        this.submitted = false;
       },
       error: (error) => {
         console.error('Error creating poll:', error);
@@ -264,9 +292,7 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
   }
 
   getSelectedTypeLabel(): string {
-    const questionType = this.pollForm.get('questionType')?.value;
-    const typeInfo = this.questionTypes.find(t => t.value === questionType);
-    return typeInfo ? typeInfo.label : 'Custom';
+    return `${this.questions.length} Question${this.questions.length !== 1 ? 's' : ''}`;
   }
 
   generateQrCode(): void {

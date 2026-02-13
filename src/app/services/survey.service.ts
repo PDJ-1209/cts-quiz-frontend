@@ -87,10 +87,13 @@ export class SurveyService {
     return {
       surveyId: source?.surveyId ?? source?.SurveyId,
       sessionId: source?.sessionId ?? source?.SessionId,
+      sessionCode: source?.sessionCode ?? source?.SessionCode ?? null,
       title: source?.title ?? source?.Title ?? '',
       description: source?.description ?? source?.Description ?? null,
       isAnonymous: source?.isAnonymous ?? source?.IsAnonymous ?? false,
-      status: source?.status ?? source?.Status ?? '',
+      status: source?.status ?? source?.Status ?? 'draft',
+      startTime: source?.startTime ?? source?.StartTime ?? null,
+      endTime: source?.endTime ?? source?.EndTime ?? null,
       questions: (source?.questions ?? source?.Questions ?? []).map((q: any) => ({
         surveyQuestionId: q?.surveyQuestionId ?? q?.SurveyQuestionId,
         sessionId: q?.sessionId ?? q?.SessionId,
@@ -114,10 +117,6 @@ export class SurveyService {
     return this.http.get<Survey>(`${this.apiBaseV2}/${surveyId}`);
   }
 
-  publishSurvey(request: PublishSurveyRequest): Observable<PublishSurveyResponse> {
-    return this.http.post<PublishSurveyResponse>(`${this.baseUrl}/survey/publish`, request);
-  }
-
   getSurveyResults(surveyId: number): Observable<SurveyResult> {
     return this.http.get<SurveyResult>(`${this.baseUrl}/survey/results/${surveyId}`);
   }
@@ -136,5 +135,10 @@ export class SurveyService {
   // Participant: submit survey responses
   submitSurveyResponses(payload: any): Observable<any> {
     return this.http.post(`${environment.apiUrl}/Participate/Survey/submit`, payload);
+  }
+
+  // Publish survey with custom start/end times
+  publishSurvey(publishPayload: { surveyId: number; hostId: string; startedAt?: string; endedAt?: string }): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/Host/Survey/publish`, publishPayload);
   }
 }

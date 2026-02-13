@@ -61,9 +61,18 @@
                 <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="addOption(i)">+ Add Option</button>
               </div>
 
-              <button type="button" class="btn btn-teal w-100 mt-4 text-white fw-bold" (click)="addQuestion()">+ Add Next Question</button>
+              <button type="button" class="btn btn-danger btn-sm mt-3" (click)="removeQuestion(i)" *ngIf="questions.length > 1">
+                <i class="fas fa-trash-alt"></i> Remove Question
+              </button>
             </div>
           </div>
+        </div>
+
+        <!-- Add Question Button -->
+        <div class="text-center mt-4">
+          <button type="button" class="btn btn-primary btn-lg w-50" (click)="addQuestion()">
+            <i class="fas fa-plus-circle"></i> Add Question
+          </button>
         </div>
       </div>
 
@@ -77,14 +86,11 @@
             </div>
             <div class="d-grid gap-2">
               <button class="btn btn-primary py-2 fw-bold" (click)="onPublish()" [disabled]="loading">
-                {{ loading ? 'Publishing...' : 'Publish Survey' }}
-              </button>
-              <button class="btn btn-success py-2 fw-bold" (click)="createQuizFromSurvey()" [disabled]="loading">
-                🔄 Convert to Quiz Format
+                {{ loading ? 'Creating...' : 'Create Survey' }}
               </button>
             </div>
             <small class="text-muted mt-2 d-block text-center">
-              Convert survey to quiz format and switch to Questions tab
+              Save your survey to the database
             </small>
           </div>
         </div>

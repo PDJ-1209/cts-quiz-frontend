@@ -109,15 +109,16 @@
         
         <!-- Quizzes Tab -->
         @if (selectedContentType() === 'quizzes') {
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Quiz Number</th>
-                  <th>Quiz Name</th>
-                  <th>Category</th>
-                  <th>Questions</th>
-                  <th>Status</th>
+          @if (hostQuizzes().length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Quiz Number</th>
+                    <th>Quiz Name</th>
+                    <th>Category</th>
+                    <th>Questions</th>
+                    <th>Status</th>
                   <th>Created</th>
                   <th>Start Time</th>
                   <th>End Time</th>
@@ -207,11 +208,12 @@
           </div>
         } @else {
           <div class="text-center py-5">
-            <div class="mb-3" style="font-size: 3rem;">📭</div>
-            <h5>No Quizzes Found</h5>
-            <p class="text-muted">You haven't created any quizzes yet.</p>
+            <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+            <h5>{{ emptyStateConfig().title }}</h5>
+            <p class="text-muted">{{ emptyStateConfig().message }}</p>
           </div>
         }
+      }
         
         <!-- Surveys Tab -->
         @if (selectedContentType() === 'surveys') {
@@ -225,7 +227,8 @@
                     <th>Questions</th>
                     <th>Status</th>
                     <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -248,30 +251,67 @@
                           {{ survey.isAnonymous ? 'Yes' : 'No' }}
                         </span>
                       </td>
-                      <td>{{ survey.sessionId || 'N/A' }}</td>
                       <td>
-                        <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Survey">
-                            <i class="fas fa-eye"></i>
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="surveyStartTimes[survey.surveyId]"
+                            (change)="onSurveyStartTimeChange(survey.surveyId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(survey.startTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="surveyEndTimes[survey.surveyId]"
+                            (change)="onSurveyEndTimeChange(survey.surveyId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(survey.endTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success"
+                            (click)="publishSurvey(survey.surveyId)">
+                            📤 Publish
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Survey">
-                            <i class="fas fa-edit"></i>
+                        } @else {
+                          <button 
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="toggleQR(survey.surveyId)">
+                            {{ showQRForQuizId() === survey.surveyId ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-danger" title="Delete Survey">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </div>
+                        }
                       </td>
                     </tr>
+                    @if (showQRForQuizId() === survey.surveyId && survey.sessionCode) {
+                      <tr>
+                        <td colspan="7" class="qr-cell">
+                          <app-qrcode 
+                            [surveyNumber]="survey.sessionCode" 
+                            [surveyId]="survey.surveyId"
+                            [contentType]="'survey'"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
             </div>
           } @else {
             <div class="text-center py-5">
-              <div class="mb-3" style="font-size: 3rem;">📝</div>
-              <h5>No Surveys Found</h5>
-              <p class="text-muted">You haven't created any surveys yet.</p>
+              <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+              <h5>{{ emptyStateConfig().title }}</h5>
+              <p class="text-muted">{{ emptyStateConfig().message }}</p>
             </div>
           }
         }
@@ -289,7 +329,8 @@
                     <th>Options</th>
                     <th>Status</th>
                     <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -313,30 +354,67 @@
                           {{ poll.pollAnonymous ? 'Yes' : 'No' }}
                         </span>
                       </td>
-                      <td>{{ poll.sessionId || 'N/A' }}</td>
                       <td>
-                        <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Poll">
-                            <i class="fas fa-eye"></i>
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="pollStartTimes[poll.pollId]"
+                            (change)="onPollStartTimeChange(poll.pollId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(poll.startTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="pollEndTimes[poll.pollId]"
+                            (change)="onPollEndTimeChange(poll.pollId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(poll.endTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success"
+                            (click)="publishPoll(poll.pollId)">
+                            📤 Publish
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Poll">
-                            <i class="fas fa-edit"></i>
+                        } @else {
+                          <button 
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="toggleQR(poll.pollId)">
+                            {{ showQRForQuizId() === poll.pollId ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-danger" title="Delete Poll">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </div>
+                        }
                       </td>
                     </tr>
+                    @if (showQRForQuizId() === poll.pollId && poll.sessionCode) {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [pollNumber]="poll.sessionCode" 
+                            [pollId]="poll.pollId"
+                            [contentType]="'poll'"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
             </div>
           } @else {
             <div class="text-center py-5">
-              <div class="mb-3" style="font-size: 3rem;">🗳️</div>
-              <h5>No Polls Found</h5>
-              <p class="text-muted">You haven't created any polls yet.</p>
+              <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+              <h5>{{ emptyStateConfig().title }}</h5>
+              <p class="text-muted">{{ emptyStateConfig().message }}</p>
             </div>
           }
         }

@@ -1,0 +1,280 @@
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-gradient-primary shadow-sm">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <i class="fas fa-chart-bar me-2 fs-4"></i>
+      <span class="fw-bold fs-5">Poll Analytics</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <!-- <li class="nav-item">
+          <a class="nav-link" href="#"><i class="fas fa-home me-1"></i> Dashboard</a>
+        </li> -->
+        <li class="nav-item">
+          <a class="nav-link active" href="#"><i class="fas fa-poll me-1"></i> Polls</a>
+        </li>
+        <!-- <li class="nav-item">
+          <a class="nav-link" href="#"><i class="fas fa-cog me-1"></i> Settings</a>
+        </li> -->
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4" (click)="closeDropdown()">
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading poll data from database...</p>
+  </div>
+
+  <!-- Content (shown when not loading) -->
+  <div *ngIf="!loading">
+  <!-- Statistics Cards -->
+  <div class="row g-4 mb-4">
+    <!-- Active Sessions Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="stats-card active-card">
+        <div class="card-icon">
+          <i class="fas fa-play-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-number">{{ activeCount }}</h3>
+          <p class="card-label">Active Sessions</p>
+        </div>
+        <div class="card-progress">
+          <div class="progress">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 [style.width]="activeCount > 0 ? '100%' : '0%'"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inactive Sessions Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="stats-card inactive-card">
+        <div class="card-icon">
+          <i class="fas fa-pause-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-number">{{ inactiveCount }}</h3>
+          <p class="card-label">Inactive Sessions</p>
+        </div>
+        <div class="card-progress">
+          <div class="progress">
+            <div class="progress-bar bg-secondary" role="progressbar" 
+                 [style.width]="inactiveCount > 0 ? '100%' : '0%'"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Polls Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="stats-card total-card">
+        <div class="card-icon">
+          <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-number">{{ pollSessions.length }}</h3>
+          <p class="card-label">Total Polls</p>
+        </div>
+        <div class="card-progress">
+          <div class="progress">
+            <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Participants Card -->
+    <div class="col-md-6 col-lg-3">
+      <div class="stats-card participants-card">
+        <div class="card-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-number">{{ getTotalParticipants() }}</h3>
+          <p class="card-label">Total Participants</p>
+        </div>
+        <div class="card-progress">
+          <div class="progress">
+            <div class="progress-bar bg-warning" role="progressbar" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="search-container">
+        <div class="input-group shadow-sm">
+          <span class="input-group-text bg-white border-end-0">
+            <i class="fas fa-search text-muted"></i>
+          </span>
+          <input 
+            type="text" 
+            class="form-control border-start-0 ps-0" 
+            placeholder="Search by poll title..."
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="onSearch()">
+          <button class="btn btn-primary px-4" type="button" (click)="onSearch()">
+            <i class="fas fa-search me-2"></i> Search
+          </button>
+          <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()" 
+                  *ngIf="searchQuery">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="row">
+    <div class="col-12">
+      <div class="table-card shadow-sm">
+        <div class="table-header">
+          <h5 class="mb-0">
+            <i class="fas fa-table me-2"></i> Poll Sessions
+          </h5>
+          <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-sm btn-outline-light" (click)="loadPollData()" [disabled]="loading" title="Refresh data">
+              <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i> Refresh
+            </button>
+            <span class="badge bg-primary rounded-pill">{{ filteredSessions.length }} Results</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center" style="width: 60px;">#</th>
+                <th style="width: 25%;">Poll Title</th>
+                <th class="text-center" style="width: 12%;">Created At</th>
+                <th class="text-center" style="width: 12%;">Published At</th>
+                <th class="text-center" style="width: 10%;">Participants</th>
+                <th class="text-center" style="width: 10%;">Status</th>
+                <th class="text-center" style="width: 15%;">Analytics</th>
+                <th class="text-center" style="width: 10%;">Download</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let session of filteredSessions; let i = index" class="table-row">
+                <td class="text-center fw-bold text-muted">{{ i + 1 }}</td>
+                <td>
+                  <div class="poll-title-cell">
+                    <i class="fas fa-poll text-primary me-2"></i>
+                    <span class="fw-semibold">{{ session.pollTitle }}</span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <small class="text-muted">
+                    <i class="far fa-calendar-alt me-1"></i>
+                    {{ formatDate(session.createdAt) }}
+                  </small>
+                </td>
+                <td class="text-center">
+                  <small class="text-muted">
+                    <i class="far fa-calendar-check me-1"></i>
+                    {{ formatDate(session.publishedAt) }}
+                  </small>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-info rounded-pill px-3">
+                    <i class="fas fa-users me-1"></i>{{ session.participantCount }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span [class]="getStatusBadgeClass(session.isActive)" class="rounded-pill px-3">
+                    <i [class]="session.isActive ? 'fas fa-circle' : 'fas fa-circle'" 
+                       style="font-size: 8px;" class="me-1"></i>
+                    {{ getStatusText(session.isActive) }}
+                  </span>
+                </td>
+                <td class="text-center" style="position: relative; z-index: auto;">
+                  <div class="dropdown" [class.show]="isDropdownOpen(session.id)">
+                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" 
+                            (click)="toggleDropdown(session.id, $event)">
+                      <i class="fas fa-chart-pie me-1"></i> View
+                    </button>
+                    <ul class="dropdown-menu" [class.show]="isDropdownOpen(session.id)">
+                      <li *ngFor="let chart of chartOptions">
+                        <a class="dropdown-item" href="javascript:void(0)" 
+                           (click)="openChartModal(session, chart.value)">
+                          <i class="fas" 
+                             [class.fa-chart-pie]="chart.value === 'pie' || chart.value === 'doughnut'"
+                             [class.fa-chart-bar]="chart.value === 'bar'"
+                             [class.fa-chart-line]="chart.value === 'line'"
+                             class="me-2"></i>
+                          {{ chart.label }}
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-success" (click)="downloadExcel(session)" 
+                          title="Download Excel">
+                    <i class="fas fa-file-excel me-1"></i> Download
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="filteredSessions.length === 0">
+                <td colspan="8" class="text-center py-5">
+                  <div class="empty-state">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No poll sessions found</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div> <!-- End of !loading -->
+</div>
+
+<!-- Chart Modal -->
+<div class="modal fade" [class.show]="showChartModal" [style.display]="showChartModal ? 'block' : 'none'" 
+     tabindex="-1" *ngIf="showChartModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-chart-bar me-2"></i>
+          {{ selectedSessionForChart?.pollTitle }} - {{ selectedChartType | titlecase }} Chart
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeChartModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="chart-container">
+          <canvas #chartCanvas></canvas>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeChartModal()">
+          <i class="fas fa-times me-1"></i> Close
+        </button>
+        <button type="button" class="btn btn-success" (click)="downloadChart()">
+          <i class="fas fa-download me-1"></i> Download Chart
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div class="modal-backdrop fade" [class.show]="showChartModal" *ngIf="showChartModal" 
+     (click)="closeChartModal()"></div>
