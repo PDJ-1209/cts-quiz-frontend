@@ -33,6 +33,9 @@ export class RegistrationComponent {
   // optional: small UX helpers
   loading = signal(false);
   errorMsg = signal<string | null>(null);
+  
+  // Fancy popup for validation messages
+  popup = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   constructor(
     private fb: FormBuilder,
@@ -75,6 +78,14 @@ export class RegistrationComponent {
  submit(): void {
   this.form.markAllAsTouched();
   this.errorMsg.set(null);
+  this.popup.set(null);
+  
+  // Custom validation: Check password length before form validation
+  if (this.f.password.value && this.f.password.value.length < 8) {
+    this.showPopup('Invalid password. Password must be at least 8 characters long.', 'error');
+    return;
+  }
+  
   if (this.form.invalid) return;
 
   const payload = {
@@ -89,17 +100,37 @@ export class RegistrationComponent {
   this.auth.register(payload).subscribe({
     next: () => {
       this.success = true;
-      setTimeout(() => this.router.navigate(['/login'], { replaceUrl: true }), 800);
+      this.showPopup('Registration successful!', 'success');
+      setTimeout(() => this.router.navigate(['/login'], { replaceUrl: true }), 1500);
     },
     error: (err: any) => {
       console.error('Registration error:', err);
       const errorText = typeof err?.error === 'string' 
         ? err.error 
         : err?.error?.message || err?.message || 'Registration failed. Please try again.';
+      
+      // Check for specific error: Employee ID and email already exist
+      if (errorText.toLowerCase().includes('employee') && errorText.toLowerCase().includes('email') && errorText.toLowerCase().includes('exist')) {
+        this.showPopup('Employee ID and email already exist.', 'error');
+      } else {
+        this.showPopup(errorText, 'error');
+      }
+      
       this.errorMsg.set(errorText);
     },
     complete: () => this.loading.set(false)
   });
+}
+
+// Method to show fancy popup with auto-hide
+private showPopup(message: string, type: 'success' | 'error' | 'warning'): void {
+  this.popup.set({ message, type });
+  setTimeout(() => this.popup.set(null), 4000);
+}
+
+// Method to manually close popup
+closePopup(): void {
+  this.popup.set(null);
 }
 
 goToLogin(): void {

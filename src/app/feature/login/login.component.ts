@@ -23,6 +23,9 @@ export class LoginComponent {
   isLoading = signal(false);
   loginError = signal<string | null>(null);
 
+  // Fancy popup for validation messages
+  popup = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+
   // Registration fields
   showRegistration = signal(false);
   regEmployeeId = signal('');
@@ -41,6 +44,7 @@ export class LoginComponent {
   async onLogin() {
     this.isLoading.set(true);
     this.loginError.set(null);
+    this.popup.set(null);
 
     try {
       const loginRequest: LoginRequest = {
@@ -51,11 +55,26 @@ export class LoginComponent {
       const result = await this.authService.login(loginRequest);
       
       if (result.success && result.redirectUrl) {
-        this.router.navigate([result.redirectUrl]);
+        this.showPopup('Login successful!', 'success');
+        setTimeout(() => this.router.navigate([result.redirectUrl]), 500);
       } else {
+        // Parse specific error messages and show appropriate popup
+        const errorMessage = result.message || 'Login failed';
+        
+        if (errorMessage.toLowerCase().includes('incorrect password')) {
+          this.showPopup('Incorrect password.', 'error');
+        } else if (errorMessage.toLowerCase().includes('employee id') && errorMessage.toLowerCase().includes('not exist')) {
+          this.showPopup('Employee ID does not exist.', 'error');
+        } else if (errorMessage.toLowerCase().includes('user') && errorMessage.toLowerCase().includes('not exist')) {
+          this.showPopup('User does not exist.', 'error');
+        } else {
+          this.showPopup(errorMessage, 'error');
+        }
+        
         this.loginError.set(result.message || 'Login failed');
       }
     } catch (error) {
+      this.showPopup('An error occurred during login', 'error');
       this.loginError.set('An error occurred during login');
       console.error('Login error:', error);
     } finally {
@@ -67,9 +86,19 @@ export class LoginComponent {
     this.isLoading.set(true);
     this.registrationError.set(null);
     this.registrationSuccess.set(null);
+    this.popup.set(null);
 
-    // Validation
+    // Validation: Check password length
+    if (this.regPassword().length < 8) {
+      this.showPopup('Invalid password. Password must be at least 8 characters long.', 'error');
+      this.registrationError.set('Invalid password. Password must be at least 8 characters long.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    // Validation: Check if passwords match
     if (this.regPassword() !== this.regConfirmPassword()) {
+      this.showPopup('Passwords do not match', 'error');
       this.registrationError.set('Passwords do not match');
       this.isLoading.set(false);
       return;
@@ -84,7 +113,8 @@ export class LoginComponent {
         password: this.regPassword()
       };
       
-      const result = await this.authService.register(registerRequest).toPromise();
+      const result = await this.authService.register(registerRequest);
+      this.showPopup('Registration successful!', 'success');
       this.registrationSuccess.set('Registration successful! You can now login with your credentials.');
       
       // Reset registration form
@@ -100,10 +130,31 @@ export class LoginComponent {
       this.employeeId.set(registerRequest.employeeId);
       
     } catch (error: any) {
-      this.registrationError.set(error.error?.message || 'Registration failed');
+      const errorText = error.error?.message || 'Registration failed';
+      
+      // Check for specific error: Employee ID and email already exist
+      if (errorText.toLowerCase().includes('employee') && errorText.toLowerCase().includes('email') && errorText.toLowerCase().includes('exist')) {
+        this.showPopup('Employee ID and email already exist.', 'error');
+        this.registrationError.set('Employee ID and email already exist.');
+      } else {
+        this.showPopup(errorText, 'error');
+        this.registrationError.set(errorText);
+      }
+      
       console.error('Registration error:', error);
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  // Method to show fancy popup with auto-hide
+  private showPopup(message: string, type: 'success' | 'error' | 'warning'): void {
+    this.popup.set({ message, type });
+    setTimeout(() => this.popup.set(null), 4000);
+  }
+
+  // Method to manually close popup
+  closePopup(): void {
+    this.popup.set(null);
   }
 }
