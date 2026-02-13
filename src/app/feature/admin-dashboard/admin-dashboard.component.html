@@ -32,6 +32,12 @@
             <span>Reports</span>
           </button>
         </li>
+        <li [class.active]="selectedTab() === 'analytics'">
+          <button (click)="selectTab('analytics')" class="nav-btn">
+            <i class="fas fa-chart-line"></i>
+            <span>Analytics</span>
+          </button>
+        </li>
         <li [class.active]="selectedTab() === 'settings'">
           <button (click)="selectTab('settings')" class="nav-btn">
             <i class="fas fa-cogs"></i>
@@ -607,6 +613,15 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div *ngIf="selectedTab() === 'analytics'" class="tab-content">
+        <div class="section-header">
+          <h2><i class="fas fa-chart-line"></i> Feedback Analytics</h2>
+          <p>Detailed feedback analytics and visualizations</p>
+        </div>
+        <app-analytics></app-analytics>
       </div>
 
       <div *ngIf="selectedTab() === 'settings'" class="tab-content">

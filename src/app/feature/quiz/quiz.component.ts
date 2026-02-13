@@ -419,14 +419,17 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   }
 
   returnToParticipant() {
-    // Clear session data
-    localStorage.removeItem('participantId');
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('quizTitle');
-    localStorage.removeItem('finalScore');
-    localStorage.removeItem('totalQuestions');
+    // Save quiz and participant info for feedback
+    const quizId = localStorage.getItem('currentQuizId');
+    const participantId = localStorage.getItem('participantId');
     
-    this.router.navigate(['/participant']);
+    // Navigate to feedback page with query params
+    this.router.navigate(['/feedback'], {
+      queryParams: {
+        quizId: quizId,
+        participantId: participantId
+      }
+    });
   }
 
   restart() {

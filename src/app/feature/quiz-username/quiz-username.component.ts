@@ -45,7 +45,7 @@ export class QuizUsernameComponent implements OnInit {
     });
   }
 
-  @HostListener('window:popstate', ['$event'])
+  @HostListener('window:popstate')
   onPopState(): void {
     this.lockBackNavigation();
 
@@ -85,6 +85,10 @@ export class QuizUsernameComponent implements OnInit {
         // Store session data for countdown
         localStorage.setItem('sessionData', JSON.stringify(validation));
         localStorage.setItem('quizTitle', validation.quizTitle || 'Quiz');
+        // Store quizId for feedback later
+        if (validation.quizId) {
+          localStorage.setItem('currentQuizId', validation.quizId.toString());
+        }
       }
     } catch (error: any) {
       this.snackBar.open('❌ Failed to validate quiz code', 'Close', {

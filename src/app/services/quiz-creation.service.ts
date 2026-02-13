@@ -50,6 +50,15 @@ export class QuizCreationService {
   }
 
   /**
+   * Update quiz status directly
+   */
+  async updateQuizStatus(quizId: number, status: string): Promise<void> {
+    const url = `${this.apiBase}/${quizId}/status`;
+    await firstValueFrom(this.http.put(url, { status }));
+    console.log(`[QuizCreationService] Updated quiz ${quizId} status to ${status}`);
+  }
+
+  /**
    * Create a new quiz with questions
    */
   async createQuiz(quiz: QuizMeta, questions: QuizQuestion[]): Promise<CreateQuizResponse> {
@@ -225,7 +234,7 @@ export class QuizCreationService {
    * Get quiz details with questions for editing
    */
   async getQuizForEdit(quizId: number): Promise<QuizDetailsResponse> {
-    const url = `${this.apiBase}/${quizId}`;
+    const url = `${this.apiBase}/GetForEdit?quizId=${quizId}`;
     try {
       return await firstValueFrom(this.http.get<QuizDetailsResponse>(url));
     } catch (error: any) {

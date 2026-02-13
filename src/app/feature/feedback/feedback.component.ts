@@ -113,10 +113,11 @@
 // ============== New code =================
 
 
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { FeedbackService } from '../services/feedback.service';
+import { FeedbackService } from '../../services/feedback.service';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-feedback-form',
@@ -126,11 +127,12 @@ import { CommonModule } from '@angular/common';
   templateUrl: './feedback.component.html',
   styleUrls: ['./feedback.component.css']
 })
-export class FeedbackFormComponent {
+export class FeedbackFormComponent implements OnInit {
   feedbackForm: FormGroup;
   showPicker = false;
   showWordCloud = false;
   selectedWords: string[] = [];
+  feedbackSubmitted = false;
 
   emojiList = ['😄','😀',  '🙂', '☹️','😞'];
 
@@ -144,7 +146,12 @@ export class FeedbackFormComponent {
     'disappointing', 'poor', 'average', 'okay', 'decent', 'satisfactory', 'acceptable'
   ];
 
-  constructor(private fb: FormBuilder, private service: FeedbackService) {
+  constructor(
+    private fb: FormBuilder, 
+    private service: FeedbackService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
     // IMPORTANT: use `comments` (plural) to match backend `Comments`
     this.feedbackForm = this.fb.group({
       id: [0],
@@ -153,6 +160,21 @@ export class FeedbackFormComponent {
       rating: [5, Validators.required],
       comments: [''],         // <-- renamed from `comment`
       emojiReaction: ['']
+    });
+  }
+
+  ngOnInit() {
+    // Get quiz and participant info from route params or localStorage
+    this.route.queryParams.subscribe(params => {
+      const quizId = params['quizId'] || localStorage.getItem('currentQuizId');
+      const participantId = params['participantId'] || localStorage.getItem('participantId');
+      
+      if (quizId) {
+        this.feedbackForm.patchValue({ quizId: Number(quizId) });
+      }
+      if (participantId) {
+        this.feedbackForm.patchValue({ participantId: Number(participantId) });
+      }
     });
   }
 
@@ -202,7 +224,8 @@ export class FeedbackFormComponent {
       this.service.submitFeedback(payload).subscribe({
         next: (response) => {
           console.log('Success response:', response);
-          alert('Feedback submitted successfully to backend!');
+          this.feedbackSubmitted = true;
+          alert('Feedback submitted successfully!');
           this.feedbackForm.reset({ rating: 5 });
           this.selectedWords = [];
         },
@@ -222,7 +245,8 @@ export class FeedbackFormComponent {
           };
           feedbacks.push(newFeedback);
           localStorage.setItem('feedbacks', JSON.stringify(feedbacks));
-          alert('Backend is not available. Feedback saved locally!\n\nData: ' + JSON.stringify(newFeedback, null, 2));
+          alert('Backend is not available. Feedback saved locally!');
+          this.feedbackSubmitted = true;
           this.feedbackForm.reset({ rating: 5 });
           this.selectedWords = [];
         }
@@ -231,5 +255,20 @@ export class FeedbackFormComponent {
       console.log('Form is invalid. Cannot submit.');
       alert('Please fill in all required fields (Quiz ID and Participant ID)');
     }
+  }
+
+  returnToHome() {
+    // Clear quiz session data
+    localStorage.removeItem('currentQuizId');
+    localStorage.removeItem('participantId');
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('participantName');
+    localStorage.removeItem('sessionCode');
+    localStorage.removeItem('quizTitle');
+    localStorage.removeItem('sessionData');
+    localStorage.removeItem('finalScore');
+    
+    // Navigate to participant home page
+    this.router.navigate(['/participantpage']);
   }
 }

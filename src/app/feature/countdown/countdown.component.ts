@@ -132,7 +132,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
     }
   }
 
-  @HostListener('window:popstate', ['$event'])
+  @HostListener('window:popstate')
   onPopState(): void {
     this.lockBackNavigation();
 
