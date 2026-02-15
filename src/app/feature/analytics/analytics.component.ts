@@ -1,14 +1,15 @@
 import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
-import { ServiceAnalyticsService } from '../../services/analytics.service';
+import { ServiceAnalyticsService, HostDto, HostQuizDto, HostFeedbackAnalyticsDto } from '../../services/analytics.service';
+import { FormsModule } from '@angular/forms';
 
 // Register all Chart.js components
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-analytics',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './analytics.component.html',
   styleUrl: './analytics.component.css'
 })
@@ -19,17 +20,32 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = true;
   selectedQuizId = 1;
 
+  // New properties for host/quiz filtering
+  hosts: HostDto[] = [];
+  selectedHostId: string = '';
+  quizzes: HostQuizDto[] = [];
+  selectedFilteredQuizId: number | null = null;
+  hostFeedbackAnalytics: HostFeedbackAnalyticsDto | null = null;
+  showHostFiltering = false;
+  loadingHosts = false;
+  loadingQuizzes = false;
+
   constructor(private analyticsService: ServiceAnalyticsService) {}
 
   ngOnInit() {
     console.log('Analytics component initialized');
+    this.isLoading = true;
+    this.loadHosts();
+    
+    // Refresh hosts periodically to catch newly created hosts
+    setInterval(() => {
+      this.loadHosts();
+    }, 10000); // Refresh every 10 seconds
   }
 
   ngAfterViewInit() {
-    // Wait for DOM to be ready, then load data
-    setTimeout(() => {
-      this.loadData();
-    }, 100);
+    // Charts will be created when data is loaded
+    // No longer calling loadData() here - it's called after host selection
   }
 
   ngOnDestroy() {
@@ -41,6 +57,119 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.barChart) {
       this.barChart.destroy();
       this.barChart = null;
+    }
+  }
+
+  /**
+   * Load all hosts who have conducted quizzes
+   */
+  loadHosts() {
+    this.loadingHosts = true;
+    this.analyticsService.getAllHosts().subscribe({
+      next: (hosts) => {
+        console.log('Hosts loaded:', hosts);
+        this.hosts = hosts.sort((a, b) => a.hostName.localeCompare(b.hostName));
+        this.loadingHosts = false;
+        
+        // If currently selected host is still in the list, keep it
+        if (this.selectedHostId && hosts.some(h => h.hostId === this.selectedHostId)) {
+          // Keep current selection
+        } else if (hosts.length > 0) {
+          // Select first host if none selected
+          this.selectedHostId = hosts[0].hostId;
+          this.onHostSelected();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading hosts:', err);
+        this.loadingHosts = false;
+      }
+    });
+  }
+
+  /**
+   * Called when a host is selected
+   */
+  onHostSelected() {
+    if (!this.selectedHostId) return;
+    
+    console.log('Loading quizzes for host:', this.selectedHostId);
+    this.loadingQuizzes = true;
+    this.selectedFilteredQuizId = null;
+    this.quizzes = [];
+    this.hostFeedbackAnalytics = null;
+
+    this.analyticsService.getQuizzesByHost(this.selectedHostId).subscribe({
+      next: (quizzes) => {
+        console.log('Quizzes loaded for host:', quizzes);
+        this.quizzes = quizzes;
+        this.loadingQuizzes = false;
+        if (quizzes.length > 0) {
+          this.selectedFilteredQuizId = quizzes[0].quizId;
+          this.onQuizSelected();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading quizzes for host:', err);
+        this.loadingQuizzes = false;
+      }
+    });
+  }
+
+  /**
+   * Called when a quiz is selected for the host
+   */
+  onQuizSelected() {
+    if (!this.selectedHostId || !this.selectedFilteredQuizId) return;
+
+    console.log(`Loading analytics for host: ${this.selectedHostId}, quiz: ${this.selectedFilteredQuizId}`);
+    this.isLoading = true;
+
+    this.analyticsService.getFeedbackAnalyticsByHostAndQuiz(this.selectedHostId, this.selectedFilteredQuizId).subscribe({
+      next: (analytics) => {
+        console.log('Host-Quiz analytics loaded:', analytics);
+        this.hostFeedbackAnalytics = analytics;
+        this.updateStatsFromHostAnalytics(analytics);
+        this.createChartFromHostAnalytics(analytics);
+        this.createBarChartFromHostAnalytics(analytics);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Error loading host-quiz analytics:', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Update stats card from host analytics
+   */
+  private updateStatsFromHostAnalytics(analytics: HostFeedbackAnalyticsDto) {
+    this.stats = [
+      { title: 'Total Responses', value: analytics.totalResponses.toString() },
+      { title: 'Average Rating', value: `${analytics.averageRating.toFixed(1)}/5` },
+      { title: 'Host', value: analytics.hostName },
+      { title: 'Quiz', value: analytics.quizName }
+    ];
+  }
+
+  /**
+   * Create emoji chart from host analytics
+   */
+  private createChartFromHostAnalytics(analytics: HostFeedbackAnalyticsDto) {
+    if (analytics.emojiBreakdown && analytics.emojiBreakdown.length > 0) {
+      this.createChart(analytics.emojiBreakdown);
+    } else {
+      this.useSampleEmojiData();
+    }
+  }
+
+  /**
+   * Create bar chart from host analytics
+   */
+  private createBarChartFromHostAnalytics(analytics: HostFeedbackAnalyticsDto) {
+    if (analytics.ratingDistribution && analytics.ratingDistribution.length > 0) {
+      this.createBarChart(analytics.ratingDistribution);
     }
   }
 
@@ -107,7 +236,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   private useSampleEmojiData() {
     console.log('Using sample emoji data');
     const sampleData = [
-      { emojiReaction: '😊', totalCount: 15 },
+      // { emojiReaction: '😊', totalCount: 15 },
       { emojiReaction: '😍', totalCount: 12 },
       { emojiReaction: '👍', totalCount: 10 },
       { emojiReaction: '🎉', totalCount: 8 },
@@ -305,4 +434,142 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }, 300);
   }
+
+  /**
+   * Toggle host filtering view
+   */
+  toggleHostFiltering() {
+    this.showHostFiltering = !this.showHostFiltering;
+    if (this.showHostFiltering && this.hosts.length === 0) {
+      this.loadHosts();
+    }
+  }
+
+  /**
+   * Reset to default view
+   */
+  resetToDefaultView() {
+    this.showHostFiltering = false;
+    this.selectedHostId = '';
+    this.selectedFilteredQuizId = null;
+    this.quizzes = [];
+    this.hostFeedbackAnalytics = null;
+    this.isLoading = true;
+    setTimeout(() => {
+      this.loadData();
+    }, 100);
+  }
+
+  /**
+   * Get emoji icon for stat card based on title
+   */
+  getStatIcon(title: string): string {
+    const iconMap: { [key: string]: string } = {
+      'Total Responses': '📊',
+      'Average Rating': '⭐',
+      'Host': '👤',
+      'Quiz': '📝'
+    };
+    return iconMap[title] || '📈';
+  }
+
+  /**
+   * Get overall sentiment label and emoji based on average rating
+   */
+  getSentiment(): string {
+    if (!this.hostFeedbackAnalytics?.totalResponses || this.hostFeedbackAnalytics.totalResponses === 0) {
+      return '📭 No Feedback';
+    }
+
+    const rating = this.hostFeedbackAnalytics.averageRating;
+    if (rating >= 4.5) {
+      return '😍 Excellent';
+    } else if (rating >= 4.0) {
+      return '😄 Very Good';
+    } else if (rating >= 3.5) {
+      return '😊 Good';
+    } else if (rating >= 3.0) {
+      return '🙂 Decent';
+    } else if (rating >= 2.0) {
+      return '😐 Average';
+    } else {
+      return '😞 Needs Work';
+    }
+  }
+
+  /**
+   * Get CSS class for sentiment card based on average rating
+   */
+  getSentimentClass(): string {
+    if (!this.hostFeedbackAnalytics?.totalResponses || this.hostFeedbackAnalytics.totalResponses === 0) {
+      return 'sentiment-neutral';
+    }
+
+    const rating = this.hostFeedbackAnalytics.averageRating;
+    if (rating >= 4.0) {
+      return 'sentiment-positive';
+    } else if (rating >= 3.0) {
+      return 'sentiment-neutral';
+    } else {
+      return 'sentiment-negative';
+    }
+  }
+
+  /**
+   * Calculate positive feedback percentage (ratings >= 4)
+   */
+  getPositiveFeedbackPercentage(): number {
+    if (!this.hostFeedbackAnalytics?.ratingDistribution || 
+        this.hostFeedbackAnalytics.ratingDistribution.length === 0) {
+      return 0;
+    }
+
+    const totalResponses = this.hostFeedbackAnalytics.totalResponses;
+    if (totalResponses === 0) return 0;
+
+    const positiveRatings = this.hostFeedbackAnalytics.ratingDistribution
+      .filter(item => item.rating >= 4)
+      .reduce((sum, item) => sum + item.count, 0);
+
+    return Math.round((positiveRatings / totalResponses) * 100);
+  }
+
+  /**
+   * Calculate neutral feedback percentage (ratings = 3)
+   */
+  getNeutralFeedbackPercentage(): number {
+    if (!this.hostFeedbackAnalytics?.ratingDistribution || 
+        this.hostFeedbackAnalytics.ratingDistribution.length === 0) {
+      return 0;
+    }
+
+    const totalResponses = this.hostFeedbackAnalytics.totalResponses;
+    if (totalResponses === 0) return 0;
+
+    const neutralRatings = this.hostFeedbackAnalytics.ratingDistribution
+      .filter(item => item.rating === 3)
+      .reduce((sum, item) => sum + item.count, 0);
+
+    return Math.round((neutralRatings / totalResponses) * 100);
+  }
+
+  /**
+   * Calculate negative feedback percentage (ratings < 3)
+   */
+  getNegativeFeedbackPercentage(): number {
+    if (!this.hostFeedbackAnalytics?.ratingDistribution || 
+        this.hostFeedbackAnalytics.ratingDistribution.length === 0) {
+      return 0;
+    }
+
+    const totalResponses = this.hostFeedbackAnalytics.totalResponses;
+    if (totalResponses === 0) return 0;
+
+    const negativeRatings = this.hostFeedbackAnalytics.ratingDistribution
+      .filter(item => item.rating < 3)
+      .reduce((sum, item) => sum + item.count, 0);
+
+    return Math.round((negativeRatings / totalResponses) * 100);
+  }
 }
+

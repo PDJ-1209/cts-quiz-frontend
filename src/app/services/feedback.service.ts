@@ -49,6 +49,28 @@ export interface QuizFeedback {
   emojiReaction?: string;
 }
 
+export interface HostDto {
+  hostId: string;
+  hostName: string;
+}
+
+export interface HostQuizDto {
+  quizId: number;
+  quizName: string;
+  createdAt?: Date;
+}
+
+export interface HostFeedbackAnalyticsDto {
+  hostId: string;
+  hostName: string;
+  quizId: number;
+  quizName: string;
+  averageRating: number;
+  totalResponses: number;
+  emojiBreakdown: Array<{ emojiReaction: string; totalCount: number }>;
+  ratingDistribution: Array<{ rating: number; count: number }>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class FeedbackService {
   private baseUrl = `${environment.apiUrl}/Feedback`;
@@ -69,5 +91,18 @@ export class FeedbackService {
 
   getWordCloud(quizId: number): Observable<Array<{ text: string; weight: number }>> {
     return this.http.get<Array<{ text: string; weight: number }>>(`${this.baseUrl}/wordcloud/${quizId}`);
+  }
+
+  // New methods for host-based analytics
+  getAllHosts(): Observable<HostDto[]> {
+    return this.http.get<HostDto[]>(`${this.baseUrl}/hosts/all`);
+  }
+
+  getQuizzesByHost(hostId: string): Observable<HostQuizDto[]> {
+    return this.http.get<HostQuizDto[]>(`${this.baseUrl}/host/${hostId}/quizzes`);
+  }
+
+  getFeedbackAnalyticsByHostAndQuiz(hostId: string, quizId: number): Observable<HostFeedbackAnalyticsDto> {
+    return this.http.get<HostFeedbackAnalyticsDto>(`${this.baseUrl}/host/${hostId}/quiz/${quizId}/analytics`);
   }
 }
