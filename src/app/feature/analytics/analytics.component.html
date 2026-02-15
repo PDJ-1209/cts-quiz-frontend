@@ -25,6 +25,13 @@
       <div class="filter-info" *ngIf="hostFeedbackAnalytics">
         <span class="badge badge-host">👤 {{ hostFeedbackAnalytics.hostName }}</span>
         <span class="badge badge-quiz">📝 {{ hostFeedbackAnalytics.quizName }}</span>
+        <button 
+          class="export-pdf-btn" 
+          (click)="exportReportAsPDF()"
+          [disabled]="!hostFeedbackAnalytics || hostFeedbackAnalytics.totalResponses === 0"
+          title="Download complete report as PDF">
+          <span>📥</span> Download PDF Report
+        </button>
       </div>
     </div>
 
@@ -106,13 +113,34 @@
 
     <!-- Show all content only when there is feedback data -->
     <ng-container *ngIf="hostFeedbackAnalytics.totalResponses > 0">
-      <!-- Stats Grid -->
-      <div class="stats-grid">
-        <div class="stat-card" *ngFor="let stat of stats; let i = index" [ngClass]="'stat-' + i">
+      <!-- Drag and Drop Toggle Button -->
+      <div class="drag-drop-toggle">
+        <button class="drag-toggle-btn" (click)="toggleDragMode()" [class.active]="isDragEnabled">
+          <span>{{ isDragEnabled ? '🔒' : '↕️' }}</span>
+          <span class="toggle-text">{{ isDragEnabled ? 'Lock Layout' : 'Rearrange Cards' }}</span>
+        </button>
+      </div>
+
+      <!-- Stats Grid with Drag and Drop -->
+      <div class="stats-grid" 
+        cdkDropList
+        cdkDropListData="stats"
+        [cdkDropListDisabled]="!isDragEnabled"
+        (cdkDropListDropped)="onStatCardDrop($event)">
+        <div class="stat-card" 
+          *ngFor="let stat of stats; let i = index" 
+          [ngClass]="'stat-' + i"
+          cdkDrag
+          [cdkDragDisabled]="!isDragEnabled"
+          [cdkDragData]="stat"
+          [cdkDragPreviewClass]="'cdk-drag-preview'">
           <div class="stat-icon">{{ getStatIcon(stat.title) }}</div>
           <div class="stat-info">
             <div class="stat-value">{{ stat.value }}</div>
             <div class="stat-title">{{ stat.title }}</div>
+          </div>
+          <div class="drag-indicator" *ngIf="isDragEnabled">
+            <span class="drag-handle">⋮⋮</span>
           </div>
         </div>
       </div>

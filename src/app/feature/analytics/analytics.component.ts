@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 import { ServiceAnalyticsService, HostDto, HostQuizDto, HostFeedbackAnalyticsDto } from '../../services/analytics.service';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 // Register all Chart.js components
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-analytics',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule],
   templateUrl: './analytics.component.html',
   styleUrl: './analytics.component.css'
 })
@@ -19,6 +20,9 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   barChart: any;
   isLoading = true;
   selectedQuizId = 1;
+
+  // Drag and drop properties
+  isDragEnabled = false;
 
   // New properties for host/quiz filtering
   hosts: HostDto[] = [];
@@ -570,6 +574,244 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
       .reduce((sum, item) => sum + item.count, 0);
 
     return Math.round((negativeRatings / totalResponses) * 100);
+  }
+
+  /**
+   * Export analytics report as PDF
+   */
+  async exportReportAsPDF(): Promise<void> {
+    if (!this.hostFeedbackAnalytics) {
+      alert('No data available to export');
+      return;
+    }
+
+    try {
+      console.log('Starting PDF export...');
+      
+      // Import pdfMake library
+      const pdfMakeModule = await import('pdfmake/build/pdfmake');
+      const vfsModule = await import('pdfmake/build/vfs_fonts');
+      
+      const pdfMake = (pdfMakeModule as any).default || pdfMakeModule;
+      const vfs = (vfsModule as any).default || vfsModule;
+      
+      console.log('pdfMake loaded:', !!pdfMake);
+      console.log('vfs loaded:', !!vfs);
+      
+      // Configure fonts
+      if (vfs && pdfMake) {
+        pdfMake.vfs = vfs.pdfMake?.vfs || vfs.vfs || vfs;
+        console.log('VFS configured');
+      }
+
+      // Prepare document content
+      const docContent: any[] = [
+        {
+          text: '📊 Quiz Analytics Report',
+          fontSize: 20,
+          bold: true,
+          color: '#0066cc',
+          margin: [0, 0, 0, 15]
+        },
+        {
+          text: `Generated: ${new Date().toLocaleString()}`,
+          fontSize: 10,
+          color: '#666',
+          margin: [0, 0, 0, 15]
+        },
+        {
+          text: 'Quiz Information',
+          fontSize: 14,
+          bold: true,
+          color: '#0066cc',
+          margin: [0, 15, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['50%', '50%'],
+            body: [
+              [
+                { text: 'Host', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'left' },
+                { text: 'Quiz', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'left' }
+              ],
+              [
+                this.hostFeedbackAnalytics.hostName || 'N/A',
+                this.hostFeedbackAnalytics.quizName || 'N/A'
+              ]
+            ]
+          },
+          margin: [0, 0, 0, 15]
+        },
+        {
+          text: 'Key Metrics',
+          fontSize: 14,
+          bold: true,
+          color: '#0066cc',
+          margin: [0, 15, 0, 10]
+        },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['25%', '25%', '25%', '25%'],
+            body: [
+              [
+                { text: 'Responses', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'center' },
+                { text: 'Avg Rating', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'center' },
+                { text: 'Positive %', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'center' },
+                { text: 'Needs Work %', bold: true, color: '#fff', fillColor: '#0066cc', alignment: 'center' }
+              ],
+              [
+                { text: (this.hostFeedbackAnalytics.totalResponses || 0).toString(), alignment: 'center' },
+                { text: (this.hostFeedbackAnalytics.averageRating || 0).toFixed(2), alignment: 'center' },
+                { text: this.getPositiveFeedbackPercentage() + '%', alignment: 'center' },
+                { text: this.getNegativeFeedbackPercentage() + '%', alignment: 'center' }
+              ]
+            ]
+          },
+          margin: [0, 0, 0, 15]
+        }
+      ];
+
+      // Add rating distribution if available
+      if (this.hostFeedbackAnalytics.ratingDistribution && this.hostFeedbackAnalytics.ratingDistribution.length > 0) {
+        docContent.push({
+          text: 'Rating Distribution',
+          fontSize: 14,
+          bold: true,
+          color: '#0066cc',
+          margin: [0, 15, 0, 10]
+        });
+
+        const ratingBody: any[] = [
+          [
+            { text: 'Rating', bold: true, color: '#fff', fillColor: '#0066cc' },
+            { text: 'Count', bold: true, color: '#fff', fillColor: '#0066cc' }
+          ]
+        ];
+
+        for (const rd of this.hostFeedbackAnalytics.ratingDistribution) {
+          ratingBody.push([
+            `⭐ ${rd.rating} Stars`,
+            (rd.count || 0).toString()
+          ]);
+        }
+
+        docContent.push({
+          table: {
+            headerRows: 1,
+            widths: ['50%', '50%'],
+            body: ratingBody
+          },
+          margin: [0, 0, 0, 15]
+        });
+      }
+
+      // Add emoji distribution if available
+      if (this.hostFeedbackAnalytics.emojiBreakdown && this.hostFeedbackAnalytics.emojiBreakdown.length > 0) {
+        docContent.push({
+          text: 'Emoji Reactions',
+          fontSize: 14,
+          bold: true,
+          color: '#0066cc',
+          margin: [0, 15, 0, 10]
+        });
+
+        // Emoji mapping for names
+        const emojiMap: any = {
+          '😄': 'Very Happy',
+          '😀': 'Happy',
+          '🙂': 'Neutral',
+          '☹️': 'Sad',
+          '😞': 'Very Sad',
+          '😊': 'Happy',
+          '😍': 'Love It',
+          '🤔': 'Thinking',
+          '😢': 'Sad',
+          '😡': 'Angry',
+          '👍': 'Thumbs Up',
+          '❤️': 'Love',
+          '🎉': 'Celebration',
+          '🔥': 'Fire',
+          '💯': 'Perfect'
+        };
+
+        const emojiBody: any[] = [
+          [
+            { text: 'Emoji', bold: true, color: '#fff', fillColor: '#0066cc' },
+            { text: 'Sentiment', bold: true, color: '#fff', fillColor: '#0066cc' },
+            { text: 'Count', bold: true, color: '#fff', fillColor: '#0066cc' }
+          ]
+        ];
+
+        for (const ed of this.hostFeedbackAnalytics.emojiBreakdown) {
+          const emojiName = emojiMap[ed.emojiReaction] || 'Reaction';
+          emojiBody.push([
+            ed.emojiReaction || '?',
+            emojiName,
+            (ed.totalCount || 0).toString()
+          ]);
+        }
+
+        docContent.push({
+          table: {
+            headerRows: 1,
+            widths: ['20%', '50%', '30%'],
+            body: emojiBody
+          },
+          margin: [0, 0, 0, 15]
+        });
+      }
+
+      docContent.push({
+        text: '© CTS Quiz Analytics System',
+        fontSize: 9,
+        color: '#999',
+        alignment: 'center',
+        margin: [0, 20, 0, 0]
+      });
+
+      const docDefinition: any = {
+        content: docContent,
+        pageMargins: [40, 40, 40, 40]
+      };
+
+      console.log('Document definition created');
+      
+      if (!pdfMake || !pdfMake.createPdf) {
+        throw new Error('pdfMake not properly initialized');
+      }
+
+      const pdf = pdfMake.createPdf(docDefinition);
+      const filename = `Analytics_Report_${(this.hostFeedbackAnalytics.quizName || 'Quiz').replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+      
+      console.log('Downloading PDF as:', filename);
+      pdf.download(filename);
+      console.log('PDF download initiated');
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Toggle drag and drop mode for stat cards
+   */
+  toggleDragMode(): void {
+    this.isDragEnabled = !this.isDragEnabled;
+    console.log('Drag mode:', this.isDragEnabled ? 'Enabled' : 'Disabled');
+  }
+
+  /**
+   * Handle stat card drop event
+   */
+  onStatCardDrop(event: any): void {
+    // Reorder the stats array
+    if (event.previousIndex !== event.currentIndex) {
+      moveItemInArray(this.stats, event.previousIndex, event.currentIndex);
+      console.log('Stats reordered:', this.stats);
+    }
   }
 }
 
