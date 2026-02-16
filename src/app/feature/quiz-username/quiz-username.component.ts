@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-quiz-username',
@@ -17,12 +18,14 @@ export class QuizUsernameComponent implements OnInit {
   showWarning = false;
   sessionCode = '';
   isValidating = false;
+  lastBackWarnAt: number = 0;
 
   constructor(
     private router: Router, 
     private route: ActivatedRoute,
     private snackBar: MatSnackBar,
-    private participantService: ParticipantService
+    private participantService: ParticipantService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -39,6 +42,27 @@ export class QuizUsernameComponent implements OnInit {
         this.router.navigate(['/participant']);
       }
     });
+  }
+
+  @HostListener('window:popstate')
+  onPopState(): void {
+    this.lockBackNavigation();
+
+    const now = Date.now();
+    if (now - this.lastBackWarnAt > 2000) {
+      this.lastBackWarnAt = now;
+      this.snackBar.open('Back navigation is disabled while joining the quiz.', 'Close', { duration: 2000 });
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  private lockBackNavigation(): void {
+    window.history.pushState(null, '', window.location.href);
   }
 
   async validateSession() {
@@ -60,6 +84,10 @@ export class QuizUsernameComponent implements OnInit {
         // Store session data for countdown
         localStorage.setItem('sessionData', JSON.stringify(validation));
         localStorage.setItem('quizTitle', validation.quizTitle || 'Quiz');
+        // Store quizId for feedback later
+        if (validation.quizId) {
+          localStorage.setItem('currentQuizId', validation.quizId.toString());
+        }
       }
     } catch (error: any) {
       this.snackBar.open('❌ Failed to validate quiz code', 'Close', {
@@ -84,12 +112,38 @@ export class QuizUsernameComponent implements OnInit {
     if (!this.showWarning && this.userName.trim()) {
       const cleaned = this.userName.trim();
       
+      // Get employee ID from logged-in user (stored during authentication)
+      let employeeId = '';
+      const authUserStr = localStorage.getItem('auth_user');
+      
+      if (authUserStr) {
+        try {
+          const authUser = JSON.parse(authUserStr);
+          employeeId = authUser.employeeId || authUser.userId || '';
+        } catch (e) {
+          console.error('Failed to parse auth_user:', e);
+        }
+      }
+      
+      if (!employeeId) {
+        this.snackBar.open('⚠️ No user session found. Please login first.', 'Close', {
+          duration: 5000,
+          panelClass: ['error-snackbar'],
+          horizontalPosition: 'center',
+          verticalPosition: 'top'
+        });
+        this.router.navigate(['/']);
+        return;
+      }
+      
+      console.log('[QuizUsername] Joining with employeeId:', employeeId);
+      
       try {
         // Join session and create participant entry
         const participant = await this.participantService.joinSession({
           sessionCode: this.sessionCode,
           nickname: cleaned,
-          employeeId: undefined // Could be added later if needed
+          employeeId: employeeId
         });
 
         // Store participant data

@@ -1,84 +1,156 @@
-<div class="page min-vh-100 bg-light">
-  <app-header [current]="currentIndex" [total]="questions.length"></app-header>
+<div class="quiz-game-page">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-screen">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Preparing your quiz...</p>
+  </div>
 
-  <main class="content container py-5">
-    <!-- Loading State -->
-    <ng-container *ngIf="loading">
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary mb-3" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="text-muted">Loading quiz questions...</p>
-      </div>
-    </ng-container>
-
-    <!-- Quiz Content -->
-    <ng-container *ngIf="!loading && !finished">
-      <!-- Timer Display -->
-      <div class="timer-display text-center mb-4">
-        <div class="card shadow-sm" [ngClass]="{'bg-danger text-white': timeRemaining <= 5, 'bg-warning': timeRemaining <= 10 && timeRemaining > 5, 'bg-light': timeRemaining > 10}">
-          <div class="card-body py-3">
-            <h5 class="mb-0">
-              <span class="fs-4">⏱️</span>
-              <span class="fs-3 fw-bold mx-2">{{ timeRemaining }}</span>
-              <span class="fs-6">seconds</span>
-            </h5>
-          </div>
-        </div>
+  <!-- Active Quiz -->
+  <div *ngIf="!loading && !finished" class="quiz-active">
+    <!-- Top Navigation Bar -->
+    <div class="top-nav-bar">
+      <!-- Live Badge (Top Left) -->
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        <span class="live-text">LIVE</span>
       </div>
 
-      <app-question *ngIf="currentQuestion" [question]="{ id: currentQuestion.id, text: currentQuestion.text }"></app-question>
+      <!-- Quiz Title (Top Center) -->
+      <div class="quiz-title-display">
+        <h1>{{ quizTitle }}</h1>
+      </div>
 
-      <app-options *ngIf="currentQuestion"
-                   [options]="currentQuestion.options"
-                   [selected]="selected"
-                   (selectedChange)="onSelectedChange($event)">
-      </app-options>
-
-      <app-submit [disabled]="!selected || submitting"
-                  label="Submit Answer"
-                  (clicked)="submitAnswer(false)">
-      </app-submit>
-    </ng-container>
-
-    <!-- Results Block -->
-    <ng-container *ngIf="!loading && finished">
-      <div class="card shadow-lg border-0 p-4">
-        <div class="text-center mb-4">
-          <h2 class="h3 fw-bold mb-3">🎉 Quiz Finished!</h2>
-          <div class="score-display mb-4">
-            <div class="display-4 fw-bold text-primary">{{ score }} / {{ questions.length }}</div>
-            <p class="text-muted h5">{{ quizTitle }}</p>
-            <p class="text-muted">{{ getScorePercentage() }}% Correct</p>
-          </div>
+      <!-- User Info (Top Right) -->
+      <div class="user-info">
+        <div class="user-avatar">{{ participantName.charAt(0) || 'P' }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ participantName || 'Participant' }}</span>
+          <span class="user-id">{{ participantId }}</span>
         </div>
+      </div>
+    </div>
 
-        <!-- Answer Review -->
-        <div class="answers-review mt-4">
-          <h4 class="fw-semibold mb-3">📋 Answer Review</h4>
-          <div class="list-group">
-            <div *ngFor="let question of questions; let i = index" 
-                 class="list-group-item mb-2 border rounded">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <h6 class="fw-semibold mb-1">Question {{ i + 1 }}</h6>
-              </div>
-              <p class="mb-2">{{ question.text }}</p>
-              <div class="small">
-                <div class="text-muted mb-1">
-                  <strong>Time Limit:</strong> {{ question.timerSeconds }} seconds
-                </div>
-              </div>
-            </div>
-          </div>
+    <!-- Question Counter (Centered) -->
+    <div class="question-counter-center">
+      <span class="current">{{ currentIndex + 1 }}</span>
+      <span class="divider">/</span>
+      <span class="total">{{ questions.length }}</span>
+    </div>
+
+    <!-- Segmented Progress Bar -->
+    <div class="progress-bar-container">
+      <div class="progress-segments">
+        <div *ngFor="let question of questions; let i = index" 
+             class="progress-segment"
+             [class.completed]="i < currentIndex"
+             [class.active]="i === currentIndex">
         </div>
+      </div>
+    </div>
 
-        <!-- Action Buttons -->
-        <div class="text-center mt-4">
-          <button class="btn btn-primary btn-lg" (click)="returnToParticipant()">
-            Return to Home
+    <!-- Timer Circle (Below Progress) -->
+    <div class="timer-wrapper">
+      <div class="timer-circle" [class.warning]="timeRemaining <= 10" [class.critical]="timeRemaining <= 5">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
+          <circle cx="50" cy="50" r="45" class="timer-progress"
+                  [style.strokeDashoffset]="283 - (283 * timeRemaining / (currentQuestion?.timerSeconds || 30))"></circle>
+        </svg>
+        <div class="timer-text">
+          <span class="time-value">{{ timeRemaining }}</span>
+          <span class="time-unit">sec</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Waiting State -->
+    <div *ngIf="waitingForNext" class="waiting-overlay">
+      <div class="waiting-card">
+        <div class="success-icon">✓</div>
+        <h3>Answer Submitted!</h3>
+        <p>Get ready for the next question...</p>
+        <div class="pulse-loader">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question & Options (Split Layout) -->
+    <div *ngIf="!waitingForNext" class="quiz-content">
+      <!-- Left Side: Question -->
+      <div class="question-section">
+        <div class="question-card">
+          <h2 class="question-text">{{ currentQuestion?.text }}</h2>
+        </div>
+      </div>
+
+      <!-- Right Side: Options + Submit -->
+      <div class="options-section">
+        <div class="options-grid">
+          <button *ngFor="let option of currentQuestion?.options; let i = index"
+                  class="option-btn"
+                  [class.selected]="selected === option"
+                  [disabled]="submitting"
+                  (click)="onSelectedChange(option)">
+            <span class="option-letter">{{ ['A', 'B', 'C', 'D', 'E', 'F'][i] }}</span>
+            <span class="option-text">{{ option }}</span>
+            <span class="check-mark" *ngIf="selected === option">✓</span>
           </button>
         </div>
+
+        <button class="submit-btn" 
+                [disabled]="!selected || submitting"
+                [class.loading]="submitting"
+                (click)="submitAnswer()">
+          <span *ngIf="!submitting">Submit Answer →</span>
+          <span *ngIf="submitting">
+            <span class="spinner"></span> Submitting...
+          </span>
+        </button>
       </div>
-    </ng-container>
-  </main>
+    </div>
+  </div>
+
+  <!-- Results Screen -->
+  <div *ngIf="!loading && finished" class="results-screen">
+    <div class="results-card">
+      <div class="trophy-icon">🏆</div>
+      <h2 class="results-title">Quiz Complete!</h2>
+      <p class="quiz-name">{{ quizTitle }}</p>
+      
+      <div class="score-circle-container">
+        <svg class="score-svg" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="90" class="score-bg"></circle>
+          <circle cx="100" cy="100" r="90" class="score-ring"
+                  [style.strokeDashoffset]="565 - (565 * getScorePercentage() / 100)"></circle>
+        </svg>
+        <div class="score-text">
+          <span class="score-percent">{{ getScorePercentage() }}%</span>
+          <span class="score-label">Score</span>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box correct">
+          <span class="stat-icon">✓</span>
+          <span class="stat-value">{{ score }}</span>
+          <span class="stat-label">Correct</span>
+        </div>
+        <div class="stat-box total">
+          <span class="stat-icon">#</span>
+          <span class="stat-value">{{ questions.length }}</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-box wrong">
+          <span class="stat-icon">✗</span>
+          <span class="stat-value">{{ questions.length - score }}</span>
+          <span class="stat-label">Wrong</span>
+        </div>
+      </div>
+
+      <button class="home-btn" (click)="returnToParticipant()">
+        ✏️ Go to Feedback
+      </button>
+    </div>
+  </div>
 </div>

@@ -1,14 +1,9 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { NgIf, NgClass, NgFor } from '@angular/common';
+import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
+import { NgIf, NgFor } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
 import { QuestionDetail, SubmitAnswerRequest } from '../../models/participant.models';
-
-import { HeaderComponent } from '../header/header.component';
-import { QuestionComponent } from '../question/question.component';
-import { OptionsComponent } from '../options/options.component';
-import { SubmitComponent } from '../submit/submit.component';
 
 type Question = { id: string; text: string; options: string[]; answer: string; timerSeconds: number; };
 
@@ -16,8 +11,7 @@ type Question = { id: string; text: string; options: string[]; answer: string; t
   selector: 'app-quiz-page',
   standalone: true,
   imports: [
-    HeaderComponent, QuestionComponent, OptionsComponent, SubmitComponent,
-    NgIf, NgClass, NgFor, MatSnackBarModule
+    NgIf, NgFor, MatSnackBarModule
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.css']
@@ -30,17 +24,24 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   score = 0;
   selected: string | null = null;
   finished = false;
-  loading = true;
+  loading = true; 
   submitting = false; // Separate flag for answer submission
-
+  waitingForNext = false;
   participantId: number = 0;
   sessionId: number = 0;
   quizTitle: string = '';
-  startTime: number = 0;
+  sessionCode: string = '';
+  participantName: string = '';
 
   // Timer properties
   timeRemaining: number = 30;
   timerInterval: any = null;
+  
+  // Server time sync
+  serverTimeOffsetMs: number = 0;
+  startedAtMs: number = 0;
+  currentQuestionStartMs: number = 0;
+  lastBackWarnAt: number = 0;
 
   private snackBar = inject(MatSnackBar);
   private participantService = inject(ParticipantService);
@@ -51,6 +52,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     const participantIdStr = localStorage.getItem('participantId');
     const sessionIdStr = localStorage.getItem('sessionId');
     const quizTitleStr = localStorage.getItem('quizTitle');
+    const sessionCodeStr = localStorage.getItem('sessionCode');
+    const participantNameStr = localStorage.getItem('participantName') || localStorage.getItem('userName');
 
     if (!participantIdStr || !sessionIdStr) {
       this.snackBar.open('No session found. Please join a quiz first.', 'Close', { duration: 3000 });
@@ -61,8 +64,75 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.participantId = parseInt(participantIdStr);
     this.sessionId = parseInt(sessionIdStr);
     this.quizTitle = quizTitleStr || 'Quiz';
+    this.sessionCode = sessionCodeStr || '';
+    this.participantName = participantNameStr || '';
+
+    this.blockBackNavigation();
 
     await this.loadQuestions();
+  }
+
+  @HostListener('window:popstate')
+  onPopState(): void {
+    this.blockBackNavigation();
+    void this.refreshSessionSync();
+
+    const now = Date.now();
+    if (now - this.lastBackWarnAt > 2000) {
+      this.lastBackWarnAt = now;
+      this.snackBar.open('Back navigation is disabled during the quiz.', 'Close', { duration: 2000 });
+    }
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'visible') {
+      void this.refreshSessionSync();
+    }
+  }
+
+  @HostListener('window:pageshow', ['$event'])
+  onPageShow(event: PageTransitionEvent): void {
+    if (event.persisted) {
+      void this.refreshSessionSync();
+    }
+  }
+
+  private async refreshSessionSync(): Promise<void> {
+    try {
+      if (!this.sessionId) return;
+      const response = await this.participantService.getSessionQuestions(this.sessionId);
+
+      if (this.questions.length === 0 && response.questions?.length) {
+        this.questionDetails = response.questions;
+        this.questions = response.questions.map((q, index) => ({
+          id: (index + 1).toString(),
+          text: q.questionText,
+          options: q.options.map(o => o.optionText),
+          answer: '',
+          timerSeconds: q.timerSeconds || 30
+        }));
+      }
+
+      const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
+      this.serverTimeOffsetMs = serverTimeMs - Date.now();
+      this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
+      this.updateQuestionState();
+    } catch (error) {
+      console.error('[QuizPage] Failed to refresh session sync:', error);
+    }
+  }
+
+  private blockBackNavigation(): void {
+    const currentUrl = window.location.href;
+    window.history.pushState(null, '', currentUrl);
+    window.history.pushState(null, '', currentUrl);
   }
 
   async loadQuestions() {
@@ -74,16 +144,16 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       this.quizTitle = response.quizTitle;
 
       // Convert to the format expected by the existing components
-      this.questions = response.questions.map(q => ({
-        id: q.questionId.toString(),
+      this.questions = response.questions.map((q, index) => ({
+        id: (index + 1).toString(),
         text: q.questionText,
         options: q.options.map(o => o.optionText),
         answer: '', // We don't show the answer to participants
         timerSeconds: q.timerSeconds || 30
       }));
 
-      this.startTime = Date.now();
       this.loading = false;
+      this.currentQuestionStartMs = this.getServerNowMs();
 
       // Start timer for first question
       this.startTimer();
@@ -151,17 +221,33 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     console.log('[QuizPage] submitAnswer called. selected =', this.selected, 'isAutoSubmit =', isAutoSubmit);
     if (!this.currentQuestion || this.submitting) return;
 
-    // Stop the timer
-    this.stopTimer();
-
-    // If no selection, just move to next question
-    if (!this.selected) {
-      await this.moveToNextQuestion();
-      return;
-    }
-
     try {
       const currentQuestionDetail = this.questionDetails[this.currentIndex];
+      
+      // Handle unanswered question
+      if (!this.selected) {
+        console.log('[QuizPage] No answer selected - submitting as unanswered');
+        const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
+        
+        const request: SubmitAnswerRequest = {
+          participantId: this.participantId,
+          questionId: currentQuestionDetail.questionId,
+          selectedOptionId: 0, // 0 indicates unanswered
+          timeSpentSeconds: timeSpent
+        };
+
+        this.submitting = true;
+        const response = await this.participantService.submitParticipantAnswer(request);
+        this.submitting = false;
+
+        if (isAutoSubmit) {
+          this.snackBar.open('⏰ Time\'s up! Question marked as unanswered.', 'Close', { duration: 2000 });
+        }
+
+        this.waitingForNext = true;
+        return;
+      }
+      
       const selectedOption = currentQuestionDetail.options.find(o => o.optionText === this.selected);
 
       if (!selectedOption) {
@@ -169,7 +255,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const timeSpent = Math.floor((Date.now() - this.startTime) / 1000);
+      const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
 
       const request: SubmitAnswerRequest = {
         participantId: this.participantId,
@@ -212,11 +298,13 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   }
 
   async moveToNextQuestion() {
+  async moveToNextQuestion() {
     // advance
     this.selected = null;
+    this.waitingForNext = false;
     if (this.currentIndex < this.questions.length - 1) {
       this.currentIndex++;
-      this.startTime = Date.now(); // Reset timer for next question
+      this.currentQuestionStartMs = this.getServerNowMs();
       this.startTimer(); // Start timer for next question
       console.log('[QuizPage] advanced to index', this.currentIndex);
     } else {
@@ -228,7 +316,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       localStorage.setItem('totalQuestions', this.questions.length.toString());
     }
   }
-
   ngOnDestroy() {
     // Clean up timer on component destroy
     this.stopTimer();
@@ -240,14 +327,17 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   }
 
   returnToParticipant() {
-    // Clear session data
-    localStorage.removeItem('participantId');
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('quizTitle');
-    localStorage.removeItem('finalScore');
-    localStorage.removeItem('totalQuestions');
+    // Save quiz and participant info for feedback
+    const quizId = localStorage.getItem('currentQuizId');
+    const participantId = localStorage.getItem('participantId');
     
-    this.router.navigate(['/participant']);
+    // Navigate to feedback page with query params
+    this.router.navigate(['/feedback'], {
+      queryParams: {
+        quizId: quizId,
+        participantId: participantId
+      }
+    });
   }
 
   restart() {
@@ -258,5 +348,19 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.stopTimer();
     this.startTimer();
     console.log('[QuizPage] restart');
+  }
+
+  private getServerNowMs(): number {
+    return Date.now() + this.serverTimeOffsetMs;
+  }
+
+  private updateQuestionState(): void {
+    this.currentQuestionStartMs = this.getServerNowMs();
+  }
+
+  private blockBackNavigation(): void {
+    const currentUrl = window.location.href;
+    window.history.pushState(null, '', currentUrl);
+    window.history.pushState(null, '', currentUrl);
   }
 }

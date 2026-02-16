@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AddQuestionService, QuizQuestion, QuizListItem } from '../../services/add-question.service';
+import { AuthService } from '../../services/auth.service';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
 
@@ -15,6 +16,7 @@ import { QrcodeComponent } from '../qrcode/qrcode.component';
 export class PreviewComponent {
   private store = inject(AddQuestionService);
   private router = inject(Router);
+  private authService = inject(AuthService);
   
   @Output() switchToQuestionsTab = new EventEmitter<void>();
   
@@ -28,7 +30,7 @@ export class PreviewComponent {
   hostQuizzes = signal<QuizListItem[]>([]);
   showQuizList = signal(true);
   loadingQuizzes = signal(false);
-  currentHostName = '2463579'; // Current logged in host ID
+  currentHostName = this.authService.currentUser()?.employeeId || ''; // Get from logged-in user
   showQRForQuizId = signal<number | null>(null);
   currentEditingQuizId = signal<number | null>(null); // Track currently editing quiz
 
@@ -108,6 +110,7 @@ export class PreviewComponent {
             status: 'Active',
             tags: editedQuestion.tags.join(',') || '',
             options: editedQuestion.options?.map(opt => ({
+              optionId: opt.optionId || null,  // Include optionId for existing options, null for new ones
               optionText: opt.text,
               isCorrect: opt.isCorrect
             })) || []

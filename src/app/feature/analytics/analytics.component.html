@@ -1,82 +1,199 @@
-<div class="container-fluid py-4">
+<div class="dashboard">
   <!-- Header -->
-  <div class="mb-4">
-    <h1 class="display-6 fw-bold">Quiz Analytics</h1>
-    <p class="text-muted">Detailed feedback and performance metrics</p>
-  </div>
+  <header class="header">
+    <div class="header-content">
+      <div class="header-top">
+        <div class="header-title">
+          <h1>📊 Quiz Analytics Dashboard</h1>
+          <p class="header-subtitle">Track feedback, ratings, and participant satisfaction</p>
+        </div>
+      </div>
+    </div>
+  </header>
 
-  <!-- Stats Cards -->
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-lg-4" *ngFor="let stat of stats">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="badge" [ngClass]="stat.trend === 'up' ? 'bg-success' : 'bg-danger'">
-              <i class="bi" [ngClass]="stat.trend === 'up' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
-              {{ stat.change }}
-            </span>
+  <!-- Filter Toggle Button -->
+  <div class="filtering-section-wrapper">
+    <div class="filter-header">
+      <button 
+        class="filter-toggle-btn" 
+        (click)="toggleHostFiltering()"
+        [class.active]="showHostFiltering">
+        <span class="filter-icon">{{ showHostFiltering ? '✕' : '⚙️' }}</span>
+        <span class="filter-text">{{ showHostFiltering ? 'Hide Filters' : 'Filter by Host & Quiz' }}</span>
+      </button>
+      
+      <div class="filter-info" *ngIf="hostFeedbackAnalytics">
+        <span class="badge badge-host">👤 {{ hostFeedbackAnalytics.hostName }}</span>
+        <span class="badge badge-quiz">📝 {{ hostFeedbackAnalytics.quizName }}</span>
+        <button 
+          class="export-pdf-btn" 
+          (click)="exportReportAsPDF()"
+          [disabled]="!hostFeedbackAnalytics || hostFeedbackAnalytics.totalResponses === 0"
+          title="Download complete report as PDF">
+          <span>📥</span> Download PDF Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Host/Quiz Filtering Section -->
+    <div *ngIf="showHostFiltering" class="filter-controls">
+      <div class="filter-content">
+        <div class="filter-group">
+          <label for="hostSelect" class="filter-label">
+            <span class="label-icon">👥</span> Select Host
+          </label>
+          <div class="select-wrapper">
+            <select 
+              id="hostSelect" 
+              [(ngModel)]="selectedHostId" 
+              (change)="onHostSelected()"
+              [disabled]="loadingHosts || hosts.length === 0"
+              class="filter-select">
+              <option *ngIf="loadingHosts" value="">⏳ Loading hosts...</option>
+              <option *ngIf="!loadingHosts && hosts.length === 0" value="">📌 No hosts available</option>
+              <option *ngFor="let host of hosts" [value]="host.hostId">
+                {{ host.hostName }}
+              </option>
+            </select>
+            <span class="select-arrow">▼</span>
           </div>
-          <div class="h3 fw-bold mb-1">{{ stat.value }}</div>
-          <div class="text-muted">{{ stat.title }}</div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Filter Section -->
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <label for="quizSelect" class="form-label fw-semibold mb-2">Filter by Quiz:</label>
-          <select 
-            id="quizSelect" 
-            class="form-select"
-            [(ngModel)]="selectedQuiz" 
-            (change)="onQuizChange()">
-            <option *ngFor="let quiz of quizzes" [value]="quiz.id">
-              {{ quiz.name }}
-            </option>
-          </select>
+        <div class="filter-group" *ngIf="selectedHostId && quizzes.length > 0">
+          <label for="quizSelect" class="filter-label">
+            <span class="label-icon">📚</span> Select Quiz
+          </label>
+          <div class="select-wrapper">
+            <select 
+              id="quizSelect" 
+              [(ngModel)]="selectedFilteredQuizId" 
+              (change)="onQuizSelected()"
+              [disabled]="loadingQuizzes"
+              class="filter-select">
+              <option *ngIf="loadingQuizzes" [value]="null">⏳ Loading quizzes...</option>
+              <option *ngIf="!loadingQuizzes && quizzes.length === 0" [value]="null">📌 No quizzes available</option>
+              <option *ngFor="let quiz of quizzes" [value]="quiz.quizId">
+                {{ quiz.quizName }}
+              </option>
+            </select>
+            <span class="select-arrow">▼</span>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Charts -->
-  <div class="row g-4">
-    <!-- Quiz Sections Chart -->
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
-          <h5 class="mb-0 fw-bold">Quiz Sections Feedback</h5>
-          <button class="btn btn-sm btn-link text-muted p-0">
-            <i class="bi bi-three-dots-vertical"></i>
+        <!-- Empty state when host has no quizzes -->
+        <div class="filter-group" *ngIf="selectedHostId && quizzes.length === 0 && !loadingQuizzes">
+          <div class="empty-quiz-message">
+            <p>📭 This host hasn't conducted any quizzes yet.</p>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <button class="reset-btn" (click)="resetToDefaultView()">
+            <span>🔄</span> Reset View
           </button>
         </div>
-        <div class="card-body">
-          <div style="position: relative; height: 300px;">
-            <canvas id="quizSectionsChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State with Spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner"></div>
+    <p class="loading-text">Loading analytics data...</p>
+  </div>
+
+  <!-- Main Content - Only show when we have host/quiz selected and data loaded -->
+  <div *ngIf="!isLoading && hostFeedbackAnalytics" class="main-content">
+    <!-- Empty State for No Feedback Data - Show this first if no responses -->
+    <div class="empty-state" *ngIf="hostFeedbackAnalytics.totalResponses === 0">
+      <div class="empty-icon">📭</div>
+      <h3>No Feedback Yet</h3>
+      <p>No participants have submitted feedback for this quiz. Feedback will appear here once participants complete and rate the quiz.</p>
+    </div>
+
+    <!-- Show all content only when there is feedback data -->
+    <ng-container *ngIf="hostFeedbackAnalytics.totalResponses > 0">
+      <!-- Drag and Drop Toggle Button -->
+      <div class="drag-drop-toggle">
+        <button class="drag-toggle-btn" (click)="toggleDragMode()" [class.active]="isDragEnabled">
+          <span>{{ isDragEnabled ? '🔒' : '↕️' }}</span>
+          <span class="toggle-text">{{ isDragEnabled ? 'Lock Layout' : 'Rearrange Cards' }}</span>
+        </button>
+      </div>
+
+      <!-- Stats Grid with Drag and Drop -->
+      <div class="stats-grid" 
+        cdkDropList
+        cdkDropListData="stats"
+        [cdkDropListDisabled]="!isDragEnabled"
+        (cdkDropListDropped)="onStatCardDrop($event)">
+        <div class="stat-card" 
+          *ngFor="let stat of stats; let i = index" 
+          [ngClass]="'stat-' + i"
+          cdkDrag
+          [cdkDragDisabled]="!isDragEnabled"
+          [cdkDragData]="stat"
+          [cdkDragPreviewClass]="'cdk-drag-preview'">
+          <div class="stat-icon">{{ getStatIcon(stat.title) }}</div>
+          <div class="stat-info">
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-title">{{ stat.title }}</div>
+          </div>
+          <div class="drag-indicator" *ngIf="isDragEnabled">
+            <span class="drag-handle">⋮⋮</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Emoji Distribution Chart -->
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
-          <h5 class="mb-0 fw-bold">Quiz Emoji Distribution</h5>
-          <button class="btn btn-sm btn-link text-muted p-0">
-            <i class="bi bi-three-dots-vertical"></i>
-          </button>
+      <!-- Insights Section -->
+      <div class="insights-section" *ngIf="hostFeedbackAnalytics">
+        <div class="insights-header">
+          <h3>💡 Key Insights</h3>
         </div>
-        <div class="card-body">
-          <div style="position: relative; height: 300px;">
+        <div class="insights-grid">
+          <div class="insight-card" [ngClass]="getSentimentClass()">
+            <div class="insight-label">Overall Sentiment</div>
+            <div class="insight-value">{{ getSentiment() }}</div>
+          </div>
+          <div class="insight-card insight-positive">
+            <div class="insight-label">Positive Feedback</div>
+            <div class="insight-value">{{ getPositiveFeedbackPercentage() }}%</div>
+          </div>
+          <div class="insight-card insight-neutral">
+            <div class="insight-label">Neutral Feedback</div>
+            <div class="insight-value">{{ getNeutralFeedbackPercentage() }}%</div>
+          </div>
+          <div class="insight-card insight-negative">
+            <div class="insight-label">Needs Improvement</div>
+            <div class="insight-value">{{ getNegativeFeedbackPercentage() }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <!-- Emoji Distribution Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>😊 Participant Reactions</h3>
+            <p class="chart-subtitle">Emoji feedback distribution</p>
+          </div>
+          <div class="chart-container">
             <canvas id="emojiChart"></canvas>
           </div>
         </div>
+
+        <!-- Rating Distribution Bar Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>⭐ Rating Breakdown</h3>
+            <p class="chart-subtitle">Participants by rating</p>
+          </div>
+          <div class="chart-container">
+            <canvas id="completionChart"></canvas>
+          </div>
+        </div>
       </div>
-    </div>
+    </ng-container>
   </div>
 </div>

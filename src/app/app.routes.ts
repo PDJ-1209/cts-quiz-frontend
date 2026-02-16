@@ -122,6 +122,11 @@ export const routes: Routes = [
     data: { roles: ['User'], roleIds: [3] }
   },
   { 
+    path: 'feedback', 
+    loadComponent: () => import('./feature/feedback/feedback.component').then(c => c.FeedbackFormComponent)
+    // No guard needed - allow anyone who completed a quiz to give feedback
+  },
+  { 
     path: 'host/calendar', 
     loadComponent: () => import('./feature/quiz-calendar/quiz-calendar.component').then(c => c.QuizCalendarComponent),
     canActivate: [roleGuard],
