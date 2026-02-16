@@ -4,6 +4,8 @@ export interface temp {
   templateName: string;
   templateType: string;
   templateConfig: string | null;
+  categoryType?: string;
+  selectedQuestionIds?: string;
   createdBy: number;
 }
 

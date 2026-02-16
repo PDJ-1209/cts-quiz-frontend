@@ -33,6 +33,7 @@ export class TemplateService {
     const payload: temp = {
       templateName: (template.templateName || '').trim(),
       templateType: template.templateType || 'PDF',
+      categoryType: template.categoryType,
       templateConfig: (template.templateConfig || '').trim(),
       createdBy: Number(template.createdBy || 1)
     };
@@ -130,5 +131,15 @@ export class TemplateService {
   getRandomQuestionsByCategory(request: any): Observable<Question[]> {
     const url = `${environment.apiUrl}/Host/Question/random`;
     return this.http.post<Question[]>(url, request, { headers: this.jsonHeaders });
+  }
+
+  getQuestionsByCategory(category: string): Observable<any[]> {
+    const url = `${environment.apiUrl}/Host/Question/category/${category}/questions`;
+    return this.http.get<any[]>(url, { headers: this.jsonHeaders });
+  }
+
+  getAllQuestions(): Observable<Question[]> {
+    const url = `${environment.apiUrl}/Host/Question`;
+    return this.http.get<Question[]>(url, { headers: this.jsonHeaders });
   }
 }

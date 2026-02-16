@@ -66,7 +66,16 @@
         <div *ngFor="let q of questions; let i = index" class="question-item">
           <div class="q-number">{{ i + 1 }}</div>
           <div class="q-content">
-            <p class="q-text">{{ q.questionText || 'No text' }}</p>
+            <p class="q-text">{{ q.questionText || q.text || 'No text' }}</p>
+            
+            <!-- Display Options with Correct Answer Highlight -->
+            <div *ngIf="q.options && q.options.length > 0" class="options-list">
+              <div *ngFor="let option of q.options; let optIndex = index" class="option-item" [class.correct-answer]="option.isCorrect">
+                <span class="option-letter">{{ getOptionLabel(optIndex) }}</span>
+                <span class="option-text">{{ option.optionText || option.text }}</span>
+                <span *ngIf="option.isCorrect" class="correct-badge">✓ Correct</span>
+              </div>
+            </div>
           </div>
           <div class="q-actions">
             <button class="q-btn edit-btn" (click)="editQuestion(q)" title="Edit">✏️</button>

@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { temp } from '../../models/temp';
-import { Question } from '../../models/question';
+import { Question } from '../../models/question.model';
 import { TemplateService } from '../../services/template.service';
 
 @Component({
@@ -104,20 +104,44 @@ export class TemplateComponent implements OnInit {
     this.questionLoading = true;
     this.activeTemplateName = t.templateName;
 
-    this.templateService.getQuestionsByTemplateId(templateId, 100).subscribe({
-      next: (qs: Question[]) => {
-        this.questions = qs || [];
-        this.questionLoading = false;
-        console.log('Questions loaded:', this.questions);
-      },
-      error: (error: any) => {
-        console.error('Error loading questions:', error);
-        const msg = this.normalizeHttpError(error);
-        this.questions = [];
-        this.questionLoading = false;
-        alert('Failed to load questions. ' + msg);
-      }
-    });
+    // Check if template has selected question IDs
+    if (t.selectedQuestionIds) {
+      // Parse the comma-separated question IDs
+      const questionIds = t.selectedQuestionIds.split(',').map(id => parseInt(id.trim()));
+      console.log('Loading selected questions:', questionIds);
+
+      // Fetch all questions and filter by selected IDs
+      this.templateService.getAllQuestions().subscribe({
+        next: (allQuestions: Question[]) => {
+          this.questions = allQuestions.filter(q => questionIds.includes(q.questionId!));
+          this.questionLoading = false;
+          console.log('Selected questions loaded:', this.questions);
+        },
+        error: (error: any) => {
+          console.error('Error loading questions:', error);
+          const msg = this.normalizeHttpError(error);
+          this.questions = [];
+          this.questionLoading = false;
+          alert('Failed to load questions. ' + msg);
+        }
+      });
+    } else {
+      // Fallback to original method if no selected question IDs
+      this.templateService.getQuestionsByTemplateId(templateId, 100).subscribe({
+        next: (qs: Question[]) => {
+          this.questions = qs || [];
+          this.questionLoading = false;
+          console.log('Questions loaded:', this.questions);
+        },
+        error: (error: any) => {
+          console.error('Error loading questions:', error);
+          const msg = this.normalizeHttpError(error);
+          this.questions = [];
+          this.questionLoading = false;
+          alert('Failed to load questions. ' + msg);
+        }
+      });
+    }
   }
 
   // ===== Add one question =====
@@ -288,6 +312,7 @@ export class TemplateComponent implements OnInit {
       const categoryTemplate: temp = {
         templateName: `${this.selectedCategory} Quiz Template`,
         templateType: 'CATEGORY',
+        categoryType: this.selectedCategory,
         templateConfig: JSON.stringify({
           category: this.selectedCategory,
           questionCount: this.requestedQuestionCount,
@@ -460,6 +485,11 @@ export class TemplateComponent implements OnInit {
     } else {
       this.addTemplate();
     }
+  }
+
+  // Helper to get option labels (A, B, C, D...)
+  getOptionLabel(index: number): string {
+    return String.fromCharCode(65 + (index % 26)); // A=65, B=66, etc.
   }
 
   // —— Utility: Convert Angular HttpErrorResponse into readable text

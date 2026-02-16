@@ -11,7 +11,7 @@ export const environment = {
   retryAttempts: 3,
   requestTimeout: 10000,
   apiEndpoints: {
-    template: '/template', // Admin area: api/template (doesn't follow area pattern)
+    template: '/Admin/Template', // Admin area: api/Admin/Template
     questions: '/host/question', // Host area: api/host/question
     dashboard: '/admin', // Admin area: api/admin
     users: '/userManagement', // Admin area: api/userManagement (doesn't follow area pattern)
