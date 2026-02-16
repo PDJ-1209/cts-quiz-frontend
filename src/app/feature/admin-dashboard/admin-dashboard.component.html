@@ -75,6 +75,9 @@
         <div class="current-time">
           {{ getCurrentDateTime() }}
         </div>
+        <button class="theme-toggle-btn" (click)="toggleTheme()" [title]="getThemeButtonTitle()">
+          <i [class]="getThemeIcon()"></i>
+        </button>
         <div class="user-badge">
           <i class="fas fa-crown"></i>
           <span>{{ currentUser()?.employeeId }}</span>
