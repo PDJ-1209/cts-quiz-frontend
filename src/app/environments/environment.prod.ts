@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: 'http://localhost:5195/api',
-  signalRUrl: 'http://localhost:5195/hubs/quizHub',
+  signalRUrl: 'http://localhost:5195/quizSessionHub',
   enableLogging: false,
   demoMode: false,
   retryAttempts: 3,
