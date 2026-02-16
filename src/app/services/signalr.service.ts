@@ -30,6 +30,53 @@ interface ReceiveQuestionData {
   serverTimeUtc?: string;
 }
 
+interface CountdownTickData {
+  remainingSeconds: number;
+  questionIndex?: number | null;
+  sessionCode: string;
+}
+
+interface NextQuestionData {
+  questionIndex: number;
+  sessionCode: string;
+}
+
+interface CurrentQuestionData {
+  questionIndex: number;
+  questionId: number;
+  totalQuestions: number;
+  sessionCode: string;
+}
+
+interface SessionEndedData {
+  sessionCode: string;
+  message: string;
+}
+
+interface PollStartedData {
+  sessionCode: string;
+  countdownDuration: number;
+}
+
+interface SurveyStartedData {
+  sessionCode: string;
+  countdownDuration: number;
+}
+
+interface ReconnectedData {
+  sessionCode: string;
+  sessionId: number;
+  isActive: boolean;
+}
+
+interface SessionValidationData {
+  isValid: boolean;
+  sessionId?: number;
+  sessionCode: string;
+  status?: string;
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -41,7 +88,7 @@ export class SignalrService {
   public newSurveyReceived$ = new Subject<SurveyData>();
   public participantJoined$ = new Subject<ParticipantData>();
   public sessionStatusChanged$ = new Subject<SessionStatusData>();
-  public sessionEnded$ = new Subject<{ sessionId: number; [key: string]: unknown }>();
+  public sessionEnded$ = new Subject<SessionEndedData>();
   public receiveQuestion$ = new Subject<ReceiveQuestionData>();
   
   // Leaderboard Event Streams
@@ -52,6 +99,18 @@ export class SignalrService {
   public scoreUpdated$ = new Subject<any>();
   public showLeaderboard$ = new Subject<any>();
   public showHostLeaderboard$ = new Subject<any>();
+  
+  // NEW: Countdown and Navigation Event Streams
+  public pollStarted$ = new Subject<PollStartedData>();
+  public countdownTick$ = new Subject<CountdownTickData>();
+  public countdownCompleted$ = new Subject<string>();
+  public nextQuestion$ = new Subject<NextQuestionData>();
+  public currentQuestion$ = new Subject<CurrentQuestionData>();
+  public pollCompleted$ = new Subject<string>();
+  public surveyCompleted$ = new Subject<string>();
+  public reconnectedToSession$ = new Subject<ReconnectedData>();
+  public reconnectionFailed$ = new Subject<{ sessionCode: string; message: string }>();
+  public sessionValidationResult$ = new Subject<SessionValidationData>();
   
   // Connection state
   public connectionEstablished$ = new BehaviorSubject<boolean>(false);
@@ -117,7 +176,7 @@ export class SignalrService {
     });
 
     // Matches NotifySessionEnded
-    this.hubConnection.on('SessionEnded', (data: { sessionId: number; [key: string]: unknown }) => {
+    this.hubConnection.on('SessionEnded', (data: SessionEndedData | any) => {
       this.sessionEnded$.next(data);
     });
 
@@ -127,6 +186,55 @@ export class SignalrService {
       } else {
         this.receiveQuestion$.next(data);
       }
+    });
+
+    // NEW: Countdown and Navigation Handlers
+    this.hubConnection.on('PollStarted', (data: PollStartedData | string) => {
+      if (typeof data === 'string') {
+        this.pollStarted$.next({ sessionCode: data, countdownDuration: 45 });
+      } else {
+        this.pollStarted$.next(data);
+      }
+    });
+
+    this.hubConnection.on('SurveyStarted', (data: SurveyStartedData | any) => {
+      this.surveyStarted$.next(data);
+    });
+
+    this.hubConnection.on('CountdownTick', (data: CountdownTickData) => {
+      this.countdownTick$.next(data);
+    });
+
+    this.hubConnection.on('CountdownCompleted', (sessionCode: string) => {
+      this.countdownCompleted$.next(sessionCode);
+    });
+
+    this.hubConnection.on('NextQuestion', (data: NextQuestionData) => {
+      this.nextQuestion$.next(data);
+    });
+
+    this.hubConnection.on('CurrentQuestion', (data: CurrentQuestionData) => {
+      this.currentQuestion$.next(data);
+    });
+
+    this.hubConnection.on('PollCompleted', (sessionCode: string) => {
+      this.pollCompleted$.next(sessionCode);
+    });
+
+    this.hubConnection.on('SurveyCompleted', (sessionCode: string) => {
+      this.surveyCompleted$.next(sessionCode);
+    });
+
+    this.hubConnection.on('ReconnectedToSession', (data: ReconnectedData) => {
+      this.reconnectedToSession$.next(data);
+    });
+
+    this.hubConnection.on('ReconnectionFailed', (data: { sessionCode: string; message: string }) => {
+      this.reconnectionFailed$.next(data);
+    });
+
+    this.hubConnection.on('SessionValidationResult', (data: SessionValidationData) => {
+      this.sessionValidationResult$.next(data);
     });
 
     // Leaderboard event handlers
@@ -165,6 +273,34 @@ export class SignalrService {
   public async leaveSession(sessionCode: string): Promise<void> {
     if (this.hubConnection) {
       await this.hubConnection.invoke('LeaveSession', sessionCode);
+    }
+  }
+
+  // Join poll session
+  public async joinPollSession(sessionCode: string): Promise<void> {
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('JoinPollSession', sessionCode);
+    }
+  }
+
+  // Join survey session
+  public async joinSurveySession(sessionCode: string): Promise<void> {
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('JoinSurveySession', sessionCode);
+    }
+  }
+
+  // Validate session code
+  public async validateSessionCode(sessionCode: string): Promise<void> {
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('ValidateSessionCode', sessionCode);
+    }
+  }
+
+  // Reconnect to active session
+  public async reconnectToActiveSession(sessionCode: string, participantId: string): Promise<void> {
+    if (this.hubConnection) {
+      await this.hubConnection.invoke('ReconnectToActiveSession', sessionCode, participantId);
     }
   }
 

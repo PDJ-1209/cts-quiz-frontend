@@ -10,7 +10,12 @@ import {
   PublishSurveyResponse,
   SurveyResult,
   CreateSurveyApiRequest,
-  SurveyOverview
+  SurveyOverview,
+  SurveyResponse,
+  RepublishSurveyRequest,
+  RepublishSurveyResponse,
+  ScheduleSurveyRequest,
+  ScheduleSurveyResponse
 } from '../models/isurvey';
 import { CreateQuizSessionRequest, CreateQuizSessionResponse } from '../models/quiz-publish.models';
 
@@ -140,5 +145,52 @@ export class SurveyService {
   // Publish survey with custom start/end times
   publishSurvey(publishPayload: { surveyId: number; hostId: string; startedAt?: string; endedAt?: string }): Observable<any> {
     return this.http.post<any>(`${environment.apiUrl}/Host/Survey/publish`, publishPayload);
+  }
+
+  // NEW: Submit a single survey response (for multi-select and ranking support)
+  submitSurveyResponse(response: SurveyResponse): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/Participate/Survey/submit`, response);
+  }
+
+  // NEW: Get survey responses by participant
+  getSurveyResponsesByParticipant(participantId: number, surveyId: number): Observable<SurveyResponse[]> {
+    return this.http.get<SurveyResponse[]>(
+      `${environment.apiUrl}/Participate/Survey/responses/participant/${participantId}/survey/${surveyId}`
+    );
+  }
+
+  // Republish survey
+  republishSurvey(surveyId: number, request: Partial<RepublishSurveyRequest> = {}): Observable<RepublishSurveyResponse> {
+    const payload: RepublishSurveyRequest = {
+      surveyId,
+      hostId: request.hostId || 'host-default',
+      startedAt: request.startedAt,
+      endedAt: request.endedAt,
+      countdownDurationSeconds: request.countdownDurationSeconds || 45
+    };
+    return this.http.post<RepublishSurveyResponse>(`${environment.apiUrl}/Host/Survey/${surveyId}/republish`, payload);
+  }
+
+  // Schedule survey
+  scheduleSurvey(surveyId: number, startTime: Date, endTime?: Date, countdownDuration: number = 45): Observable<ScheduleSurveyResponse> {
+    // Format datetime in ISO-like format but without timezone conversion (keeps IST)
+    const formatLocalDateTime = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
+    const payload: ScheduleSurveyRequest = {
+      surveyId,
+      hostId: 'host-default',
+      scheduledStartTime: formatLocalDateTime(startTime),
+      scheduledEndTime: endTime ? formatLocalDateTime(endTime) : undefined,
+      countdownDurationSeconds: countdownDuration
+    };
+    return this.http.post<ScheduleSurveyResponse>(`${environment.apiUrl}/Host/Survey/${surveyId}/schedule`, payload);
   }
 }

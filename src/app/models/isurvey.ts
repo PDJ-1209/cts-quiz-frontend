@@ -158,12 +158,32 @@ export interface SurveyResponse {
   response_text?: string;
   response_number?: number;
   selected_option_id?: number;
+  // NEW: For multi-select questions - comma-separated option IDs
+  selected_option_ids?: string;
+  // NEW: For ranking questions - rank order (1, 2, 3, etc.)
+  option_rank?: number;
 }
 
 export interface SurveySubmissionResponse {
   success: boolean;
   message: string;
   responseCount: number;
+}
+
+// NEW: Survey submission payload for API
+export interface SurveySubmitPayload {
+  SessionId: number;
+  ParticipantId: number;
+  Responses: SurveyAnswerPayload[];
+}
+
+export interface SurveyAnswerPayload {
+  SurveyQuestionId: number;
+  ResponseText?: string;
+  ResponseNumber?: number;
+  SelectedOptionId?: number;
+  SelectedOptionIds?: number[]; // Array of option IDs for multi-select
+  OptionRanks?: { [optionId: number]: number }; // Map of option ID to rank
 }
 
 // 5. Analytics & Results
@@ -210,4 +230,50 @@ export interface CreateSessionRequest {
     startAt: string; 
     endAt: string;   
     status: string;
+}
+
+// Republish and Schedule Models
+export interface RepublishSurveyRequest {
+  surveyId: number;
+  hostId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  countdownDurationSeconds?: number;
+}
+
+export interface RepublishSurveyResponse {
+  surveyId: number;
+  newSessionId: number;
+  oldSessionId: number;
+  newSessionCode: string;
+  qrCodeBase64: string;
+  status: string;
+  countdownDurationSeconds: number;
+}
+
+export interface ScheduleSurveyRequest {
+  surveyId: number;
+  hostId?: string;
+  scheduledStartTime: string;
+  scheduledEndTime?: string;
+  countdownDurationSeconds?: number;
+}
+
+export interface ScheduleSurveyResponse {
+  surveyId: number;
+  sessionId: number;
+  sessionCode: string;
+  scheduledStartTime: string;
+  scheduledEndTime?: string;
+  status: string;
+}
+
+// Extended Survey Overview with new fields
+export interface SurveyOverviewExtended extends SurveyOverview {
+  newSessionCode?: string;
+  qrCodeUrl?: string;
+  qrCodeBase64?: string;
+  countdownDuration?: number;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
 }

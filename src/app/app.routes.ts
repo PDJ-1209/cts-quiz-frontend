@@ -110,6 +110,18 @@ export const routes: Routes = [
     data: { roles: ['User'], roleIds: [3] }
   },
   { 
+    path: 'poll-countdown', 
+    loadComponent: () => import('./feature/poll-countdown/poll-countdown.component').then(c => c.PollCountdownComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['User'], roleIds: [3] }
+  },
+  { 
+    path: 'survey-countdown', 
+    loadComponent: () => import('./feature/survey-countdown/survey-countdown.component').then(c => c.SurveyCountdownComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['User'], roleIds: [3] }
+  },
+  { 
     path: 'quiz', 
     loadComponent: () => import('./feature/quiz/quiz.component').then(c => c.QuizPageComponent),
     canActivate: [roleGuard],
@@ -162,6 +174,34 @@ export const routes: Routes = [
     loadComponent: () => import('./feature/user-management/user-management.component').then(c => c.UserManagementComponent),
     canActivate: [roleGuard],
     data: { roles: ['Admin'], roleIds: [1] }
+  },
+  
+  // Poll Participation Route
+  { 
+    path: 'poll-join', 
+    loadComponent: () => import('./feature/poll-join/poll-participate.component').then(c => c.PollParticipateComponent)
+  },
+  
+  // Survey Participation Routes
+  { 
+    path: 'survey-participate', 
+    loadComponent: () => import('./feature/survey-participate/survey-participate.component').then(c => c.SurveyParticipateComponent)
+  },
+  { 
+    path: 'survey/thank-you', 
+    loadComponent: () => import('./feature/survey-participate/survey-participate.component').then(c => c.SurveyParticipateComponent)
+  },
+  { 
+    path: 'survey/:sessionId', 
+    loadComponent: () => import('./feature/survey-participate/survey-participate.component').then(c => c.SurveyParticipateComponent)
+  },
+  
+  // Participant Responses Route - View submitted responses
+  { 
+    path: 'participant/responses', 
+    loadComponent: () => import('./feature/participant-responses/participant-responses.component').then(c => c.ParticipantResponsesComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['User'], roleIds: [3] }
   },
   
   // Catch all

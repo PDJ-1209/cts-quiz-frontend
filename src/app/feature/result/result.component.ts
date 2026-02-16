@@ -853,11 +853,11 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      const startTime = new Date(startTimeInput).toISOString();
+      const startDate = new Date(startTimeInput);
       const endDate = new Date(endTimeInput);
-      const endTime = endDate.toISOString();
+      const now = new Date();
 
-      if (endDate <= new Date()) {
+      if (endDate <= now) {
         this.snackBar.open('⚠️ End time must be in the future', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
@@ -865,24 +865,52 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      if (endDate <= new Date(startTimeInput)) {
+      if (endDate <= startDate) {
         this.snackBar.open('⚠️ End time must be after start time', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
         return;
       }
-      
-      // Use PublishPollDto structure
-      const publishPayload = {
-        pollId: pollId,
-        hostId: this.currentHostId(),
-        startedAt: startTime,
-        endedAt: endTime
-      };
 
-      const publishResponse = await this.pollService.publishPoll(publishPayload).toPromise();
-      console.log('Poll published:', publishResponse);
+      // Determine if this is scheduled (future) or immediate publish
+      const isScheduled = startDate > now;
+      
+      let publishResponse: any;
+
+      if (isScheduled) {
+        // Use SchedulePoll for future times
+        console.log('Scheduling poll for future time:', startDate);
+        publishResponse = await this.pollService.schedulePoll(
+          pollId,
+          startDate,
+          endDate,
+          45 // countdown duration in seconds
+        ).toPromise();
+        
+        this.snackBar.open(`✅ Poll scheduled for ${startDate.toLocaleString()}`, 'Close', {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        });
+      } else {
+        // Use PublishPoll for immediate start
+        console.log('Publishing poll immediately');
+        const publishPayload = {
+          pollId: pollId,
+          hostId: this.currentHostId(),
+          startedAt: startDate.toISOString(),
+          endedAt: endDate.toISOString()
+        };
+        
+        publishResponse = await this.pollService.publishPoll(publishPayload).toPromise();
+        
+        this.snackBar.open(`✅ Poll published successfully!`, 'Close', {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        });
+      }
+
+      console.log('Poll publish/schedule response:', publishResponse);
 
       // Update the poll with session code immediately
       const pollIndex = this.hostPolls().findIndex(p => p.pollId === pollId);
@@ -890,18 +918,14 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         const updatedPolls = [...this.hostPolls()];
         updatedPolls[pollIndex] = {
           ...updatedPolls[pollIndex],
-          pollStatus: publishResponse.pollStatus || 'Active',
+          pollStatus: publishResponse.pollStatus || publishResponse.status || (isScheduled ? 'Scheduled' : 'Active'),
           sessionCode: publishResponse.sessionCode
         };
         this.hostPolls.set(updatedPolls);
       }
 
-      this.snackBar.open(`✅ Poll published successfully!`, 'Close', {
-        duration: 5000,
-        panelClass: ['success-snackbar'],
-      });
     } catch (error: any) {
-      console.error('Error publishing poll:', error);
+      console.error('Error publishing/scheduling poll:', error);
       
       let errorMessage = 'Failed to publish poll';
       if (error.status === 500) {
@@ -941,11 +965,11 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      const startTime = new Date(startTimeInput).toISOString();
+      const startDate = new Date(startTimeInput);
       const endDate = new Date(endTimeInput);
-      const endTime = endDate.toISOString();
+      const now = new Date();
 
-      if (endDate <= new Date()) {
+      if (endDate <= now) {
         this.snackBar.open('⚠️ End time must be in the future', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
@@ -953,24 +977,52 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      if (endDate <= new Date(startTimeInput)) {
+      if (endDate <= startDate) {
         this.snackBar.open('⚠️ End time must be after start time', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
         return;
       }
-      
-      // Use PublishSurveyDto structure
-      const publishPayload = {
-        surveyId: surveyId,
-        hostId: this.currentHostId(),
-        startedAt: startTime,
-        endedAt: endTime
-      };
 
-      const publishResponse = await this.surveyService.publishSurvey(publishPayload).toPromise();
-      console.log('Survey published:', publishResponse);
+      // Determine if this is scheduled (future) or immediate publish
+      const isScheduled = startDate > now;
+      
+      let publishResponse: any;
+
+      if (isScheduled) {
+        // Use ScheduleSurvey for future times
+        console.log('Scheduling survey for future time:', startDate);
+        publishResponse = await this.surveyService.scheduleSurvey(
+          surveyId,
+          startDate,
+          endDate,
+          45 // countdown duration in seconds
+        ).toPromise();
+        
+        this.snackBar.open(`✅ Survey scheduled for ${startDate.toLocaleString()}`, 'Close', {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        });
+      } else {
+        // Use PublishSurvey for immediate start
+        console.log('Publishing survey immediately');
+        const publishPayload = {
+          surveyId: surveyId,
+          hostId: this.currentHostId(),
+          startedAt: startDate.toISOString(),
+          endedAt: endDate.toISOString()
+        };
+        
+        publishResponse = await this.surveyService.publishSurvey(publishPayload).toPromise();
+        
+        this.snackBar.open(`✅ Survey published successfully!`, 'Close', {
+          duration: 5000,
+          panelClass: ['success-snackbar'],
+        });
+      }
+
+      console.log('Survey publish/schedule response:', publishResponse);
 
       // Update the survey with session code immediately
       const surveyIndex = this.hostSurveys().findIndex(s => s.surveyId === surveyId);
@@ -978,18 +1030,14 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         const updatedSurveys = [...this.hostSurveys()];
         updatedSurveys[surveyIndex] = {
           ...updatedSurveys[surveyIndex],
-          status: publishResponse.status || 'Active',
+          status: publishResponse.status || (isScheduled ? 'Scheduled' : 'Active'),
           sessionCode: publishResponse.sessionCode
         };
         this.hostSurveys.set(updatedSurveys);
       }
 
-      this.snackBar.open(`✅ Survey published successfully!`, 'Close', {
-        duration: 5000,
-        panelClass: ['success-snackbar'],
-      });
     } catch (error: any) {
-      console.error('Error publishing survey:', error);
+      console.error('Error publishing/scheduling survey:', error);
       
       let errorMessage = 'Failed to publish survey';
       if (error.status === 500) {

@@ -196,6 +196,11 @@ export class CreatePollComponent implements OnInit, AfterViewInit {
     return questionGroup.get('questionType')?.value === 'custom';
   }
 
+  getQuestionTypeLabel(typeValue: string): string {
+    const type = this.questionTypes.find(t => t.value === typeValue);
+    return type ? type.label : 'Custom';
+  }
+
   onSubmit(): void {
     this.submitted = true;
     this.errorMessage = '';

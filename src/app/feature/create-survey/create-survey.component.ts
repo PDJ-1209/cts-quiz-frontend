@@ -131,6 +131,17 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
     this.questions.push(questionGroup);
   }
 
+  getQuestionTypeLabel(typeValue: string): string {
+    const types: { [key: string]: string } = {
+      'single_choice': 'Single Choice',
+      'multiple_choice': 'Multiple Choice',
+      'ranking': 'Ranking',
+      'rating': 'Rating (1-5)',
+      'text': 'Short Text'
+    };
+    return types[typeValue] || typeValue;
+  }
+
   onPublish(): void {
     // Get form values directly
     const formValue = this.surveyForm.getRawValue();
@@ -157,7 +168,7 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      if (q.type === 'single_choice' || q.type === 'multiple_choice') {
+      if (q.type === 'single_choice' || q.type === 'multiple_choice' || q.type === 'ranking') {
         const validOptions = q.options ? q.options.filter((opt: string) => opt && opt.trim().length > 0) : [];
         if (validOptions.length < 2) {
           alert(`Question ${i + 1}: Choice questions must have at least 2 options`);
@@ -184,8 +195,8 @@ export class CreateSurveyComponent implements OnInit, OnDestroy, AfterViewInit {
         questionPayload.scale_max = 5;
       }
 
-      // Add options for choices
-      if ((q.type === 'single_choice' || q.type === 'multiple_choice') && q.options) {
+      // Add options for choices and ranking
+      if ((q.type === 'single_choice' || q.type === 'multiple_choice' || q.type === 'ranking') && q.options) {
         const validOptions = q.options
           .filter((opt: string) => opt && opt.trim().length > 0)
           .map((opt: string, oi: number) => ({

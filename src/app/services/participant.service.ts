@@ -228,7 +228,10 @@ export class ParticipantService {
         isValid: response.IsValid ?? response.isValid,
         sessionId: response.SessionId ?? response.sessionId,
         quizId: response.QuizId ?? response.quizId,
+        pollId: response.PollId ?? response.pollId,
+        surveyId: response.SurveyId ?? response.surveyId,
         quizTitle: response.QuizTitle ?? response.quizTitle,
+        sessionType: response.SessionType ?? response.sessionType,
         startedAt: response.StartedAt ?? response.startedAt,
         endedAt: response.EndedAt ?? response.endedAt,
         status: response.Status ?? response.status,
@@ -242,16 +245,22 @@ export class ParticipantService {
 
   /**
    * Join session - create participant entry
+   * Enhanced with detailed error logging to debug 400 Bad Request errors
    */
   async joinSession(request: JoinSessionRequest): Promise<ParticipantResponse> {
     const url = `${this.apiBase}/session/join`;
     
     try {
-      console.log('[ParticipantService] Joining session:', request);
+      console.log('[ParticipantService] === JOIN SESSION REQUEST ===');
+      console.log('[ParticipantService] URL:', url);
+      console.log('[ParticipantService] Request payload:', JSON.stringify(request, null, 2));
+      
       const response: any = await firstValueFrom(
         this.http.post<any>(url, request)
       );
-      console.log('[ParticipantService] Join response:', response);
+      
+      console.log('[ParticipantService] === JOIN SESSION SUCCESS ===');
+      console.log('[ParticipantService] Response:', response);
       
       // Map to handle both PascalCase and camelCase
       return {
@@ -263,8 +272,14 @@ export class ParticipantService {
         joinedAt: response.JoinedAt ?? response.joinedAt
       };
     } catch (error: any) {
-      console.error('Join session failed:', error);
-      throw new Error(`Failed to join session: ${error?.error?.message || error?.message || 'Unknown error'}`);
+      console.error('[ParticipantService] === JOIN SESSION FAILED ===');
+      console.error('[ParticipantService] Error status:', error?.status);
+      console.error('[ParticipantService] Error message:', error?.error?.message || error?.message);
+      console.error('[ParticipantService] Full error:', error);
+      
+      // Extract the error message from backend
+      const errorMessage = error?.error?.message || error?.message || 'Unknown error';
+      throw new Error(`Failed to join session: ${errorMessage}`);
     }
   }
 

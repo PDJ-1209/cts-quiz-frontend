@@ -1,0 +1,126 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { PollService } from '../../services/poll.service';
+import { PollOverview, PollVoteSubmission } from '../../models/ipoll';
+
+@Component({
+  selector: 'app-poll-participate',
+  standalone: true,
+  imports: [CommonModule, FormsModule, MatSnackBarModule],
+  templateUrl: './poll-participate.component.html',
+  styleUrls: ['./poll-participate.component.css']
+})
+export class PollParticipateComponent implements OnInit {
+  poll: PollOverview | null = null;
+  selectedOptionIds: number[] = [];
+  loading = true;
+  submitting = false;
+  participantId: number = 0;
+  sessionId: number = 0;
+  sessionCode: string = '';
+  pollId: number = 0;
+  
+  private pollService = inject(PollService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private snackBar = inject(MatSnackBar);
+
+  ngOnInit(): void {
+    // Get parameters from query params or localStorage
+    this.route.queryParams.subscribe(params => {
+      this.sessionCode = params['sessionCode'] || localStorage.getItem('sessionCode') || '';
+      this.participantId = +params['participantId'] || +(localStorage.getItem('participantId') || '0');
+      this.pollId = +params['pollId'] || +(localStorage.getItem('pollId') || '0');
+      this.sessionId = +params['sessionId'] || +(localStorage.getItem('sessionId') || '0');
+
+      if (!this.participantId || !this.sessionId) {
+        this.snackBar.open('Invalid session. Please join again.', 'Close', { duration: 3000 });
+        this.router.navigate(['/participant']);
+        return;
+      }
+
+      this.loadPoll();
+    });
+  }
+
+  loadPoll(): void {
+    this.loading = true;
+    this.pollService.getPollsBySession(this.sessionId).subscribe({
+      next: (poll) => {
+        this.poll = poll;
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading poll:', error);
+        this.snackBar.open('Failed to load poll', 'Close', { duration: 3000 });
+        this.loading = false;
+      }
+    });
+  }
+
+  toggleOption(optionId: number): void {
+    if (!this.poll) return;
+
+    const index = this.selectedOptionIds.indexOf(optionId);
+    
+    if (this.poll.selectionType === 'single') {
+      // Single choice - replace selection
+      this.selectedOptionIds = [optionId];
+    } else {
+      // Multi-select - toggle option
+      if (index > -1) {
+        this.selectedOptionIds.splice(index, 1);
+      } else {
+        this.selectedOptionIds.push(optionId);
+      }
+    }
+  }
+
+  isSelected(optionId: number): boolean {
+    return this.selectedOptionIds.includes(optionId);
+  }
+
+  async submitVote(): Promise<void> {
+    if (this.selectedOptionIds.length === 0) {
+      this.snackBar.open('Please select at least one option', 'Close', { duration: 2000 });
+      return;
+    }
+
+    if (!this.poll) return;
+
+    this.submitting = true;
+
+    const voteSubmission: PollVoteSubmission = {
+      pollId: this.poll.pollId,
+      participantId: this.participantId,
+      optionId: this.selectedOptionIds[0], // For interface compatibility
+      selectedOptionIds: this.selectedOptionIds,
+      interactionValue: 1
+    };
+
+    this.pollService.submitPollVote(voteSubmission).subscribe({
+      next: (response) => {
+        this.snackBar.open('✅ Vote submitted successfully!', 'Close', { duration: 3000 });
+        
+        // Navigate to view responses
+        setTimeout(() => {
+          this.router.navigate(['/participant/responses'], {
+            queryParams: {
+              participantId: this.participantId,
+              pollId: this.poll?.pollId,
+              sessionCode: this.sessionCode
+            }
+          });
+        }, 1500);
+      },
+      error: (error) => {
+        console.error('Error submitting vote:', error);
+        this.snackBar.open('Failed to submit vote. Please try again.', 'Close', { duration: 3000 });
+        this.submitting = false;
+      }
+    });
+  }
+}

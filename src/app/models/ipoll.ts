@@ -146,3 +146,67 @@ export interface PollResult {
     percentage: number;
   }[];
 }
+
+// Republish and Schedule Models
+export interface RepublishPollRequest {
+  pollId: number;
+  hostId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  countdownDurationSeconds?: number;
+}
+
+export interface RepublishPollResponse {
+  pollId: number;
+  newSessionId: number;
+  oldSessionId: number;
+  newSessionCode: string;
+  qrCodeBase64: string;
+  pollStatus: string;
+  countdownDurationSeconds: number;
+}
+
+export interface SchedulePollRequest {
+  pollId: number;
+  hostId?: string;
+  scheduledStartTime: string;
+  scheduledEndTime?: string;
+  countdownDurationSeconds?: number;
+}
+
+export interface SchedulePollResponse {
+  pollId: number;
+  sessionId: number;
+  sessionCode: string;
+  scheduledStartTime: string;
+  scheduledEndTime?: string;
+  status: string;
+}
+
+// Extended Poll Overview with new fields
+export interface PollOverviewExtended extends PollOverview {
+  newSessionCode?: string;
+  qrCodeUrl?: string;
+  qrCodeBase64?: string;
+  countdownDuration?: number;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
+}
+
+// Participant Poll Response interface
+export interface PollResponse {
+  pollResponseId?: number;
+  pollId: number;
+  participantId: number;
+  sessionId: number;
+  selectedOptionId?: number;
+  selectedOptionIds?: string; // comma-separated values for multi-select
+  optionRank?: number; // rank order for ranking questions
+  responseText?: string;
+  responseNumber?: number;
+  submittedAt?: string;
+  pollQuestion?: string;
+  pollTitle?: string;
+  optionLabel?: string; // Label of selected option
+}
+

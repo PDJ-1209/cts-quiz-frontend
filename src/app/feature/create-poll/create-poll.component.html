@@ -107,27 +107,50 @@
       </div>
     </div>
 
-    <!-- Poll Summary Card -->
+    <!-- Poll Preview Card -->
     <div class="col-lg-4 col-md-12">
-      <div class="poll-summary-card card shadow-sm">
-        <div class="card-body p-4">
-          <h6 class="fw-bold border-bottom pb-2">Poll Summary</h6>
-          <div class="d-flex justify-content-between my-3">
-            <span class="text-muted">Questions</span>
-            <span class="badge bg-primary rounded-pill px-3">{{ questions.length }}</span>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><span class="me-2">👁️</span>Poll Preview ({{ questions.length }} questions)</h5>
+        </div>
+        <div class="card-body">
+          @if (questions.length === 0) {
+          <div class="text-center py-5">
+            <div class="display-1 mb-3">📊</div>
+            <p class="text-muted">No questions added yet. Create your first poll question above.</p>
           </div>
-          <div class="d-flex justify-content-between my-3">
-            <span class="text-muted">Type</span>
-            <span class="badge bg-info rounded-pill px-3">{{ getSelectedTypeLabel() }}</span>
+          } @else {
+          <div class="list-group mb-3">
+            @for (q of questions.controls; let i = $index; track i) {
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-warning text-dark rounded-pill">Q{{ i + 1 }}</span>
+                <button class="btn btn-outline-danger btn-sm" type="button" (click)="removePollQuestion(i)"
+                  title="Delete">🗑️</button>
+              </div>
+              <div class="fw-semibold mb-2">{{ q.get('questionText')?.value || 'No question text' }}</div>
+              <div class="d-flex flex-column gap-1">
+                @for (opt of getOptions(i).controls; track $index) {
+                <div class="badge bg-light text-dark">
+                  {{ opt.get('optionLabel')?.value || 'Option ' + ($index + 1) }}
+                </div>
+                }
+              </div>
+              <div class="d-flex gap-2 flex-wrap mt-2">
+                <span class="badge bg-info">{{ getQuestionTypeLabel(q.get('questionType')?.value) }}</span>
+              </div>
+            </div>
+            }
           </div>
-          <div class="d-grid gap-2">
-            <button class="btn btn-primary py-2 fw-bold" (click)="onSubmit()" [disabled]="loading">
-              {{ loading ? 'Creating...' : 'Create Poll' }}
-            </button>
+          <button type="button" class="btn btn-warning text-dark w-100 fw-bold" (click)="onSubmit()" [disabled]="loading || questions.length === 0">
+            {{ loading ? '⏳ Creating...' : '🚀 Create Poll' }}
+          </button>
+          @if (questions.length === 0) {
+          <div class="text-muted text-center mt-2 small">
+            Add at least one question to create poll.
           </div>
-          <small class="text-muted mt-2 d-block text-center">
-            Save your poll to the database
-          </small>
+          }
+          }
         </div>
       </div>
     </div>

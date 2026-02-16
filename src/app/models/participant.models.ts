@@ -3,7 +3,10 @@ export interface ValidateSessionResponse {
   message: string;
   sessionId?: number;
   quizId?: number;
+  pollId?: number;
+  surveyId?: number;
   quizTitle?: string;
+  sessionType?: string; // 'Quiz', 'Poll', or 'Survey'
   startedAt?: string;
   endedAt?: string;
   status?: string;

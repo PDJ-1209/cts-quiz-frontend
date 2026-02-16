@@ -7,7 +7,7 @@ import { ResultPollComponent } from './result-poll/result-poll.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, NavigationComponent, CommonModule,ResultPollComponent],
+  imports: [RouterOutlet, NavigationComponent, CommonModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })

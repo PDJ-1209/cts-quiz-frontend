@@ -132,7 +132,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
     }
   }
 
-  @HostListener('window:popstate', ['$event'])
+  @HostListener('window:popstate')
   onPopState(): void {
     this.lockBackNavigation();
 
@@ -223,7 +223,39 @@ export class CountdownComponent implements OnInit, OnDestroy {
   }
 
   private navigateToQuiz(): void {
-    this.router.navigate(['/quiz']);
+    // Check if this is a poll or survey session
+    const sessionType = localStorage.getItem('sessionType') || 'Quiz';
+    const pollId = localStorage.getItem('pollId');
+    const surveyId = localStorage.getItem('surveyId');
+    const participantId = localStorage.getItem('participantId');
+    
+    console.log('[Countdown] navigateToQuiz called with sessionType:', sessionType);
+    
+    // Polls and surveys don't use the countdown/quiz flow
+    // They should have been routed directly from quiz-username
+    if (sessionType === 'Poll' && pollId && participantId) {
+      console.log('[Countdown] Redirecting to poll-join');
+      this.router.navigate(['/poll-join'], {
+        queryParams: { 
+          sessionCode: this.sessionCode,
+          participantId: participantId,
+          pollId: pollId
+        }
+      });
+    } else if (sessionType === 'Survey' && surveyId && participantId) {
+      console.log('[Countdown] Redirecting to survey-participate');
+      this.router.navigate(['/survey-participate'], {
+        queryParams: { 
+          sessionCode: this.sessionCode,
+          participantId: participantId,
+          surveyId: surveyId
+        }
+      });
+    } else {
+      // Normal quiz flow
+      console.log('[Countdown] Navigating to quiz');
+      this.router.navigate(['/quiz']);
+    }
   }
 
   ngOnDestroy(): void {
