@@ -120,9 +120,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         }));
       }
 
-      const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
+      const serverTimeMs = Date.now();
       this.serverTimeOffsetMs = serverTimeMs - Date.now();
-      this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
+      this.startedAtMs = serverTimeMs;
       this.updateQuestionState();
     } catch (error) {
       console.error('[QuizPage] Failed to refresh session sync:', error);
@@ -298,7 +298,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   }
 
   async moveToNextQuestion() {
-  async moveToNextQuestion() {
     // advance
     this.selected = null;
     this.waitingForNext = false;
@@ -316,6 +315,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       localStorage.setItem('totalQuestions', this.questions.length.toString());
     }
   }
+
   ngOnDestroy() {
     // Clean up timer on component destroy
     this.stopTimer();
@@ -356,11 +356,5 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
   private updateQuestionState(): void {
     this.currentQuestionStartMs = this.getServerNowMs();
-  }
-
-  private blockBackNavigation(): void {
-    const currentUrl = window.location.href;
-    window.history.pushState(null, '', currentUrl);
-    window.history.pushState(null, '', currentUrl);
   }
 }
