@@ -623,12 +623,6 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Reload quizzes immediately to reflect status change
       await this.loadQuizzes();
-      
-      // Reload again after 2 seconds to ensure database sync
-      setTimeout(async () => {
-        console.log('Secondary reload to ensure database sync');
-        await this.loadQuizzes();
-      }, 2000);
     } catch (error: any) {
       console.error('Error publishing quiz:', error);
       
@@ -737,19 +731,20 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
       console.log('New session created for republish:', sessionResponse);
 
-      // Now reset the quiz back to Draft status
+      // Update quiz status to Active to match the session
       try {
-        await this.store.syncQuizStatus(quiz.quizId);
-        console.log(`Quiz ${quiz.quizId} reset to Draft after creating new session`);
+        await this.store.updateQuizStatus(quiz.quizId, 'Active');
+        quiz.status = 'Active';  // Update local object immediately
+        console.log(`Quiz ${quiz.quizId} status updated to Active`);
       } catch (error) {
-        console.error('Error resetting quiz to Draft:', error);
+        console.error('Error updating quiz status:', error);
       }
 
       // Track this session for status monitoring
       this.activeSessionIds.set(quizNumber, sessionResponse.sessionId);
 
       this.snackBar.open(
-        `✅ New session created for Quiz ${quizNumber}! Quiz reset to Draft.`,
+        `✅ Quiz ${quizNumber} republished successfully! Status: Active`,
         'Close',
         {
           duration: 5000,
@@ -757,14 +752,8 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       );
 
-      // Reload quizzes immediately to reflect status change
+      // Reload quizzes to reflect all changes
       await this.loadQuizzes();
-      
-      // Reload again after 2 seconds to ensure database sync
-      setTimeout(async () => {
-        console.log('Secondary reload after republish');
-        await this.loadQuizzes();
-      }, 2000);
     } catch (error: any) {
       console.error('Error republishing quiz:', error);
       

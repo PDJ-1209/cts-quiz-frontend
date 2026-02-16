@@ -11,37 +11,9 @@
   <!-- Grid container for fields -->
   <div class="form-grid">
 
-    <!-- Quiz ID -->
-    <div class="field">
-      <label class="label" for="quizId">Quiz ID</label>
-      <input
-        id="quizId"
-        type="number"
-        formControlName="quizId"
-        class="input"
-        placeholder="Enter Quiz ID"
-        inputmode="numeric"
-      />
-      <div class="hint" *ngIf="feedbackForm.get('quizId')?.invalid && feedbackForm.get('quizId')?.touched">
-        Quiz ID is required
-      </div>
-    </div>
-
-    <!-- Participant ID -->
-    <div class="field">
-      <label class="label" for="participantId">Participant ID</label>
-      <input
-        id="participantId"
-        type="number"
-        formControlName="participantId"
-        class="input"
-        placeholder="Enter Participant ID"
-        inputmode="numeric"
-      />
-      <div class="hint" *ngIf="feedbackForm.get('participantId')?.invalid && feedbackForm.get('participantId')?.touched">
-        Participant ID is required
-      </div>
-    </div>
+    <!-- Hidden fields for Quiz ID and Participant ID -->
+    <input type="hidden" formControlName="quizId" />
+    <input type="hidden" formControlName="participantId" />
 
     <!-- Rating (Stars) -->
     <div class="field">
@@ -147,8 +119,11 @@
 
   <!-- Actions -->
   <div class="actions">
-    <button class="btn-primary" type="submit">
+    <button class="btn-primary" type="submit" *ngIf="!feedbackSubmitted">
       Submit Feedback
+    </button>
+    <button class="btn-primary" type="button" *ngIf="feedbackSubmitted" (click)="returnToHome()">
+      ← Return to Home
     </button>
   </div>
 </form>

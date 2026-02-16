@@ -74,7 +74,28 @@ export class AuthService {
   }
 
   /**
+   * Check if employee ID exists in the database
+   * This is used to differentiate between "Employee ID does not exist" and "Invalid password" errors
+   */
+  async checkEmployeeExists(employeeId: string): Promise<boolean> {
+    try {
+      // Try to get user information to verify employee ID exists
+      const response = await firstValueFrom(
+        this.http.get<any>(`${this.apiUrl}/users`)
+      );
+      
+      // Check if employee ID exists in the users list
+      const users = response?.users || response || [];
+      return users.some((user: any) => user.employeeId === employeeId);
+    } catch (error) {
+      console.error('Error checking employee ID:', error);
+      return false;
+    }
+  }
+
+  /**
    * Enhanced login with employee ID and password
+   * Pre-validates employee ID existence to provide specific error messages
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     this.setLoading(true);
@@ -120,9 +141,51 @@ export class AuthService {
       }
     } catch (error: any) {
       console.error('Login error:', error);
+      
+      // Enhanced error handling for specific login scenarios
+      // NOTE: Backend needs to return specific error messages for proper error handling:
+      // - "Employee ID not found" or "Employee does not exist" for wrong employee ID
+      // - "Incorrect password" or "Wrong password" for wrong password
+      // - "Invalid credentials" for both wrong (generic fallback)
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error?.error?.message) {
+        errorMessage = error.error.message;
+      } else if (error?.error && typeof error.error === 'string') {
+        errorMessage = error.error;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Map HTTP status codes and error messages to specific user-friendly messages
+      if (error?.status === 401) {
+        // Check the actual error message from backend to determine the specific error
+        const backendMessage = error?.error?.message?.toLowerCase() || '';
+        
+        // Check for password-related errors
+        if (backendMessage.includes('password') || backendMessage.includes('incorrect password') || backendMessage.includes('wrong password')) {
+          errorMessage = 'Incorrect password.';
+        } 
+        // Check for employee ID not found errors
+        else if (backendMessage.includes('employee id not found') || backendMessage.includes('employee not found') || backendMessage.includes('employee does not exist') || backendMessage.includes('user not found')) {
+          errorMessage = 'Employee ID does not exist.';
+        } 
+        // Generic invalid credentials - when backend can't specify which field is wrong
+        else if (backendMessage.includes('invalid credentials') || backendMessage.includes('authentication failed')) {
+          errorMessage = 'User does not exist.';
+        } 
+        // Default for other 401 errors
+        else {
+          errorMessage = 'User does not exist.';
+        }
+      } else if (error?.status === 404) {
+        // Not found - employee ID doesn't exist
+        errorMessage = 'Employee ID does not exist.';
+      }
+      
       return {
         success: false,
-        message: error?.error?.message || 'Login failed. Please try again.'
+        message: errorMessage
       };
     } finally {
       this.setLoading(false);

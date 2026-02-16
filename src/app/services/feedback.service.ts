@@ -6,7 +6,7 @@
 //   providedIn: 'root'
 // })
 // export class FeedbackService {
-//   private apiUrl = 'https:// localhost:7236/api/Feedback';
+//   private apiUrl = 'https://localhost:7236/api/Feedback';
  
 //   constructor(private http: HttpClient) { }
  
@@ -38,6 +38,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 
 export interface QuizFeedback {
   id: number;
@@ -50,7 +51,7 @@ export interface QuizFeedback {
 
 @Injectable({ providedIn: 'root' })
 export class FeedbackService {
-  private baseUrl = 'https:// localhost:7205/api/Feedback'; // change port if needed
+  private baseUrl = `${environment.apiUrl}/Feedback`;
 
   constructor(private http: HttpClient) {}
 

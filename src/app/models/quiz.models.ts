@@ -6,6 +6,7 @@ export type QuestionType = 'Multiple Choice' | 'True/False' | 'Short Answer';
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface QuizOption {
+  optionId?: number;  // For existing options from backend
   text: string;
   isCorrect: boolean;
 }

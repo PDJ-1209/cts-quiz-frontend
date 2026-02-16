@@ -245,7 +245,7 @@ export class AddQuestionService {
     const questions: QuizQuestion[] = quizDetails.questions.map(q => ({
       questionId: parseInt(q.questionId),  // Keep the question ID for updates
       text: q.questionText,
-      type: q.type as QuestionType,
+      type: this.mapBackendTypeToFrontend(q.type) as QuestionType,
       difficulty: q.difficulty as Difficulty,
       category: q.category,
       timerSeconds: q.timeLimit || null,
@@ -258,6 +258,16 @@ export class AddQuestionService {
     }));
 
     this._questions.set(questions);
+  }
+
+  // Map backend question type to frontend format
+  private mapBackendTypeToFrontend(backendType: string): string {
+    switch (backendType) {
+      case 'MCQ': return 'Multiple Choice';
+      case 'TrueFalse': return 'True/False';
+      case 'ShortAnswer': return 'Short Answer';
+      default: return 'Multiple Choice';
+    }
   }
 
   // ===== Preview Helper =====
