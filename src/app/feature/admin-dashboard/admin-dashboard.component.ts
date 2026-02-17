@@ -1,7 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, effect, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { debounceTime, Subject } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../models/auth.models';
 import { AdminService, AdminUser, Role, Template, AdminStats } from '../../services/admin.service';
@@ -14,10 +16,11 @@ import { AnalyticsComponent } from '../analytics/analytics.component';
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private adminService = inject(AdminService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   
   currentUser = signal<User | null>(null);
   users = signal<AdminUser[]>([]);
@@ -37,8 +40,31 @@ export class AdminDashboardComponent implements OnInit {
     lastUpdated: new Date()
   });
   
+  // Animated counter signals
+  displayedStats = signal<AdminStats>({
+    totalUsers: 0,
+    activeHosts: 0,
+    totalQuizzes: 0,
+    activeSessions: 0,
+    templatesCount: 0,
+    lastUpdated: new Date()
+  });
+  
+  // Search & Filter signals
+  searchTerm = signal('');
+  selectedRoleFilter = signal<number | null>(null);
+  selectedStatusFilter = signal<string>('all'); // all, active, inactive
+  filteredUsers = signal<AdminUser[]>([]);
+  filteredQuizzes = signal<any[]>([]);
+  filteredSurveys = signal<any[]>([]);
+  filteredPolls = signal<any[]>([]);
+  
+  // Search subject for debouncing
+  private searchSubject = new Subject<string>();
+  
   isLoading = signal(false);
   selectedTab = signal('overview');
+  sidebarCollapsed = signal(false);
   
   // Role management
   selectedUserId = signal<string | null>(null);
@@ -53,14 +79,53 @@ export class AdminDashboardComponent implements OnInit {
   // Quiz management
   selectedQuizTab = signal('quizzes'); // quizzes, surveys, polls
 
-  // Analytics signals
-  isLoadingReports = signal(false);
-  reportsAnalytics = signal<any>(null);
-  feedbackAnalytics = signal<any>(null);
-
   ngOnInit() {
     this.loadCurrentUser();
     this.loadAdminData();
+    this.setupSearchDebounce();
+    this.setupCounterAnimation();
+  }
+  
+  private setupSearchDebounce() {
+    this.searchSubject
+      .pipe(
+        debounceTime(300),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
+  }
+  
+  private setupCounterAnimation() {
+    effect(() => {
+      const currentStats = this.stats();
+      this.animateCounters(currentStats);
+    });
+  }
+  
+  private animateCounters(newStats: AdminStats) {
+    const duration = 800; // ms
+    const steps = 30;
+    const stepDuration = duration / steps;
+    
+    const startStats = this.displayedStats();
+    const animateValue = (start: number, end: number, currentStep: number): number => {
+      return Math.floor(start + (end - start) * (currentStep / steps));
+    };
+    
+    for (let step = 0; step <= steps; step++) {
+      setTimeout(() => {
+        this.displayedStats.set({
+          totalUsers: animateValue(startStats.totalUsers, newStats.totalUsers, step),
+          activeHosts: animateValue(startStats.activeHosts, newStats.activeHosts, step),
+          totalQuizzes: animateValue(startStats.totalQuizzes, newStats.totalQuizzes, step),
+          activeSessions: animateValue(startStats.activeSessions, newStats.activeSessions, step),
+          templatesCount: animateValue(startStats.templatesCount, newStats.templatesCount, step),
+          lastUpdated: newStats.lastUpdated
+        });
+      }, stepDuration * step);
+    }
   }
 
   private async loadAdminData() {
@@ -78,10 +143,8 @@ export class AdminDashboardComponent implements OnInit {
         this.loadStats(),
         this.loadRecentActivity()
       ]);
-      
-      // Load analytics data after initial data is loaded
-      this.loadReportsAnalytics();
-      this.loadFeedbackAnalytics();
+      // Apply initial filters
+      this.applyFilters();
     } catch (error) {
       console.error('Error loading admin data:', error);
     } finally {
@@ -236,14 +299,17 @@ export class AdminDashboardComponent implements OnInit {
       this.adminService.getAdminStats().subscribe({
         next: (stats) => {
           console.log('[Admin] Stats loaded from backend:', stats);
-          this.stats.set({
+          const formattedStats = {
             totalUsers: stats.totalUsers || 0,
             activeHosts: stats.activeHosts || 0,
             totalQuizzes: stats.totalQuizzes || 0,
             activeSessions: stats.activeSessions || 0,
             templatesCount: stats.templatesCount || 0,
             lastUpdated: new Date(stats.lastUpdated || new Date())
-          });
+          };
+          this.stats.set(formattedStats);
+          // Initialize displayed stats for animation
+          this.displayedStats.set(formattedStats);
         },
         error: (error) => {
           console.error('[Admin] Error loading stats from backend:', error);
@@ -267,26 +333,31 @@ export class AdminDashboardComponent implements OnInit {
         u.employeeRoles?.some(r => r.roleName?.toLowerCase() === 'host') && u.isActive
       ).length;
       
-      console.log('[Admin] Using fallback stats calculation');
-      this.stats.set({
+      const fallbackStats = {
         totalUsers,
         activeHosts,
         totalQuizzes: 0, // Will be updated when quiz data is available
         activeSessions: 0, // Will be updated when session data is available
         templatesCount: templates.length,
         lastUpdated: new Date()
-      });
+      };
+      
+      console.log('[Admin] Using fallback stats calculation');
+      this.stats.set(fallbackStats);
+      this.displayedStats.set(fallbackStats);
     } catch (error) {
       console.error('[Admin] Error calculating fallback stats:', error);
       // Set default values if everything fails
-      this.stats.set({
+      const defaultStats = {
         totalUsers: 0,
         activeHosts: 0,
         totalQuizzes: 0,
         activeSessions: 0,
         templatesCount: 0,
         lastUpdated: new Date()
-      });
+      };
+      this.stats.set(defaultStats);
+      this.displayedStats.set(defaultStats);
     }
   }
 
@@ -294,85 +365,12 @@ export class AdminDashboardComponent implements OnInit {
     this.selectedTab.set(tab);
   }
 
+  toggleSidebar() {
+    this.sidebarCollapsed.set(!this.sidebarCollapsed());
+  }
+
   selectQuizTab(tab: string) {
     this.selectedQuizTab.set(tab);
-  }
-
-  // Reports methods
-  loadReportsAnalytics() {
-    this.isLoadingReports.set(true);
-    this.adminService.getReportsAnalytics().subscribe({
-      next: (data) => {
-        this.reportsAnalytics.set(data);
-        this.isLoadingReports.set(false);
-      },
-      error: (error) => {
-        console.error('Error loading reports analytics:', error);
-        this.isLoadingReports.set(false);
-      }
-    });
-  }
-
-  loadFeedbackAnalytics() {
-    this.adminService.getFeedbackAnalytics().subscribe({
-      next: (data) => {
-        this.feedbackAnalytics.set(data);
-      },
-      error: (error) => {
-        console.error('Error loading feedback analytics:', error);
-      }
-    });
-  }
-
-  // Chart helper methods
-  getBarHeight(value: number, data: any[]): number {
-    const max = Math.max(...data.map(item => item.count));
-    return max > 0 ? (value / max) * 100 : 0;
-  }
-
-  getPercentage(value: number, data: any[]): number {
-    const max = Math.max(...data.map(item => item.quizCount));
-    return max > 0 ? (value / max) * 100 : 0;
-  }
-
-  getEmojiPercentage(value: number, data: any[]): number {
-    const max = Math.max(...data.map(item => item.count));
-    return max > 0 ? (value / max) * 100 : 0;
-  }
-
-  formatMonth(monthStr: string): string {
-    const [year, month] = monthStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { month: 'short' });
-  }
-
-  getCurrentMonthQuizzes(): number {
-    const analytics = this.reportsAnalytics();
-    if (!analytics?.quizzesByMonth) return 0;
-    
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-    const currentMonthData = analytics.quizzesByMonth.find((item: any) => item.month === currentMonth);
-    return currentMonthData?.count || 0;
-  }
-
-  getRecentQuizzes(): number {
-    const analytics = this.reportsAnalytics();
-    if (!analytics?.quizzesByMonth) return 0;
-    
-    // For simplicity, return the last month's count
-    const lastMonth = analytics.quizzesByMonth[analytics.quizzesByMonth.length - 1];
-    return lastMonth?.count || 0;
-  }
-
-  getSatisfactionLevel(): string {
-    const feedback = this.feedbackAnalytics();
-    if (!feedback?.averageRating) return 'N/A';
-    
-    const rating = feedback.averageRating;
-    if (rating >= 4.5) return 'Excellent';
-    if (rating >= 3.5) return 'Good';
-    if (rating >= 2.5) return 'Average';
-    return 'Needs Improvement';
   }
 
   async updateUserRole(userId: string, newRole: string) {
@@ -526,7 +524,7 @@ export class AdminDashboardComponent implements OnInit {
       case 'overview': return 'Dashboard Overview';
       case 'users': return 'User Management';
       case 'quizzes': return 'Quiz Management';
-      case 'reports': return 'Reports & Analytics';
+      case 'analytics': return 'Analytics & Insights';
       case 'settings': return 'System Settings';
       default: return 'Admin Dashboard';
     }
@@ -537,7 +535,7 @@ export class AdminDashboardComponent implements OnInit {
       case 'overview': return 'Monitor system activity and key metrics';
       case 'users': return 'Manage user accounts, roles, and permissions';
       case 'quizzes': return 'Oversee all quizzes, surveys, and polls';
-      case 'reports': return 'View detailed analytics and performance reports';
+      case 'analytics': return 'View detailed analytics and insights';
       case 'settings': return 'Configure system preferences and settings';
       default: return 'Welcome to the admin control panel';
     }
@@ -643,5 +641,103 @@ export class AdminDashboardComponent implements OnInit {
   logout() {
     this.authService.logout();
     this.router.navigate(['/landing']);
+  }
+  
+  // ============= SEARCH & FILTER METHODS =============
+  
+  onSearchChange(searchValue: string) {
+    this.searchTerm.set(searchValue);
+    this.searchSubject.next(searchValue);
+  }
+  
+  onRoleFilterChange(value: string) {
+    const roleId = value ? parseInt(value, 10) : null;
+    this.selectedRoleFilter.set(roleId);
+    this.applyFilters();
+  }
+  
+  onStatusFilterChange(status: string) {
+    this.selectedStatusFilter.set(status);
+    this.applyFilters();
+  }
+  
+  private applyFilters() {
+    const search = this.searchTerm().toLowerCase();
+    const roleFilter = this.selectedRoleFilter();
+    const statusFilter = this.selectedStatusFilter();
+    
+    // Filter Users
+    let filteredUsers = this.users();
+    
+    if (search) {
+      filteredUsers = filteredUsers.filter(user =>
+        user.firstName.toLowerCase().includes(search) ||
+        user.lastName.toLowerCase().includes(search) ||
+        user.email.toLowerCase().includes(search) ||
+        user.employeeId.toLowerCase().includes(search)
+      );
+    }
+    
+    if (roleFilter) {
+      filteredUsers = filteredUsers.filter(user =>
+        user.employeeRoles?.some(r => r.roleId === roleFilter)
+      );
+    }
+    
+    if (statusFilter !== 'all') {
+      const isActive = statusFilter === 'active';
+      filteredUsers = filteredUsers.filter(user => user.isActive === isActive);
+    }
+    
+    this.filteredUsers.set(filteredUsers);
+    
+    // Filter Quizzes
+    let filteredQuizzes = this.quizzes();
+    if (search) {
+      filteredQuizzes = filteredQuizzes.filter(quiz =>
+        quiz.quizNumber?.toLowerCase().includes(search) ||
+        quiz.createdBy?.toLowerCase().includes(search) ||
+        quiz.status?.toLowerCase().includes(search)
+      );
+    }
+    this.filteredQuizzes.set(filteredQuizzes);
+    
+    // Filter Surveys
+    let filteredSurveys = this.surveys();
+    if (search) {
+      filteredSurveys = filteredSurveys.filter(survey =>
+        survey.title?.toLowerCase().includes(search) ||
+        survey.description?.toLowerCase().includes(search) ||
+        survey.status?.toLowerCase().includes(search)
+      );
+    }
+    this.filteredSurveys.set(filteredSurveys);
+    
+    // Filter Polls
+    let filteredPolls = this.polls();
+    if (search) {
+      filteredPolls = filteredPolls.filter(poll =>
+        poll.pollTitle?.toLowerCase().includes(search) ||
+        poll.pollQuestion?.toLowerCase().includes(search) ||
+        poll.pollStatus?.toLowerCase().includes(search)
+      );
+    }
+    this.filteredPolls.set(filteredPolls);
+  }
+  
+  clearFilters() {
+    this.searchTerm.set('');
+    this.selectedRoleFilter.set(null);
+    this.selectedStatusFilter.set('all');
+    this.applyFilters();
+  }
+  
+  isFiltersActive(): boolean {
+    return this.searchTerm() !== '' || 
+           this.selectedRoleFilter() !== null || 
+           this.selectedStatusFilter() !== 'all';
+  }
+  ngOnDestroy() {
+    // Cleanup handled by takeUntilDestroyed
   }
 }
