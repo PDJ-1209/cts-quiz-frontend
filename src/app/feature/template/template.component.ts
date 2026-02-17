@@ -245,18 +245,8 @@ export class TemplateComponent implements OnInit {
     this.activeTemplateName = '';
   }
 
-  openModal(type: 'template' | 'category' = 'template'): void {
-    if (type === 'template') {
-      this.showModal = true;
-      this.showCategoryForm = false;
-      this.isEditing = false;
-      this.newTemplate = {
-        templateName: '',
-        templateType: 'PDF',
-        templateConfig: '',
-        createdBy: 1
-      };
-    } else if (type === 'category') {
+  openModal(type: 'category' = 'category'): void {
+    if (type === 'category') {
       this.showModal = true;
       this.showCategoryForm = true;
       this.selectedCategory = '';
