@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 import { 
   Survey, 
   CreateSurveyRequest, 
@@ -192,5 +192,10 @@ export class SurveyService {
       countdownDurationSeconds: countdownDuration
     };
     return this.http.post<ScheduleSurveyResponse>(`${environment.apiUrl}/Host/Survey/${surveyId}/schedule`, payload);
+  }
+
+  // End survey
+  endSurvey(surveyId: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/Host/Survey/${surveyId}/end`, {});
   }
 }

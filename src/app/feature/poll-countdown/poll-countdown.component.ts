@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import * as signalR from '@microsoft/signalr';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface TimeRemaining {
   days: number;
@@ -103,31 +103,31 @@ export class PollCountdownComponent implements OnInit, OnDestroy {
     console.log('[PollCountdown] checkIfLate - Start time:', startTime);
     console.log('[PollCountdown] checkIfLate - Current time:', now);
     console.log('[PollCountdown] checkIfLate - Time difference (ms):', timeDiff);
-    console.log('[PollCountdown] checkIfLate - Time difference (seconds):', timeDiff / 1000);
+    console.log('[PollCountdown] checkIfLate - Time difference (minutes):', (timeDiff / 60000).toFixed(2));
     console.log('[PollCountdown] checkIfLate - Session status:', sessionStatus);
 
-    // If poll should have started (within grace period), navigate immediately
-    // For scheduled sessions, use 60-second grace period to account for delays
-    // For active sessions, use 5-second grace period
-    const gracePeriodMs = sessionStatus === 'scheduled' ? -60000 : -5000;
+    // ±2 minute window for on-time join
+    const twoMinutesInMs = 2 * 60 * 1000;
     
-    if (timeDiff <= 0 && timeDiff > gracePeriodMs) {
-      console.log('[PollCountdown] Poll start time reached, navigating immediately');
+    // LATE: More than 2 minutes after start time
+    if (timeDiff < -twoMinutesInMs) {
+      console.log('[PollCountdown] LATE ENTRY BLOCKED - More than 2 minutes late');
+      this.isLate.set(true);
+      this.snackBar.open('Poll has already started. Late entry not allowed.', 'Close', { duration: 5000 });
+      return;
+    }
+    
+    // ON-TIME: Within ±2 minutes of start time - navigate immediately
+    if (timeDiff >= -twoMinutesInMs && timeDiff <= twoMinutesInMs) {
+      console.log('[PollCountdown] ON-TIME entry (within ±2 minutes), navigating immediately');
       this.navigateToPoll();
       return;
     }
-
-    // Only block entry if truly late (beyond grace period) for ACTIVE sessions
-    // For SCHEDULED sessions, wait for SignalR event instead of blocking
-    if (timeDiff < gracePeriodMs && sessionStatus === 'active') {
-      console.log('[PollCountdown] LATE ENTRY BLOCKED - timeDiff:', timeDiff);
-      this.isLate.set(true);
-      this.snackBar.open('Poll has already started. Late entry not allowed.', 'Close', { duration: 5000 });
-    } else if (timeDiff < gracePeriodMs && sessionStatus === 'scheduled') {
-      console.log('[PollCountdown] Scheduled session time passed, waiting for SignalR PollStarted event');
-      // Don't block - wait for backend to send PollStarted via SignalR
-    } else {
-      console.log('[PollCountdown] Entry allowed - waiting for start time');
+    
+    // EARLY: More than 2 minutes before start time - show waiting room
+    if (timeDiff > twoMinutesInMs) {
+      console.log('[PollCountdown] EARLY entry - showing waiting room with countdown');
+      // Continue to show waiting room (handled by template)
     }
   }
 
@@ -145,30 +145,28 @@ export class PollCountdownComponent implements OnInit, OnDestroy {
 
     const now = new Date();
     const timeDiff = startTime.getTime() - now.getTime();
-    const sessionStatus = localStorage.getItem('sessionStatus')?.toLowerCase();
+    const twoMinutesInMs = 2 * 60 * 1000;
 
-    if (timeDiff <= 0) {
-      // Poll has started
+    // Check if we've entered the on-time window (±2 minutes)
+    if (timeDiff <= twoMinutesInMs && timeDiff >= -twoMinutesInMs) {
+      console.log('[PollCountdown] Countdown reached on-time window, navigating to poll');
       this.hasStarted.set(true);
       this.timeUntilStart.set({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      
-      // Use appropriate grace period based on session status
-      const gracePeriodMs = sessionStatus === 'scheduled' ? -60000 : -5000;
-      
-      // Check if we're not too late
-      if (timeDiff > gracePeriodMs) {
-        // Navigate to poll within grace period
-        this.navigateToPoll();
-      } else if (sessionStatus === 'active') {
-        this.isLate.set(true);
-        if (this.countdownInterval) {
-          clearInterval(this.countdownInterval);
-        }
+      this.navigateToPoll();
+      return;
+    }
+
+    // Check if we're too late (more than 2 minutes after start)
+    if (timeDiff < -twoMinutesInMs) {
+      console.log('[PollCountdown] Too late - more than 2 minutes after start');
+      this.isLate.set(true);
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
       }
       return;
     }
 
-    // Calculate time remaining
+    // Calculate time remaining (for early joiners)
     const seconds = Math.floor(timeDiff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);

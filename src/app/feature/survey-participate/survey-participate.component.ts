@@ -6,7 +6,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import * as signalR from '@microsoft/signalr';
 import { SurveyService } from '../../services/survey.service';
 import { SurveyOverview, SurveyQuestionOverview, SurveyResponse } from '../../models/isurvey';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface MultiSelectQuestion {
   selectedOptions: number[];
@@ -31,6 +31,14 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
   hasSubmitted = false;
   surveyEnded = false;
   
+  // Session timing for waiting room
+  sessionStartTime?: Date;
+  sessionEndTime?: Date;
+  isWaitingRoom = false;
+  isLateJoin = false;
+  countdownSeconds = 0;
+  countdownInterval?: any;
+  
   // Multi-select and ranking state
   multiSelectState: { [questionId: number]: MultiSelectQuestion } = {};
   
@@ -53,8 +61,10 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
 
-  // Expose localStorage to template
-  localStorage = localStorage;
+  // Helper method to access localStorage
+  getLocalStorage(key: string): string | null {
+    return localStorage.getItem(key);
+  }
 
   ngOnInit(): void {
     // Try getting from query params first (for direct navigation)
@@ -86,7 +96,7 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
             this.loadSurvey();
           } else {
             // Try localStorage
-            const storedSessionId = localStorage.getItem('sessionId') || localStorage.getItem('surveySessionId');
+            const storedSessionId = this.getLocalStorage('sessionId') || this.getLocalStorage('surveySessionId');
             if (storedSessionId) {
               this.sessionId = parseInt(storedSessionId);
               this.loadSurvey();
@@ -101,14 +111,14 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
 
     // Get participant ID and session code from localStorage if not already set
     if (!this.participantId) {
-      const participantIdStr = localStorage.getItem('participantId');
+      const participantIdStr = this.getLocalStorage('participantId');
       if (participantIdStr) {
         this.participantId = parseInt(participantIdStr);
       }
     }
     
     if (!this.sessionCode) {
-      this.sessionCode = localStorage.getItem('sessionCode') || '';
+      this.sessionCode = this.getLocalStorage('sessionCode') || '';
     }
     
     // Initialize SignalR
@@ -120,6 +130,7 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopTimer();
+    this.stopCountdown();
     this.cleanup();
   }
 
@@ -241,6 +252,16 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
         console.log('Full survey data:', survey);
         console.log('Questions:', survey.questions);
         
+        // Check session timing
+        if (survey.startTime) {
+          this.sessionStartTime = new Date(survey.startTime);
+        }
+        if (survey.endTime) {
+          this.sessionEndTime = new Date(survey.endTime);
+        }
+        
+        this.checkSessionTiming();
+        
         // Debug ranking questions specifically
         const rankingQuestions = survey.questions?.filter(q => q.questionType === 'ranking');
         console.log('Ranking questions found:', rankingQuestions?.length);
@@ -257,8 +278,11 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
         this.survey = survey;
         this.initializeForm();
         this.loading = false;
-        // Start timer for first question
-        this.startQuestionTimer();
+        
+        // Only start timer if not in waiting room or late join
+        if (!this.isWaitingRoom && !this.isLateJoin) {
+          this.startQuestionTimer();
+        }
       },
       error: (error) => {
         console.error('Error loading survey:', error);
@@ -528,7 +552,7 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
 
   startQuestionTimer(): void {
     this.stopTimer(); // Clear any existing timer
-    this.questionTimer = 30;
+    this.questionTimer = 10; // 10 seconds per question
     this.canNavigate = false;
     this.questionStartTime = new Date();
 
@@ -613,7 +637,8 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
       this.currentQuestionIndex++;
       this.startQuestionTimer();
     } else {
-      // All questions completed, submit survey
+      // All questions completed, submit survey (keep timer running)
+      this.currentQuestionIndex++; // Increment to go beyond last question so currentQuestion returns null
       this.submitAllResponses();
     }
   }
@@ -677,9 +702,8 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
         this.submitting = false;
         this.snackBar.open('Survey completed successfully!', 'Close', { duration: 3000 });
         
-        setTimeout(() => {
-          this.navigateToResults();
-        }, 1500);
+        // Don't navigate away - show thank you card and keep timer active
+        // Timer will continue running in the background
       },
       error: (error) => {
         console.error('Error submitting survey:', error);
@@ -700,6 +724,89 @@ export class SurveyParticipateComponent implements OnInit, OnDestroy {
   }
 
   getTimerPercentage(): number {
-    return (this.questionTimer / 30) * 100;
+    return (this.questionTimer / 10) * 100; // Changed to match 10 second timer
+  }
+
+  // ========== SESSION TIMING AND WAITING ROOM ==========
+
+  checkSessionTiming(): void {
+    const now = new Date();
+    
+    if (!this.sessionStartTime) {
+      console.log('No session start time set, allowing immediate access');
+      return;
+    }
+
+    const startTime = new Date(this.sessionStartTime);
+    const timeDiffMs = startTime.getTime() - now.getTime();
+    const timeDiffSeconds = Math.floor(timeDiffMs / 1000);
+    const twoMinutesInSeconds = 120;
+
+    console.log('Session timing check:', {
+      now: now.toISOString(),
+      startTime: startTime.toISOString(),
+      timeDiffSeconds,
+      timeDiffMinutes: (timeDiffSeconds / 60).toFixed(2)
+    });
+
+    // EARLY: More than 2 minutes before start time - show waiting room
+    if (timeDiffSeconds > twoMinutesInSeconds) {
+      console.log('EARLY join - showing waiting room (more than 2 minutes early)');
+      this.isWaitingRoom = true;
+      this.isLateJoin = false;
+      this.countdownSeconds = timeDiffSeconds;
+      this.startCountdown();
+    } 
+    // ON-TIME: Within ±2 minutes of start time - allow direct access
+    else if (timeDiffSeconds >= -twoMinutesInSeconds && timeDiffSeconds <= twoMinutesInSeconds) {
+      console.log('ON-TIME join - direct access (within ±2 minutes)');
+      this.isWaitingRoom = false;
+      this.isLateJoin = false;
+    } 
+    // LATE: More than 2 minutes after start time - block entry
+    else {
+      console.log('LATE join - session already started (more than 2 minutes late)');
+      this.isWaitingRoom = false;
+      this.isLateJoin = true;
+    }
+  }
+
+  startCountdown(): void {
+    this.stopCountdown();
+    
+    this.countdownInterval = setInterval(() => {
+      this.countdownSeconds--;
+      
+      // Exit waiting room when reaching 2-minute-before mark (entering on-time window)
+      if (this.countdownSeconds <= 120) {
+        this.stopCountdown();
+        this.isWaitingRoom = false;
+        this.isLateJoin = false;
+        
+        // Start the survey
+        this.snackBar.open('Survey is starting now!', 'Close', { duration: 2000 });
+        this.startQuestionTimer();
+      }
+    }, 1000);
+  }
+
+  stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = undefined;
+    }
+  }
+
+  getCountdownDisplay(): string {
+    const minutes = Math.floor(this.countdownSeconds / 60);
+    const seconds = this.countdownSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  proceedAnyway(): void {
+    // Allow late joiners to proceed
+    this.isLateJoin = false;
+    this.isWaitingRoom = false;
+    this.startQuestionTimer();
   }
 }

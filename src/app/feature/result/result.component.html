@@ -228,7 +228,6 @@
                     <th>Status</th>
                     <th>Anonymous</th>
                     <th>Start Time</th>
-                    <th>End Time</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -252,48 +251,53 @@
                         </span>
                       </td>
                       <td>
-                        @if (survey.status.toLowerCase() === 'draft') {
+                        @if (survey.status.toLowerCase() === 'draft' || survey.status.toLowerCase() === 'completed') {
                           <input 
                             type="datetime-local" 
                             class="form-control form-control-sm"
                             [value]="surveyStartTimes[survey.surveyId]"
                             (change)="onSurveyStartTimeChange(survey.surveyId, $event)"
-                            style="min-width: 180px;">
+                            style="min-width: 180px;"
+                            [placeholder]="survey.status.toLowerCase() === 'completed' ? 'Set new start time' : 'Set start time'">
                         } @else {
                           <span class="text-muted">{{ formatDateTime(survey.startTime) }}</span>
                         }
                       </td>
                       <td>
-                        @if (survey.status.toLowerCase() === 'draft') {
-                          <input 
-                            type="datetime-local" 
-                            class="form-control form-control-sm"
-                            [value]="surveyEndTimes[survey.surveyId]"
-                            (change)="onSurveyEndTimeChange(survey.surveyId, $event)"
-                            style="min-width: 180px;">
-                        } @else {
-                          <span class="text-muted">{{ formatDateTime(survey.endTime) }}</span>
-                        }
-                      </td>
-                      <td>
-                        @if (survey.status.toLowerCase() === 'draft') {
-                          <button 
-                            class="btn btn-sm btn-success"
-                            (click)="publishSurvey(survey.surveyId)">
-                            📤 Publish
-                          </button>
-                        } @else {
-                          <button 
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="toggleQR(survey.surveyId)">
-                            {{ showQRForQuizId() === survey.surveyId ? 'Hide QR' : 'Show QR' }}
-                          </button>
-                        }
+                        <div class="d-flex gap-2 flex-wrap">
+                          @if (survey.status.toLowerCase() === 'draft') {
+                            <button 
+                              class="btn btn-sm btn-success"
+                              (click)="publishSurvey(survey.surveyId)">
+                              📤 Publish
+                            </button>
+                          } @else if (survey.status.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-sm btn-warning"
+                              (click)="republishSurvey(survey.surveyId)">
+                              🔄 Republish
+                            </button>
+                          } @else if (survey.status.toLowerCase() === 'active' || survey.status.toLowerCase() === 'scheduled') {
+                            <button 
+                              class="btn btn-sm btn-danger"
+                              (click)="endSurvey(survey.surveyId)">
+                              🛑 End Survey
+                            </button>
+                          }
+                          
+                          @if (survey.sessionCode && survey.status.toLowerCase() !== 'draft') {
+                            <button 
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="toggleQR(survey.surveyId)">
+                              {{ showQRForQuizId() === survey.surveyId ? '🔽 Hide QR' : '🔼 Show QR' }}
+                            </button>
+                          }
+                        </div>
                       </td>
                     </tr>
                     @if (showQRForQuizId() === survey.surveyId && survey.sessionCode) {
                       <tr>
-                        <td colspan="7" class="qr-cell">
+                        <td colspan="6" class="qr-cell">
                           <app-qrcode 
                             [surveyNumber]="survey.sessionCode" 
                             [surveyId]="survey.surveyId"
@@ -330,7 +334,6 @@
                     <th>Status</th>
                     <th>Anonymous</th>
                     <th>Start Time</th>
-                    <th>End Time</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -355,48 +358,53 @@
                         </span>
                       </td>
                       <td>
-                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                        @if (poll.pollStatus.toLowerCase() === 'draft' || poll.pollStatus.toLowerCase() === 'completed') {
                           <input 
                             type="datetime-local" 
                             class="form-control form-control-sm"
                             [value]="pollStartTimes[poll.pollId]"
                             (change)="onPollStartTimeChange(poll.pollId, $event)"
-                            style="min-width: 180px;">
+                            style="min-width: 180px;"
+                            [placeholder]="poll.pollStatus.toLowerCase() === 'completed' ? 'Set new start time' : 'Set start time'">
                         } @else {
                           <span class="text-muted">{{ formatDateTime(poll.startTime) }}</span>
                         }
                       </td>
                       <td>
-                        @if (poll.pollStatus.toLowerCase() === 'draft') {
-                          <input 
-                            type="datetime-local" 
-                            class="form-control form-control-sm"
-                            [value]="pollEndTimes[poll.pollId]"
-                            (change)="onPollEndTimeChange(poll.pollId, $event)"
-                            style="min-width: 180px;">
-                        } @else {
-                          <span class="text-muted">{{ formatDateTime(poll.endTime) }}</span>
-                        }
-                      </td>
-                      <td>
-                        @if (poll.pollStatus.toLowerCase() === 'draft') {
-                          <button 
-                            class="btn btn-sm btn-success"
-                            (click)="publishPoll(poll.pollId)">
-                            📤 Publish
-                          </button>
-                        } @else {
-                          <button 
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="toggleQR(poll.pollId)">
-                            {{ showQRForQuizId() === poll.pollId ? 'Hide QR' : 'Show QR' }}
-                          </button>
-                        }
+                        <div class="d-flex gap-2 flex-wrap">
+                          @if (poll.pollStatus.toLowerCase() === 'draft') {
+                            <button 
+                              class="btn btn-sm btn-success"
+                              (click)="publishPoll(poll.pollId)">
+                              📤 Publish
+                            </button>
+                          } @else if (poll.pollStatus.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-sm btn-warning"
+                              (click)="republishPoll(poll.pollId)">
+                              🔄 Republish
+                            </button>
+                          } @else if (poll.pollStatus.toLowerCase() === 'active' || poll.pollStatus.toLowerCase() === 'scheduled') {
+                            <button 
+                              class="btn btn-sm btn-danger"
+                              (click)="endPoll(poll.pollId)">
+                              🛑 End Poll
+                            </button>
+                          }
+                          
+                          @if (poll.sessionCode && poll.pollStatus.toLowerCase() !== 'draft') {
+                            <button 
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="toggleQR(poll.pollId)">
+                              {{ showQRForQuizId() === poll.pollId ? '🔽 Hide QR' : '🔼 Show QR' }}
+                            </button>
+                          }
+                        </div>
                       </td>
                     </tr>
                     @if (showQRForQuizId() === poll.pollId && poll.sessionCode) {
                       <tr>
-                        <td colspan="9" class="qr-cell">
+                        <td colspan="8" class="qr-cell">
                           <app-qrcode 
                             [pollNumber]="poll.sessionCode" 
                             [pollId]="poll.pollId"

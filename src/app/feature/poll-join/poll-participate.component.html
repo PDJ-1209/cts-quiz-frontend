@@ -4,6 +4,60 @@
       <p>Loading poll...</p>
     </div>
   } @else if (poll()) {
+    <!-- Waiting Room -->
+    @if (isWaitingRoom() && !hasSubmitted()) {
+      <div class="waiting-room">
+        <div class="waiting-card">
+          <div class="waiting-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <h1 class="waiting-title">Poll Starts Soon</h1>
+          <p class="waiting-message">Please wait. The poll will begin in:</p>
+          <div class="countdown-display">
+            {{ getCountdownDisplay() }}
+          </div>
+          <div class="poll-info">
+            <h3>{{ poll()!.pollTitle }}</h3>
+            <p>{{ poll()!.pollQuestion }}</p>
+            <div class="info-items">
+              <div class="info-item">
+                <i class="fas fa-calendar"></i>
+                <span>Start Time: {{ sessionStartTime | date:'short' }}</span>
+              </div>
+              <div class="info-item">
+                <i class="fas fa-list"></i>
+                <span>{{ poll()!.options.length }} Options</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Late Join Warning -->
+    @if (isLateJoin() && !hasSubmitted()) {
+      <div class="late-join-warning">
+        <div class="late-join-card">
+          <div class="warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <h1 class="warning-title">Session Already Started</h1>
+          <p class="warning-message">This poll session began at {{ sessionStartTime | date:'short' }}.</p>
+          <p class="warning-message">You may have limited time to vote.</p>
+          <div class="late-join-actions">
+            <button class="btn btn-primary" (click)="proceedAnyway()">
+              <i class="fas fa-arrow-right"></i> Proceed Anyway
+            </button>
+            <button class="btn btn-secondary" (click)="router.navigate(['/'])">
+              <i class="fas fa-home"></i> Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Normal Poll Flow -->
+    @if (!isWaitingRoom() && !isLateJoin()) {
     <div class="poll-header">
       <h1>{{ poll()?.pollTitle }}</h1>
       <p class="poll-question">{{ poll()?.pollQuestion }}</p>
@@ -52,6 +106,7 @@
         </button>
       }
     </div>
+    } <!-- End of normal poll flow -->
   } @else {
     <div class="error-message">
       <p>Failed to load poll. Please try again.</p>

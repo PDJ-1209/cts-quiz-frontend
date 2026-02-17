@@ -843,10 +843,9 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const startTimeInput = this.pollStartTimes[pollId];
-      const endTimeInput = this.pollEndTimes[pollId];
 
-      if (!startTimeInput || !endTimeInput) {
-        this.snackBar.open('⚠️ Please set both start and end times', 'Close', {
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Please set start time', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
@@ -854,24 +853,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const startDate = new Date(startTimeInput);
-      const endDate = new Date(endTimeInput);
       const now = new Date();
-
-      if (endDate <= now) {
-        this.snackBar.open('⚠️ End time must be in the future', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar'],
-        });
-        return;
-      }
-
-      if (endDate <= startDate) {
-        this.snackBar.open('⚠️ End time must be after start time', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar'],
-        });
-        return;
-      }
 
       // Determine if this is scheduled (future) or immediate publish
       const isScheduled = startDate > now;
@@ -884,7 +866,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         publishResponse = await this.pollService.schedulePoll(
           pollId,
           startDate,
-          endDate,
+          undefined, // No endDate needed
           45 // countdown duration in seconds
         ).toPromise();
         
@@ -899,7 +881,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
           pollId: pollId,
           hostId: this.currentHostId(),
           startedAt: startDate.toISOString(),
-          endedAt: endDate.toISOString()
+          endedAt: undefined // No endDate needed
         };
         
         publishResponse = await this.pollService.publishPoll(publishPayload).toPromise();
@@ -955,10 +937,9 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const startTimeInput = this.surveyStartTimes[surveyId];
-      const endTimeInput = this.surveyEndTimes[surveyId];
 
-      if (!startTimeInput || !endTimeInput) {
-        this.snackBar.open('⚠️ Please set both start and end times', 'Close', {
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Please set start time', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
@@ -966,24 +947,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       const startDate = new Date(startTimeInput);
-      const endDate = new Date(endTimeInput);
       const now = new Date();
-
-      if (endDate <= now) {
-        this.snackBar.open('⚠️ End time must be in the future', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar'],
-        });
-        return;
-      }
-
-      if (endDate <= startDate) {
-        this.snackBar.open('⚠️ End time must be after start time', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar'],
-        });
-        return;
-      }
 
       // Determine if this is scheduled (future) or immediate publish
       const isScheduled = startDate > now;
@@ -996,7 +960,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         publishResponse = await this.surveyService.scheduleSurvey(
           surveyId,
           startDate,
-          endDate,
+          undefined, // No endDate needed
           45 // countdown duration in seconds
         ).toPromise();
         
@@ -1011,7 +975,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
           surveyId: surveyId,
           hostId: this.currentHostId(),
           startedAt: startDate.toISOString(),
-          endedAt: endDate.toISOString()
+          endedAt: undefined // No endDate needed
         };
         
         publishResponse = await this.surveyService.publishSurvey(publishPayload).toPromise();
@@ -1040,6 +1004,192 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       console.error('Error publishing/scheduling survey:', error);
       
       let errorMessage = 'Failed to publish survey';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  // Republish Poll
+  async republishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar'],
+        });
+        return;
+      }
+
+      const startTimeInput = this.pollStartTimes[pollId];
+
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Please set start time', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      const startDate = new Date(startTimeInput);
+
+      console.log('Republishing poll:', {
+        pollId,
+        startTime: startDate.toISOString()
+      });
+
+      const republishResponse = await this.pollService.republishPoll(pollId, {
+        hostId: this.currentHostId(),
+        startedAt: startDate.toISOString(),
+        endedAt: undefined
+      }).toPromise();
+
+      console.log('Poll republish response:', republishResponse);
+
+      this.snackBar.open(`✅ Poll republished successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+
+      // Reload polls to reflect the new session
+      await this.loadPolls();
+
+    } catch (error: any) {
+      console.error('Error republishing poll:', error);
+      
+      let errorMessage = 'Failed to republish poll';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  // Republish Survey
+  async republishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', {
+          duration: 3000,
+          panelClass: ['error-snackbar'],
+        });
+        return;
+      }
+
+      const startTimeInput = this.surveyStartTimes[surveyId];
+
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Please set start time', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar'],
+        });
+        return;
+      }
+
+      const startDate = new Date(startTimeInput);
+
+      console.log('Republishing survey:', {
+        surveyId,
+        startTime: startDate.toISOString()
+      });
+
+      const republishResponse = await this.surveyService.republishSurvey(surveyId, {
+        hostId: this.currentHostId(),
+        startedAt: startDate.toISOString(),
+        endedAt: undefined
+      }).toPromise();
+
+      console.log('Survey republish response:', republishResponse);
+
+      this.snackBar.open(`✅ Survey republished successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+
+      // Reload surveys to reflect the new session
+      await this.loadSurveys();
+
+    } catch (error: any) {
+      console.error('Error republishing survey:', error);
+      
+      let errorMessage = 'Failed to republish survey';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  // End Poll
+  async endPoll(pollId: number) {
+    try {
+      await this.pollService.endPoll(pollId).toPromise();
+      
+      this.snackBar.open(`✅ Poll ended successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+
+      // Reload polls to reflect the completed status
+      await this.loadPolls();
+
+    } catch (error: any) {
+      console.error('Error ending poll:', error);
+      
+      let errorMessage = 'Failed to end poll';
+      if (error.status === 500) {
+        errorMessage = error.error?.message || 'Server error';
+      } else if (error.status === 0) {
+        errorMessage = 'Cannot connect to backend server';
+      }
+      
+      this.snackBar.open(`⚠️ ${errorMessage}`, 'Close', {
+        duration: 5000,
+        panelClass: ['error-snackbar'],
+      });
+    }
+  }
+
+  // End Survey
+  async endSurvey(surveyId: number) {
+    try {
+      await this.surveyService.endSurvey(surveyId).toPromise();
+      
+      this.snackBar.open(`✅ Survey ended successfully!`, 'Close', {
+        duration: 5000,
+        panelClass: ['success-snackbar'],
+      });
+
+      // Reload surveys to reflect the completed status
+      await this.loadSurveys();
+
+    } catch (error: any) {
+      console.error('Error ending survey:', error);
+      
+      let errorMessage = 'Failed to end survey';
       if (error.status === 500) {
         errorMessage = error.error?.message || 'Server error';
       } else if (error.status === 0) {

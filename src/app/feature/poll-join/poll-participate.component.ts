@@ -6,7 +6,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import * as signalR from '@microsoft/signalr';
 import { PollService } from '../../services/poll.service';
 import { PollOverview, PollVoteSubmission } from '../../models/ipoll';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-poll-participate',
@@ -31,12 +31,20 @@ export class PollParticipateComponent implements OnInit, OnDestroy {
   hasSubmitted = signal<boolean>(false);
   pollEnded = signal<boolean>(false);
   
+  // Session timing for waiting room
+  sessionStartTime?: Date;
+  sessionEndTime?: Date;
+  isWaitingRoom = signal<boolean>(false);
+  isLateJoin = signal<boolean>(false);
+  countdownSeconds = signal<number>(0);
+  private countdownInterval?: any;
+  
   private hubConnection?: signalR.HubConnection;
   private timerInterval?: any;
   private hasNavigatedAway = false;
   
   private pollService = inject(PollService);
-  private router = inject(Router);
+  router = inject(Router);
   private route = inject(ActivatedRoute);
   private snackBar = inject(MatSnackBar);
 
@@ -139,6 +147,16 @@ export class PollParticipateComponent implements OnInit, OnDestroy {
     this.pollService.getParticipantPollBySession(sessionId).subscribe({
       next: (poll) => {
         this.poll.set(poll);
+        
+        // Check session timing
+        if (poll.startTime) {
+          this.sessionStartTime = new Date(poll.startTime);
+        }
+        if (poll.endTime) {
+          this.sessionEndTime = new Date(poll.endTime);
+        }
+        
+        this.checkSessionTiming();
         this.loading.set(false);
       },
       error: (error) => {
@@ -351,6 +369,10 @@ export class PollParticipateComponent implements OnInit, OnDestroy {
       clearInterval(this.timerInterval);
     }
     
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    
     if (this.hubConnection) {
       this.hubConnection.stop();
     }
@@ -360,5 +382,89 @@ export class PollParticipateComponent implements OnInit, OnDestroy {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // ========== SESSION TIMING AND WAITING ROOM ==========
+
+  private checkSessionTiming(): void {
+    const now = new Date();
+    
+    if (!this.sessionStartTime) {
+      console.log('No session start time set, allowing immediate access');
+      return;
+    }
+
+    const startTime = new Date(this.sessionStartTime);
+    const timeDiffMs = startTime.getTime() - now.getTime();
+    const timeDiffSeconds = Math.floor(timeDiffMs / 1000);
+    const twoMinutesInSeconds = 120;
+
+    console.log('Session timing check:', {
+      now: now.toISOString(),
+      startTime: startTime.toISOString(),
+      timeDiffSeconds,
+      timeDiffMinutes: (timeDiffSeconds / 60).toFixed(2)
+    });
+
+    // EARLY: More than 2 minutes before start time - show waiting room
+    if (timeDiffSeconds > twoMinutesInSeconds) {
+      console.log('EARLY join - showing waiting room (more than 2 minutes early)');
+      this.isWaitingRoom.set(true);
+      this.isLateJoin.set(false);
+      this.countdownSeconds.set(timeDiffSeconds);
+      this.startCountdown();
+    } 
+    // ON-TIME: Within ±2 minutes of start time - allow direct access
+    else if (timeDiffSeconds >= -twoMinutesInSeconds && timeDiffSeconds <= twoMinutesInSeconds) {
+      console.log('ON-TIME join - direct access (within ±2 minutes)');
+      this.isWaitingRoom.set(false);
+      this.isLateJoin.set(false);
+    } 
+    // LATE: More than 2 minutes after start time - block entry
+    else {
+      console.log('LATE join - session already started (more than 2 minutes late)');
+      this.isWaitingRoom.set(false);
+      this.isLateJoin.set(true);
+    }
+  }
+
+  private startCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    
+    this.countdownInterval = setInterval(() => {
+      const current = this.countdownSeconds();
+      this.countdownSeconds.set(current - 1);
+      
+      // Exit waiting room when reaching 2-minute-before mark (entering on-time window)
+      if (this.countdownSeconds() <= 120) {
+        this.stopCountdown();
+        this.isWaitingRoom.set(false);
+        this.isLateJoin.set(false);
+        
+        // Allow poll interaction
+        this.snackBar.open('Poll is now available!', 'Close', { duration: 2000 });
+      }
+    }, 1000);
+  }
+
+  private stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = undefined;
+    }
+  }
+
+  getCountdownDisplay(): string {
+    const minutes = Math.floor(this.countdownSeconds() / 60);
+    const seconds = this.countdownSeconds() % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  proceedAnyway(): void {
+    // Allow late joiners to proceed
+    this.isLateJoin.set(false);
+    this.isWaitingRoom.set(false);
   }
 }

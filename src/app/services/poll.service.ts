@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 import { 
   Poll, 
   PollResult, 
@@ -157,5 +157,9 @@ export class PollService {
       `${environment.apiUrl}/Participate/Poll/responses/participant/${participantId}/poll/${pollId}`
     );
   }
-}
 
+  // End poll
+  endPoll(pollId: number): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/Host/Poll/${pollId}/end`, {});
+  }
+}

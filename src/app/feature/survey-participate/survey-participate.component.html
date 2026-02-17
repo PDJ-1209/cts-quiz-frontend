@@ -1,4 +1,54 @@
 <div class="survey-container" *ngIf="!loading && survey">
+  <!-- Waiting Room -->
+  <div class="waiting-room" *ngIf="isWaitingRoom && !hasSubmitted">
+    <div class="waiting-card">
+      <div class="waiting-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <h1 class="waiting-title">Survey Starts Soon</h1>
+      <p class="waiting-message">Please wait. The survey will begin in:</p>
+      <div class="countdown-display">
+        {{ getCountdownDisplay() }}
+      </div>
+      <div class="survey-info">
+        <h3>{{ survey.title }}</h3>
+        <p *ngIf="survey.description">{{ survey.description }}</p>
+        <div class="info-items">
+          <div class="info-item">
+            <i class="fas fa-calendar"></i>
+            <span>Start Time: {{ sessionStartTime | date:'short' }}</span>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-question-circle"></i>
+            <span>{{ survey.questions?.length || 0 }} Questions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Late Join Warning -->
+  <div class="late-join-warning" *ngIf="isLateJoin && !hasSubmitted">
+    <div class="late-join-card">
+      <div class="warning-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <h1 class="warning-title">Session Already Started</h1>
+      <p class="warning-message">This survey session began at {{ sessionStartTime | date:'short' }}.</p>
+      <p class="warning-message">You may have limited time to complete it.</p>
+      <div class="late-join-actions">
+        <button class="btn btn-primary" (click)="proceedAnyway()">
+          <i class="fas fa-arrow-right"></i> Proceed Anyway
+        </button>
+        <button class="btn btn-secondary" (click)="router.navigate(['/'])">
+          <i class="fas fa-home"></i> Go Back
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Normal Survey Flow -->
+  <div *ngIf="!isWaitingRoom && !isLateJoin">
   <!-- Fixed Header with Survey Title and Progress -->
   <div class="survey-header-fixed">
     <h1 class="survey-title">{{ survey.title }}</h1>
@@ -185,29 +235,11 @@
       <div class="success-icon">
         <i class="fas fa-check-circle"></i>
       </div>
-      <h1 class="thank-you-title">Thank You!</h1>
-      <p class="thank-you-message">Your survey responses have been submitted successfully.</p>
-      <div class="completion-info">
-        <div class="info-item">
-          <i class="fas fa-clipboard-check"></i>
-          <span>{{ totalQuestions }} Questions Completed</span>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-user"></i>
-          <span>Participant: {{ localStorage.getItem('participantName') || 'Anonymous' }}</span>
-        </div>
-        <div class="info-item">
-          <i class="fas fa-check-double"></i>
-          <span>All responses saved</span>
-        </div>
-      </div>
-      <div class="thank-you-actions">
-        <button class="btn btn-home" (click)="router.navigate(['/'])">
-          <i class="fas fa-home"></i> Go to Home
-        </button>
-      </div>
+      <h1 class="thank-you-title">Thank you</h1>
+      <p class="thank-you-message">Your survey was successfully submitted.</p>
     </div>
   </div>
+  </div> <!-- End of normal survey flow -->
 </div>
 
 <div class="loading-container" *ngIf="loading">
