@@ -131,4 +131,12 @@ export class TemplateService {
     const url = `${environment.apiUrl}/Host/Question/random`;
     return this.http.post<Question[]>(url, request, { headers: this.jsonHeaders });
   }
+
+  getQuestionsByCategory(category: string, limit: number = 15): Observable<Question[]> {
+    const url = `${environment.apiUrl}/Host/Question/category/${encodeURIComponent(category)}/questions`;
+    return this.http.get<Question[]>(url, { 
+      headers: this.jsonHeaders,
+      params: { limit } as any
+    });
+  }
 }
