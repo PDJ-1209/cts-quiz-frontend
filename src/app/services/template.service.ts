@@ -35,6 +35,7 @@ export class TemplateService {
       templateType: template.templateType || 'PDF',
       categoryType: template.categoryType,
       templateConfig: (template.templateConfig || '').trim(),
+      selectedQuestionIds: template.selectedQuestionIds,
       createdBy: Number(template.createdBy || 1)
     };
 
