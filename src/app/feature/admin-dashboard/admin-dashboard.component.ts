@@ -5,9 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { debounceTime, Subject } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService, ThemeType } from '../../services/theme.service';
 import { User } from '../../models/auth.models';
 import { AdminService, AdminUser, Role, Template, AdminStats } from '../../services/admin.service';
 import { AnalyticsComponent } from '../analytics/analytics.component';
+
+// Bootstrap 5 Admin Dashboard - Enhanced Component with Dark/Light Theme Support
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -21,6 +24,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private adminService = inject(AdminService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private themeService = inject(ThemeService);
+  
+  // Theme management
+  currentTheme = signal<ThemeType>('light');
+  isDarkMode = signal(false);
   
   currentUser = signal<User | null>(null);
   users = signal<AdminUser[]>([]);
@@ -84,6 +92,46 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.loadAdminData();
     this.setupSearchDebounce();
     this.setupCounterAnimation();
+    this.setupTheme();
+  }
+  
+  /**
+   * Initialize and setup theme
+   */
+  private setupTheme(): void {
+    // Set initial theme
+    const initialTheme = this.themeService.getCurrentTheme();
+    this.currentTheme.set(initialTheme);
+    this.isDarkMode.set(initialTheme === 'dark');
+
+    // Subscribe to theme changes
+    this.themeService.theme$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((theme: ThemeType) => {
+        this.currentTheme.set(theme);
+        this.isDarkMode.set(theme === 'dark');
+      });
+  }
+
+  /**
+   * Toggle theme between light and dark
+   */
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
+
+  /**
+   * Get theme icon class for UI
+   */
+  getThemeIcon(): string {
+    return this.isDarkMode() ? 'fas fa-sun' : 'fas fa-moon';
+  }
+
+  /**
+   * Get theme button title
+   */
+  getThemeButtonTitle(): string {
+    return this.isDarkMode() ? 'Switch to Light Theme' : 'Switch to Dark Theme';
   }
   
   private setupSearchDebounce() {
