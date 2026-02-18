@@ -64,6 +64,33 @@ export class AddQuestionComponent implements AfterViewInit {
 
   readonly questionTypes = ['Multiple Choice', 'True/False', 'Short Answer'] as const;
   readonly difficulties = ['Easy', 'Medium', 'Hard'] as const;
+  readonly categories = [
+    'Java',
+    'Database',
+    'Human Resource',
+    'Angular',
+    'Dotnet',
+    'Data Structure',
+    'Python',
+    'JavaScript',
+    'C++',
+    'HTML/CSS',
+    'Machine Learning',
+    'Artificial Intelligence',
+    'Cloud Computing',
+    'Networking',
+    'Security',
+    'Testing',
+    'DevOps',
+    'Agile',
+    'Project Management',
+    'UI/UX Design',
+    'Mobile Development',
+    'Data Science',
+    'Big Data',
+    'React',
+    'Node.js'
+  ] as const;
 
   suggestionsOpen = signal(false);
   csvStatus = signal<string>('');

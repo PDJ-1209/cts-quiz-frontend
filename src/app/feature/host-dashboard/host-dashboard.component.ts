@@ -91,6 +91,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Calendar-related signals
   showCalendar = signal(false);
+  showSettingsDropdown = signal(false);
   currentCalendarDate = signal(new Date());
   selectedDate = signal<Date | null>(null);
   selectedDateQuizzes = signal<CalendarQuiz[]>([]);
@@ -438,6 +439,10 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   // Calendar methods
   toggleCalendar(): void {
     this.showCalendar.set(!this.showCalendar());
+  }
+
+  toggleSettingsDropdown(): void {
+    this.showSettingsDropdown.set(!this.showSettingsDropdown());
   }
 
   getCurrentMonthYear(): string {

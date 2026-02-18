@@ -58,68 +58,20 @@
             </button>
             
             <!-- Host Access - Only if user has Host role -->
-            <div class="host-access-group" *ngIf="canAccessHost()">
-              <button class="cognizant-btn-host" (click)="showHostOptions = !showHostOptions">
-                <i class="fas fa-graduation-cap me-1"></i>Host Dashboard
-                <i class="fas fa-chevron-down ms-1" [class.rotated]="showHostOptions"></i>
-              </button>
-              <div class="host-dropdown" [class.show]="showHostOptions">
-                <div class="dropdown-header">
-                  <h6>Learning Solutions</h6>
-                  <span class="subtitle">Choose your assessment type</span>
-                </div>
-                <button class="host-option featured" (click)="navigateToQuizCreation()">
-                  <div class="option-icon quiz-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L13.5 7L16 9.5V12.5H8V9.5L10.5 7L9 4L3 7V9H4V19H6V21H18V19H20V9H21ZM8 12.5H16V16.5H8V12.5Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Smart Quiz</span>
-                    <span class="option-description">Create interactive assessments</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <button class="host-option featured" (click)="showAccessAlert('survey')">
-                  <div class="option-icon survey-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3ZM9,17H7V15H9V17ZM9,13H7V11H9V13ZM9,9H7V7H9V9ZM17,17H11V15H17V17ZM17,13H11V11H17V13ZM17,9H11V7H17V9Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Survey Builder</span>
-                    <span class="option-description">Gather insights & feedback</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <button class="host-option featured" (click)="showAccessAlert('poll')">
-                  <div class="option-icon poll-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Live Polls</span>
-                    <span class="option-description">Real-time audience engagement</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <div class="dropdown-footer">
-                  <small>Powered by Cognizant AI</small>
-                </div>
-              </div>
-            </div>
+            <button *ngIf="canAccessHost()" class="cognizant-btn-host" (click)="navigateToHostDashboard()">
+              <i class="fas fa-graduation-cap me-1"></i>Host Dashboard
+            </button>
             
             <!-- Admin Access - Only if user has Admin role -->
-            <button *ngIf="canAccessAdmin()" class="cognizant-btn-admin" (click)="router.navigate(['/admin/dashboard'])">
+            <!-- <button *ngIf="canAccessAdmin()" class="cognizant-btn-admin" (click)="router.navigate(['/admin/dashboard'])">
               <i class="fas fa-user-shield me-1"></i>Admin Dashboard
-            </button>
+            </button> -->
             
             <!-- Admin Access Disabled for non-admin users -->
-            <button *ngIf="!canAccessAdmin() && isAuthenticated()" class="cognizant-btn-admin-disabled" (click)="showAccessAlert('admin')">
+            <!-- <button *ngIf="!canAccessAdmin() && isAuthenticated()" class="cognizant-btn-admin-disabled" (click)="showAccessAlert('admin')">
               <i class="fas fa-user-shield me-1"></i>Admin
               <span class="access-badge">Restricted</span>
-            </button>
+            </button> -->
             
           </div>
         </ng-template>
@@ -393,7 +345,7 @@
               </div>
             </div>
             
-            <div class="role-card host-card enhanced" (click)="showHostOptions = !showHostOptions">
+            <div class="role-card host-card enhanced" (click)="navigateToHostDashboard()">
               <div class="role-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
                   <path d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z"/>
@@ -409,7 +361,7 @@
                 </small>
               </div>
               <div class="role-badge primary">
-                <i class="fas fa-chevron-down" [class.rotated]="showHostOptions"></i>
+                <i class="fas fa-arrow-right"></i>
               </div>
             </div>
             

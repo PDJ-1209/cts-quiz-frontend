@@ -3,10 +3,10 @@
   <div class="container-fluid px-4">
     <div class="d-flex align-items-center justify-content-between py-3">
       <div class="header-brand d-flex align-items-center">
-        <button class="btn btn-outline-light btn-sm me-3" (click)="navigateBack()">
+        <!-- <button class="btn btn-outline-light btn-sm me-3" (click)="navigateBack()">
           <i class="fas fa-arrow-left me-1"></i>
           <span class="d-none d-md-inline">Back</span>
-        </button>
+        </button> -->
         <div class="brand-info">
           <div class="cognizant-logo d-flex align-items-center">
             <div class="logo-container me-3">
@@ -20,21 +20,26 @@
         </div>
       </div>
       <div class="header-actions d-flex align-items-center gap-2 gap-md-3">
-        <!-- Tutorial Button -->
-        <button class="btn btn-outline-light btn-sm" (click)="resetTutorial()" title="Start Tutorial">
-          <i class="fas fa-question-circle me-1"></i>
-          <span class="d-none d-lg-inline">Tutorial</span>
-        </button>
         <!-- Quiz Calendar Button -->
         <button class="btn btn-outline-light btn-sm" (click)="toggleCalendar()" title="Quiz Calendar">
           <i class="fas fa-calendar-alt me-1"></i>
           <span class="d-none d-lg-inline">Calendar</span>
         </button>
-        <!-- Logout Button -->
-        <button class="btn btn-outline-danger btn-sm" (click)="logout()" title="Logout">
-          <i class="fas fa-sign-out-alt me-1"></i>
-          <span class="d-none d-lg-inline">Logout</span>
-        </button>
+        <!-- Settings Dropdown -->
+        <div class="settings-dropdown-container position-relative">
+          <button class="btn btn-outline-light btn-sm" (click)="toggleSettingsDropdown()" title="Settings">
+            <i class="fas fa-cog me-1"></i>
+            <span class="d-none d-lg-inline">Settings</span>
+          </button>
+          <div class="settings-dropdown" [class.show]="showSettingsDropdown()" *ngIf="showSettingsDropdown()">
+            <button class="dropdown-item" (click)="resetTutorial(); toggleSettingsDropdown()">
+              <i class="fas fa-question-circle me-2"></i>Tutorial
+            </button>
+            <button class="dropdown-item logout-item" (click)="logout(); toggleSettingsDropdown()">
+              <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
+          </div>
+        </div>
         <div class="user-info text-end text-white ms-2">
           <div class="fw-bold user-name">{{ hostName() }}</div>
           <div class="datetime-display">
@@ -71,7 +76,7 @@
   <div class="container-fluid px-4">
     <div class="row g-4">
       <!-- Total Quizzes -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
+      <div class="col-xl col-lg-4 col-md-6 col-sm-6">
         <div class="stat-card quiz-card">
           <div class="stat-icon">
             <i class="fas fa-brain"></i>
@@ -83,34 +88,8 @@
         </div>
       </div>
 
-      <!-- Draft Quizzes -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="stat-card draft-card">
-          <div class="stat-icon">
-            <i class="fas fa-edit"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="stat-number">{{ stats().draftQuizzes }}</h3>
-            <p class="stat-label">Drafts</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Published Quizzes -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="stat-card published-card">
-          <div class="stat-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="stat-number">{{ stats().publishedQuizzes }}</h3>
-            <p class="stat-label">Published</p>
-          </div>
-        </div>
-      </div>
-
       <!-- Total Surveys -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
+      <div class="col-xl col-lg-4 col-md-6 col-sm-6">
         <div class="stat-card survey-card">
           <div class="stat-icon">
             <i class="fas fa-clipboard-list"></i>
@@ -123,7 +102,7 @@
       </div>
 
       <!-- Total Polls -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
+      <div class="col-xl col-lg-4 col-md-6 col-sm-6">
         <div class="stat-card poll-card">
           <div class="stat-icon">
             <i class="fas fa-poll"></i>
@@ -135,15 +114,28 @@
         </div>
       </div>
 
-      <!-- Total Questions -->
-      <div class="col-lg-2 col-md-4 col-sm-6">
-        <div class="stat-card questions-card">
+      <!-- Draft Quizzes -->
+      <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+        <div class="stat-card draft-card">
           <div class="stat-icon">
-            <i class="fas fa-question-circle"></i>
+            <i class="fas fa-edit"></i>
           </div>
           <div class="stat-content">
-            <h3 class="stat-number">{{ stats().totalQuestions }}</h3>
-            <p class="stat-label">Questions</p>
+            <h3 class="stat-number">{{ stats().draftQuizzes }}</h3>
+            <p class="stat-label">Drafts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Published Quizzes -->
+      <div class="col-xl col-lg-4 col-md-6 col-sm-6">
+        <div class="stat-card published-card">
+          <div class="stat-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="stat-content">
+            <h3 class="stat-number">{{ stats().publishedQuizzes }}</h3>
+            <p class="stat-label">Published</p>
           </div>
         </div>
       </div>

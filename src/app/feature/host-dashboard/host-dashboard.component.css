@@ -880,3 +880,74 @@
     gap: 0.5rem;
   }
 }
+
+/* Settings Dropdown Styles */
+.settings-dropdown-container {
+  position: relative;
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  visibility: hidden;
+  transition: all 0.2s ease-in-out;
+  z-index: 1000;
+}
+
+.settings-dropdown.show {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.settings-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-dropdown .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.settings-dropdown .dropdown-item:hover {
+  background: #f8f9fa;
+  color: var(--cognizant-primary);
+}
+
+.settings-dropdown .dropdown-item.logout-item:hover {
+  background: #fff5f5;
+  color: var(--cognizant-danger);
+}
+
+.settings-dropdown .dropdown-item i {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+/* Animation for settings icon */
+.btn-outline-light .fa-cog {
+  transition: transform 0.3s ease;
+}
+
+.btn-outline-light:hover .fa-cog {
+  transform: rotate(45deg);
+}

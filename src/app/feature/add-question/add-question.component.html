@@ -51,8 +51,12 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Category</label>
-                <input type="text" class="form-control" [formControl]="form.controls.category"
-                  placeholder="e.g., Angular, JavaScript" />
+                <select class="form-select" [formControl]="form.controls.category">
+                  <option value="" disabled selected>Select a category</option>
+                  @for (category of categories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
               </div>
             </div>
             @if (questions().length > 0) {

@@ -73,7 +73,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   showStats = signal(false);
   
   // UI state
-  showHostOptions = false;
   isLoading = signal(false);
   error = signal<string | null>(null);
   
@@ -243,13 +242,23 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     this.isLoading.set(false);
   }
   
+  navigateToHostDashboard() {
+    try {
+      this.clearError();
+      this.router.navigate(['/host/dashboard']).catch(error => {
+        this.handleError(error, 'navigation to host dashboard');
+      });
+    } catch (error) {
+      this.handleError(error, 'navigateToHostDashboard');
+    }
+  }
+
   navigateToQuizCreation() {
     try {
       this.clearError();
       this.router.navigate(['/host/dashboard']).catch(error => {
         this.handleError(error, 'navigation to host dashboard');
       });
-      this.showHostOptions = false;
     } catch (error) {
       this.handleError(error, 'navigateToQuizCreation');
     }
@@ -261,7 +270,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       this.router.navigate(['/host/dashboard']).catch(error => {
         this.handleError(error, 'navigation to host dashboard');
       });
-      this.showHostOptions = false;
     } catch (error) {
       this.handleError(error, 'navigateToSurveyCreation');
     }
@@ -273,7 +281,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       this.router.navigate(['/host/dashboard']).catch(error => {
         this.handleError(error, 'navigation to host dashboard');
       });
-      this.showHostOptions = false;
     } catch (error) {
       this.handleError(error, 'navigateToPollCreation');
     }
@@ -281,8 +288,8 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   
   navigateToHost() {
     try {
-      // Legacy method - redirect to quiz creation
-      this.navigateToQuizCreation();
+      // Legacy method - redirect to host dashboard
+      this.navigateToHostDashboard();
     } catch (error) {
       this.handleError(error, 'navigateToHost');
     }
@@ -411,8 +418,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   }
   
   showAccessAlert(type: 'admin' | 'survey' | 'poll') {
-    this.showHostOptions = false;
-    
     // Handle survey navigation directly
     if (type === 'survey') {
       this.navigateToSurveyCreation();
