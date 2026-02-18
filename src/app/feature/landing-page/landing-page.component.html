@@ -1,4 +1,28 @@
 <div class="cognizant-landing">
+<!-- Fancy Popup Notification -->
+@if (popup()) {
+  <div class="fancy-popup-container">
+    <div class="fancy-popup" 
+         [class.popup-success]="popup()?.type === 'success'" 
+         [class.popup-error]="popup()?.type === 'error'" 
+         [class.popup-warning]="popup()?.type === 'warning'">
+      <div class="popup-icon">
+        @if (popup()?.type === 'success') {
+          <span class="icon-checkmark">✓</span>
+        } @else if (popup()?.type === 'error') {
+          <span class="icon-cross">✕</span>
+        } @else {
+          <span class="icon-warning">⚠</span>
+        }
+      </div>
+      <div class="popup-content">
+        <p class="popup-message">{{ popup()?.message }}</p>
+      </div>
+      <button class="popup-close" (click)="closePopup()" aria-label="Close">×</button>
+    </div>
+  </div>
+}
+
 <!-- Cognizant Header -->
 <header class="cognizant-header">
   <div class="container">

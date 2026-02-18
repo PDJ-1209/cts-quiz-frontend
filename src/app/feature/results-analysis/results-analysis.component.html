@@ -1,0 +1,188 @@
+<!-- Results Analysis Page -->
+<div class="results-container">
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading quiz results...</p>
+    </div>
+  }
+
+  <!-- Main Content -->
+  @if (!loading()) {
+    <!-- Header -->
+    <header class="results-header">
+      <div class="header-content">
+        <button class="back-btn" (click)="goBack()">
+          <span class="arrow">←</span> Back to Content Management
+        </button>
+        <h1 class="page-title">📊 Quiz Results & Analysis</h1>
+        <button class="export-btn" (click)="exportAsCSV()">
+          📥 Export CSV
+        </button>
+      </div>
+    </header>
+
+    <!-- Session Summary -->
+    @if (sessionSummary(); as summary) {
+      <section class="summary-section">
+        <div class="summary-header">
+          <h2>{{ summary.quizName }}</h2>
+          <div class="session-code-badge">Session: {{ summary.sessionCode }}</div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="card-icon">👥</div>
+            <div class="card-content">
+              <div class="card-value">{{ summary.totalParticipants }}</div>
+              <div class="card-label">Total Participants</div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-icon">📈</div>
+            <div class="card-content">
+              <div class="card-value">{{ summary.averageScore.toFixed(1) }}%</div>
+              <div class="card-label">Average Score</div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-icon">✅</div>
+            <div class="card-content">
+              <div class="card-value">{{ summary.completionRate.toFixed(1) }}%</div>
+              <div class="card-label">Completion Rate</div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-icon">🏆</div>
+            <div class="card-content">
+              <div class="card-value">{{ summary.topScore }}%</div>
+              <div class="card-label">Top Score</div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-icon">📉</div>
+            <div class="card-content">
+              <div class="card-value">{{ summary.lowestScore }}%</div>
+              <div class="card-label">Lowest Score</div>
+            </div>
+          </div>
+
+          <div class="summary-card">
+            <div class="card-icon">⏱️</div>
+            <div class="card-content">
+              <div class="card-value">{{ (summary.endedAt | date:'short') || 'In Progress' }}</div>
+              <div class="card-label">Ended At</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Question-wise Analysis -->
+    <section class="analysis-section">
+      <h2 class="section-title">🎯 Question-wise Analysis</h2>
+      
+      @if (questionAnalysis().length > 0) {
+        <div class="questions-grid">
+          @for (question of questionAnalysis(); track question.questionId) {
+            <div class="question-card">
+              <div class="question-header">
+                <span class="question-number">Q{{ question.questionId }}</span>
+                <span class="response-count">{{ question.totalResponses }} responses</span>
+              </div>
+              
+              <p class="question-text">{{ question.questionText }}</p>
+              
+              <div class="analysis-chart">
+                <div class="chart-row correct-row">
+                  <span class="chart-label">✅ Correct</span>
+                  <div class="chart-bar-container">
+                    <div class="chart-bar correct-bar" 
+                         [style.width.%]="getBarWidth(question.correctCount, question.totalResponses)">
+                      <span class="bar-value">{{ question.correctCount }}</span>
+                    </div>
+                  </div>
+                  <span class="chart-percentage">{{ question.correctPercentage.toFixed(1) }}%</span>
+                </div>
+
+                <div class="chart-row incorrect-row">
+                  <span class="chart-label">❌ Incorrect</span>
+                  <div class="chart-bar-container">
+                    <div class="chart-bar incorrect-bar" 
+                         [style.width.%]="getBarWidth(question.incorrectCount, question.totalResponses)">
+                      <span class="bar-value">{{ question.incorrectCount }}</span>
+                    </div>
+                  </div>
+                  <span class="chart-percentage">{{ (100 - question.correctPercentage).toFixed(1) }}%</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="no-data-message">
+          <p>📊 No question analysis data available</p>
+        </div>
+      }
+    </section>
+
+    <!-- Participant Results Table -->
+    <section class="participants-section">
+      <h2 class="section-title">📋 Participant Results</h2>
+      
+      @if (participantResults().length > 0) {
+        <div class="table-responsive">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Participant Name</th>
+                <th>Employee ID</th>
+                <th>Score</th>
+                <th>Correct Answers</th>
+                <th>Total Questions</th>
+                <th>Completed At</th>
+                <th>Time Taken</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (result of participantResults(); track result.employeeId; let i = $index) {
+                <tr [class.top-performer]="i === 0">
+                  <td>{{ i + 1 }}</td>
+                  <td class="participant-name">
+                    {{ result.participantName }}
+                    @if (i === 0) {
+                      <span class="trophy-icon">🏆</span>
+                    }
+                  </td>
+                  <td>{{ result.employeeId }}</td>
+                  <td class="score-cell">
+                    <span class="score-badge" 
+                          [class.high-score]="result.score >= 80"
+                          [class.medium-score]="result.score >= 50 && result.score < 80"
+                          [class.low-score]="result.score < 50">
+                      {{ result.score }}%
+                    </span>
+                  </td>
+                  <td>{{ result.correctAnswers }}</td>
+                  <td>{{ result.totalQuestions }}</td>
+                  <td>{{ result.completedAt | date:'short' }}</td>
+                  <td>{{ result.timeTaken }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="no-data-message">
+          <p>👥 No participant results available</p>
+        </div>
+      }
+    </section>
+  }
+</div>

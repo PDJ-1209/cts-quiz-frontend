@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 
 // Define interfaces for type safety
 interface SurveyData {
@@ -55,6 +55,10 @@ export class SignalrService {
   
   // Connection state
   public connectionEstablished$ = new BehaviorSubject<boolean>(false);
+  public leaderboardConnectionEstablished$ = new BehaviorSubject<boolean>(false);
+
+  // Leaderboard Hub Connection (separate from main hub)
+  private leaderboardHubConnection!: signalR.HubConnection;
 
   constructor() {}
 
@@ -172,6 +176,124 @@ export class SignalrService {
     if (this.hubConnection) {
       this.hubConnection.stop();
       this.connectionEstablished$.next(false);
+    }
+  }
+
+  /**
+   * Initialize Leaderboard Hub Connection
+   */
+  public initLeaderboardHub(sessionId: number): void {
+    if (this.leaderboardHubConnection && this.leaderboardConnectionEstablished$.value) {
+      console.log('[SignalR] Leaderboard hub already connected');
+      return;
+    }
+
+    this.leaderboardHubConnection = new signalR.HubConnectionBuilder()
+      .withUrl(`${environment.signalRUrl}/leaderboardHub`, {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    this.leaderboardHubConnection
+      .start()
+      .then(() => {
+        console.log(`[SignalR] Connected to Leaderboard Hub for Session ${sessionId}`);
+        this.leaderboardConnectionEstablished$.next(true);
+        
+        // Join the session leaderboard group
+        this.joinSessionLeaderboard(sessionId);
+        this.registerLeaderboardHandlers();
+      })
+      .catch((err: Error) => {
+        console.error('[SignalR] Leaderboard Hub Connection Error: ', err);
+        this.leaderboardConnectionEstablished$.next(false);
+      });
+
+    // Handle reconnection
+    this.leaderboardHubConnection.onreconnected(() => {
+      console.log('[SignalR] Leaderboard hub reconnected');
+      this.leaderboardConnectionEstablished$.next(true);
+      this.joinSessionLeaderboard(sessionId);
+    });
+
+    this.leaderboardHubConnection.onclose(() => {
+      console.log('[SignalR] Leaderboard hub connection closed');
+      this.leaderboardConnectionEstablished$.next(false);
+    });
+  }
+
+  /**
+   * Join session leaderboard group
+   */
+  private joinSessionLeaderboard(sessionId: number): void {
+    if (this.leaderboardHubConnection) {
+      this.leaderboardHubConnection.invoke('JoinSessionLeaderboard', sessionId)
+        .catch((err: Error) => console.error('[SignalR] JoinSessionLeaderboard Error: ', err));
+    }
+  }
+
+  /**
+   * Leave session leaderboard group
+   */
+  public leaveSessionLeaderboard(sessionId: number): void {
+    if (this.leaderboardHubConnection) {
+      this.leaderboardHubConnection.invoke('LeaveSessionLeaderboard', sessionId)
+        .catch((err: Error) => console.error('[SignalR] LeaveSessionLeaderboard Error: ', err));
+    }
+  }
+
+  /**
+   * Register leaderboard-specific event handlers
+   */
+  private registerLeaderboardHandlers(): void {
+    if (!this.leaderboardHubConnection) return;
+
+    // Leaderboard update events
+    this.leaderboardHubConnection.on('LeaderboardUpdated', (data: any) => {
+      console.log('[SignalR] LeaderboardUpdated:', data);
+      this.leaderboardUpdated$.next(data);
+    });
+
+    this.leaderboardHubConnection.on('HostLeaderboardUpdated', (data: any) => {
+      console.log('[SignalR] HostLeaderboardUpdated:', data);
+      this.hostLeaderboardUpdated$.next(data);
+    });
+
+    this.leaderboardHubConnection.on('ParticipantCountUpdated', (count: number) => {
+      console.log('[SignalR] ParticipantCountUpdated:', count);
+      this.participantCountUpdated$.next(count);
+    });
+
+    this.leaderboardHubConnection.on('LeaderboardVisibilityChanged', (isVisible: boolean) => {
+      console.log('[SignalR] LeaderboardVisibilityChanged:', isVisible);
+      this.leaderboardVisibilityChanged$.next(isVisible);
+    });
+
+    this.leaderboardHubConnection.on('ScoreUpdated', (data: any) => {
+      console.log('[SignalR] ScoreUpdated:', data);
+      this.scoreUpdated$.next(data);
+    });
+
+    this.leaderboardHubConnection.on('ShowLeaderboard', (data: any) => {
+      console.log('[SignalR] ShowLeaderboard:', data);
+      this.showLeaderboard$.next(data);
+    });
+
+    this.leaderboardHubConnection.on('ShowHostLeaderboard', (data: any) => {
+      console.log('[SignalR] ShowHostLeaderboard:', data);
+      this.showHostLeaderboard$.next(data);
+    });
+  }
+
+  /**
+   * Disconnect from Leaderboard Hub
+   */
+  public disconnectLeaderboardHub(): void {
+    if (this.leaderboardHubConnection) {
+      this.leaderboardHubConnection.stop();
+      this.leaderboardConnectionEstablished$.next(false);
     }
   }
 }

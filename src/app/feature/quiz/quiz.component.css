@@ -1237,6 +1237,7 @@
   }
 }
 
+
 /* ===== UPDATED STYLES FOR NEW REQUIREMENTS ===== */
 
 /* White Background Override */
@@ -1404,6 +1405,46 @@
 @keyframes slideDown {
   from {
     transform: translateY(-20px);
+
+/* ===== LEADERBOARD OVERLAY ===== */
+.leaderboard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.leaderboard-modal {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
     opacity: 0;
   }
   to {
@@ -1646,4 +1687,205 @@
     opacity: 1;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
+=======
+.leaderboard-header {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.leaderboard-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.countdown-timer {
+  color: #ffd700;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(255, 215, 0, 0.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.leaderboard-content {
+  padding: 25px;
+  max-height: calc(80vh - 100px);
+  overflow-y: auto;
+}
+
+.leaderboard-stats {
+  text-align: center;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.leaderboard-stats p {
+  margin: 5px 0;
+  font-size: 0.95rem;
+}
+
+.rankings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ranking-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.ranking-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(5px);
+}
+
+.ranking-item.top-1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border-color: #ffd700;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.ranking-item.top-2 {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+  border-color: #c0c0c0;
+}
+
+.ranking-item.top-3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
+  border-color: #cd7f32;
+}
+
+.ranking-item.top-1,
+.ranking-item.top-2,
+.ranking-item.top-3 {
+  color: #333;
+  font-weight: 600;
+}
+
+.ranking-item:not(.top-1):not(.top-2):not(.top-3) {
+  color: white;
+}
+
+.rank-badge {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.participant-info {
+  flex: 1;
+}
+
+.participant-name {
+  font-weight: 600;
+  color: white;
+  margin-bottom: 5px;
+}
+
+.participant-stats {
+  display: flex;
+  gap: 15px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.score-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+}
+
+.ranking-item.top-1 .score-badge,
+.ranking-item.top-2 .score-badge,
+.ranking-item.top-3 .score-badge {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.no-data p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.no-data .hint {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Scrollbar styling for leaderboard */
+.leaderboard-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.leaderboard-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.leaderboard-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+.leaderboard-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
