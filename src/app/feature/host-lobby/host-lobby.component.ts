@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as signalR from '@microsoft/signalr';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 interface ParticipantProgress {
   totalParticipants: number;

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { isPlatformBrowser, DOCUMENT } from '@angular/common';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 import { 
   User, 
   LoginRequest, 
