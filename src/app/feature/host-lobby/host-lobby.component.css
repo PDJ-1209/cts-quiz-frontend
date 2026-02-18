@@ -537,6 +537,55 @@
   margin-bottom: 0;
 }
 
+/* Timer Settings Row */
+.timer-settings {
+  background: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--cognizant-primary-light);
+}
+
+.timer-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.timer-input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 2px solid var(--cognizant-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.timer-input:focus {
+  outline: none;
+  border-color: var(--cognizant-secondary);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.timer-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-disabled);
+}
+
+.timer-unit {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
 .control-btn {
   flex: 1;
   padding: 1rem 1.5rem;
@@ -561,6 +610,18 @@
   background: var(--gradient-primary);
   color: var(--text-light);
   border-color: transparent;
+}
+
+.control-btn.active {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: var(--text-light);
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+}
+
+.control-btn.active:hover:not(:disabled) {
+  background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+  transform: translateY(-2px);
 }
 
 .control-btn:disabled {
@@ -646,4 +707,257 @@
   .question-input {
     flex: 1;
   }
+}
+
+/* ===== LEADERBOARD OVERLAY ===== */
+.leaderboard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.leaderboard-modal {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.leaderboard-header {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.leaderboard-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.loading-badge {
+  color: #ffd700;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(255, 215, 0, 0.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.leaderboard-content {
+  padding: 25px;
+  max-height: calc(85vh - 100px);
+  overflow-y: auto;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: white;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 20px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.leaderboard-stats {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.leaderboard-stats p {
+  margin: 5px 0;
+  font-size: 0.95rem;
+}
+
+.rankings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ranking-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.ranking-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(5px);
+}
+
+.ranking-item.top-1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border-color: #ffd700;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+  color: #333;
+  font-weight: 600;
+}
+
+.ranking-item.top-2 {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+  border-color: #c0c0c0;
+  color: #333;
+  font-weight: 600;
+}
+
+.ranking-item.top-3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
+  border-color: #cd7f32;
+  color: #333;
+  font-weight: 600;
+}
+
+.ranking-item:not(.top-1):not(.top-2):not(.top-3) {
+  color: white;
+}
+
+.rank-badge {
+  font-size: 1.5rem;
+  min-width: 50px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.participant-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.participant-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.participant-stats {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.score-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.ranking-item.top-1 .score-badge,
+.ranking-item.top-2 .score-badge,
+.ranking-item.top-3 .score-badge {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: white;
+}
+
+.no-data p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.no-data .hint {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Scrollbar styling */
+.leaderboard-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.leaderboard-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.leaderboard-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+
+.leaderboard-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }

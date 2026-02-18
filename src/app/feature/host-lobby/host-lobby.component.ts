@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../environments/environment';
+import { LeaderboardService } from '../../services/leaderboard.service';
 
 interface ParticipantProgress {
   totalParticipants: number;
@@ -46,6 +47,7 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private leaderboardService = inject(LeaderboardService);
   
   // SignalR Hub Connection
   private hubConnection?: signalR.HubConnection;
@@ -66,6 +68,7 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   countdown = signal<number>(0);
   private countdownInterval: any;
   private questionTimerInterval: any;
+  private isProcessingTimerExpiry: boolean = false; // Prevent re-entry
   
   // Live quiz state
   currentQuestionId = signal<number>(1);
@@ -81,8 +84,16 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   });
   
   leaderboardVisible = signal<boolean>(false);
+  showLeaderboardAfterQuestion = signal<boolean>(false);
+  showLeaderboardAtEndOnly = signal<boolean>(false);
   quizEnded = signal<boolean>(false);
   jumpToQuestion: number = 1;
+  
+  // Leaderboard overlay for host view
+  showLeaderboardOverlay = signal<boolean>(false);
+  leaderboardData = signal<any>(null);
+  isLoadingLeaderboard = signal<boolean>(false);
+  leaderboardDisplayDuration = signal<number>(5); // Default 5 seconds
   
   // Prevent multiple end quiz calls
   private isEndingQuiz = false;
@@ -290,14 +301,16 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Start question timer countdown
+   * Start question timer with broadcast
    */
   private async startQuestionTimer() {
     console.log('[HostLobby] Starting question timer');
     
-    // Clear any existing timer
+    // CRITICAL: Prevent duplicate timer creation
     if (this.questionTimerInterval) {
+      console.log('⚠️ [HostLobby] Timer already running, clearing old one first');
       clearInterval(this.questionTimerInterval);
+      this.questionTimerInterval = null;
     }
     
     // Send initial timer sync immediately
@@ -319,10 +332,51 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
     this.questionTimerInterval = setInterval(async () => {
       const timer = this.questionTimer();
       if (timer.remainingSeconds <= 0) {
-        console.log('[HostLobby] Question timer expired');
-        clearInterval(this.questionTimerInterval);
         
-        // Always auto-advance to next question when timer expires (both auto and manual mode)
+        // Prevent multiple executions
+        if (this.isProcessingTimerExpiry) {
+          console.log('⚠️ [HostLobby] Already processing timer expiry, skipping...');
+          return;
+        }
+        
+        this.isProcessingTimerExpiry = true;
+        
+        console.log('⏰ [HostLobby] ========== QUESTION TIMER EXPIRED ==========');
+        console.log('⏰ [HostLobby] Question ID:', timer.questionId);
+        console.log('⏰ [HostLobby] ShowLeaderboardAfterQuestion setting:', this.showLeaderboardAfterQuestion());
+        console.log('⏰ [HostLobby] Display duration:', this.leaderboardDisplayDuration());
+        
+        // STOP the timer interval immediately
+        clearInterval(this.questionTimerInterval);
+        this.questionTimerInterval = null;
+        
+        // Show leaderboard after question if setting is enabled
+        if (this.showLeaderboardAfterQuestion()) {
+          console.log('📊 [HostLobby] CALLING ShowLeaderboardAfterQuestion Hub method...');
+          try {
+            await this.hubConnection!.invoke('ShowLeaderboardAfterQuestion', 
+              this.sessionCode(), 
+              timer.questionId, 
+              this.leaderboardDisplayDuration());
+            console.log('✅ [HostLobby] ShowLeaderboardAfterQuestion invoked successfully');
+            
+            // WAIT for leaderboard display duration before advancing to next question
+            const displayDuration = this.leaderboardDisplayDuration();
+            console.log(`⏳ [HostLobby] Waiting ${displayDuration} seconds for leaderboard display...`);
+            
+            await new Promise(resolve => setTimeout(resolve, displayDuration * 1000));
+            console.log('✅ [HostLobby] Leaderboard display completed, advancing to next question');
+            
+          } catch (error) {
+            console.error('❌ [HostLobby] Failed to show leaderboard after question:', error);
+          }
+        } else {
+          console.log('⚠️ [HostLobby] SKIPPING leaderboard - setting is disabled');
+        }
+        
+        console.log('⏰ [HostLobby] ==================================================');
+        
+        // Now advance to next question AFTER leaderboard is done
         const nextQuestionNumber = this.currentQuestionNumber() + 1;
         if (nextQuestionNumber <= this.totalQuestions()) {
           console.log('[HostLobby] Auto-advancing to question', nextQuestionNumber);
@@ -330,14 +384,15 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
             await this.forceNavigate(nextQuestionNumber);
           } catch (error) {
             console.error('[HostLobby] Auto-advance failed:', error);
-            // Continue locally even if SignalR fails
             this.snackBar.open('⚠️ Connection issue, advancing locally', 'Close', { duration: 2000 });
           }
         } else {
           console.log('[HostLobby] Last question completed - ending quiz');
-          // Call manualEndQuiz to properly end the quiz and update database
-          await this.manualEndQuiz(true); // Skip confirmation for auto-end
+          await this.manualEndQuiz(true);
         }
+        
+        // Reset flag after processing complete
+        this.isProcessingTimerExpiry = false;
       } else {
         this.questionTimer.update(t => ({
           ...t,
@@ -378,31 +433,40 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         .build();
 
       // Add reconnection event handlers
-      this.hubConnection.onreconnecting((error) => {
-        console.warn('[HostLobby] SignalR reconnecting...', error);
+      this.hubConnection.onreconnecting((error: Error | undefined) => {
+        console.warn('⚠️ [DEBUG] SignalR reconnecting...');
+        console.warn('   - Error:', error);
+        console.warn('   - Session code:', this.sessionCode());
         this.connectionStatus.set('connecting');
         this.snackBar.open('⚠️ Reconnecting...', 'Close', { duration: 2000 });
       });
 
-      this.hubConnection.onreconnected(async (connectionId) => {
-        console.log('[HostLobby] SignalR reconnected:', connectionId);
+      this.hubConnection.onreconnected(async (connectionId: string | undefined) => {
+        console.log('✅ [DEBUG] SignalR reconnected!');
+        console.log('   - Connection ID:', connectionId);
+        console.log('   - Session code:', this.sessionCode());
         this.connectionStatus.set('connected');
         
         // Rejoin groups after reconnection
         try {
+          console.log('📡 [DEBUG] Rejoining session groups...');
           await this.hubConnection!.invoke('JoinHostSession', this.sessionCode());
+          console.log('✅ [DEBUG] Rejoined host session group');
           await this.hubConnection!.invoke('JoinSession', this.sessionCode());
-          console.log('[HostLobby] Rejoined session groups after reconnection');
+          console.log('✅ [DEBUG] Rejoined regular session group');
           this.snackBar.open('✅ Reconnected successfully', 'Close', { duration: 2000 });
         } catch (error) {
-          console.error('[HostLobby] Failed to rejoin after reconnection:', error);
+          console.error('❌ [DEBUG] Failed to rejoin after reconnection:', error);
         }
       });
 
-      this.hubConnection.onclose((error) => {
-        console.error('[HostLobby] SignalR connection closed:', error);
+      this.hubConnection.onclose((error: Error | undefined) => {
+        console.error('❌ [DEBUG] SignalR connection closed!');
+        console.error('   - Error:', error);
+        console.error('   - Session code:', this.sessionCode());
+        console.error('   - Was connected:', this.connectionStatus() === 'connected');
         this.connectionStatus.set('disconnected');
-        this.snackBar.open('⚠️ Connection lost', 'Close', { duration: 3000 });
+        this.snackBar.open('⚠️ Connection lost - Please refresh the page', 'Close', { duration: 5000 });
       });
 
       // Register event handlers
@@ -455,33 +519,9 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Listen for timer updates
-    this.hubConnection.on('LiveTimerUpdate', (data: any) => {
-      console.log('[HostLobby] Timer update:', data);
-      const questionId = data.QuestionId;
-      const remainingSeconds = data.RemainingSeconds;
-      
-      // Update timer
-      this.questionTimer.set({
-        questionId: questionId,
-        remainingSeconds: remainingSeconds,
-        totalSeconds: this.questionTimer().totalSeconds || remainingSeconds
-      });
-      
-      // Update current question if it changed
-      if (this.currentQuestionId() !== questionId) {
-        this.currentQuestionId.set(questionId);
-        const question = this.allQuestions().find(q => q.questionId === questionId);
-        if (question) {
-          this.currentQuestion.set(question);
-          this.questionTimer.update(timer => ({
-            ...timer,
-            totalSeconds: question.timerSeconds
-          }));
-          console.log('[HostLobby] Switched to question:', question.questionNumber);
-        }
-      }
-    });
+    // NOTE: Host does NOT listen to LiveTimerUpdate - it manages its own timer via setInterval
+    // Only participants listen to LiveTimerUpdate to sync with host
+    // Listening here would cause double updates (setInterval + SignalR = 2x speed)
 
     // Listen for quiz end confirmation (host-specific)
     this.hubConnection.on('QuizEndedConfirmation', (data: any) => {
@@ -633,24 +673,147 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Toggle leaderboard visibility for participants
+   * Toggle show leaderboard after each question
    */
-  async toggleLeaderboard() {
+  async viewLeaderboard() {
+    console.log('🔍 [DEBUG] viewLeaderboard called');
+    console.log('   - Session ID:', this.sessionId());
+    console.log('   - Session Code:', this.sessionCode());
+    
+    if (!this.sessionId()) {
+      console.error('❌ [DEBUG] No session ID available');
+      this.snackBar.open('⚠️ No active session', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      this.isLoadingLeaderboard.set(true);
+      console.log('📡 [DEBUG] Fetching leaderboard data...');
+      
+      const leaderboard = await this.leaderboardService.getLeaderboard(this.sessionId()).toPromise();
+      console.log('✅ [DEBUG] Leaderboard data received:', leaderboard);
+      
+      this.leaderboardData.set(leaderboard);
+      this.showLeaderboardOverlay.set(true);
+      this.isLoadingLeaderboard.set(false);
+      
+      this.snackBar.open('📊 Leaderboard displayed', 'Close', { duration: 2000 });
+    } catch (error) {
+      console.error('❌ [DEBUG] Failed to load leaderboard:', error);
+      this.isLoadingLeaderboard.set(false);
+      this.snackBar.open('⚠️ Failed to load leaderboard', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Close leaderboard overlay
+   */
+  closeLeaderboardOverlay() {
+    console.log('🔍 [DEBUG] Closing leaderboard overlay');
+    this.showLeaderboardOverlay.set(false);
+    this.leaderboardData.set(null);
+  }
+
+  /**
+   * Toggle show leaderboard after each question
+   */
+  async toggleShowAfterQuestion() {
+    console.log('🔍 [DEBUG] toggleShowAfterQuestion called');
+    console.log('🔍 [DEBUG] Current setting:', this.showLeaderboardAfterQuestion());
+    console.log('🔍 [DEBUG] End-only setting:', this.showLeaderboardAtEndOnly());
+    
     if (!this.hubConnection || this.connectionStatus() !== 'connected') {
+      console.error('❌ [DEBUG] Not connected to session');
       this.snackBar.open('⚠️ Not connected to session', 'Close', { duration: 3000 });
       return;
     }
 
     try {
-      const newVisibility = !this.leaderboardVisible();
-      await this.hubConnection.invoke('ToggleLeaderboard', this.sessionCode(), newVisibility);
-      this.leaderboardVisible.set(newVisibility);
+      const newSetting = !this.showLeaderboardAfterQuestion();
+      console.log('📡 [DEBUG] New setting will be:', newSetting);
       
-      const message = newVisibility ? '👁️ Leaderboard shown to participants' : '🔒 Leaderboard hidden from participants';
+      // If enabling after-question, disable end-only mode
+      if (newSetting) {
+        console.log('🔧 [DEBUG] Disabling end-only mode');
+        this.showLeaderboardAtEndOnly.set(false);
+      }
+      
+      // Call backend to update setting
+      console.log('📡 [DEBUG] Invoking SetShowLeaderboardAfterQuestion...');
+      await this.hubConnection.invoke('SetShowLeaderboardAfterQuestion', this.sessionCode(), newSetting);
+      console.log('✅ [DEBUG] Backend updated successfully');
+      
+      this.showLeaderboardAfterQuestion.set(newSetting);
+      console.log('✅ [DEBUG] Local state updated to:', newSetting);
+      
+      const message = newSetting 
+        ? '✅ Leaderboard will show after each question' 
+        : '🔒 Leaderboard will NOT show after questions';
       this.snackBar.open(message, 'Close', { duration: 3000 });
     } catch (error) {
-      console.error('[HostLobby] Toggle leaderboard failed:', error);
-      this.snackBar.open('⚠️ Failed to toggle leaderboard', 'Close', { duration: 3000 });
+      console.error('❌ [DEBUG] Toggle show after question failed:', error);
+      console.error('   - Error details:', JSON.stringify(error, null, 2));
+      this.snackBar.open('⚠️ Failed to update setting', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Toggle show leaderboard at end only
+   */
+  async toggleShowAtEndOnly() {
+    console.log('🔍 [DEBUG] toggleShowAtEndOnly called');
+    console.log('🔍 [DEBUG] Current setting:', this.showLeaderboardAtEndOnly());
+    console.log('🔍 [DEBUG] After-question setting:', this.showLeaderboardAfterQuestion());
+    
+    if (!this.hubConnection || this.connectionStatus() !== 'connected') {
+      console.error('❌ [DEBUG] Not connected to session');
+      this.snackBar.open('⚠️ Not connected to session', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const newSetting = !this.showLeaderboardAtEndOnly();
+      console.log('📡 [DEBUG] New setting will be:', newSetting);
+      
+      // If enabling end-only, disable after-question mode
+      if (newSetting) {
+        console.log('🔧 [DEBUG] Disabling after-question mode');
+        this.showLeaderboardAfterQuestion.set(false);
+      }
+      
+      // Call backend to update setting
+      console.log('📡 [DEBUG] Invoking SetShowLeaderboardAtEndOnly...');
+      await this.hubConnection.invoke('SetShowLeaderboardAtEndOnly', this.sessionCode(), newSetting);
+      console.log('✅ [DEBUG] Backend updated successfully');
+      
+      this.showLeaderboardAtEndOnly.set(newSetting);
+      console.log('✅ [DEBUG] Local state updated to:', newSetting);
+      
+      const message = newSetting 
+        ? '✅ Leaderboard will show only at quiz end' 
+        : '🔒 End-only mode disabled';
+      this.snackBar.open(message, 'Close', { duration: 3000 });
+    } catch (error) {
+      console.error('❌ [DEBUG] Toggle show at end only failed:', error);
+      console.error('   - Error details:', JSON.stringify(error, null, 2));
+      this.snackBar.open('⚠️ Failed to update setting', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Update leaderboard display duration
+   */
+  updateLeaderboardDuration(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const value = parseInt(input.value, 10);
+    
+    if (value >= 3 && value <= 30) {
+      this.leaderboardDisplayDuration.set(value);
+      console.log('⏱️ [DEBUG] Leaderboard display duration updated to:', value, 'seconds');
+      this.snackBar.open(`⏱️ Display duration set to ${value} seconds`, 'Close', { duration: 2000 });
+    } else {
+      console.warn('⚠️ [DEBUG] Invalid duration:', value);
+      input.value = this.leaderboardDisplayDuration().toString();
     }
   }
 
@@ -684,6 +847,16 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       
       // Always set local state
       this.quizEnded.set(true);
+      
+      // Show leaderboard at end if setting is enabled
+      if (this.showLeaderboardAtEndOnly() && this.hubConnection && this.connectionStatus() === 'connected') {
+        try {
+          await this.hubConnection.invoke('ShowLeaderboardAtEnd', this.sessionCode());
+          console.log('[HostLobby] Showing leaderboard at quiz end');
+        } catch (error) {
+          console.error('[HostLobby] Failed to show leaderboard at end:', error);
+        }
+      }
       
       // Check connection and try to notify backend
       if (this.hubConnection && this.connectionStatus() === 'connected') {
@@ -725,15 +898,6 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         this.snackBar.open('⚠️ Failed to end quiz on server', 'Close', { duration: 3000 });
       }
     }
-  }
-
-  /**
-   * View real-time leaderboard (host only)
-   */
-  viewLeaderboard() {
-    this.router.navigate(['/host/leaderboard'], {
-      queryParams: { sessionCode: this.sessionCode() }
-    });
   }
 
   /**
