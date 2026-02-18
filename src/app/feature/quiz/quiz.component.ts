@@ -35,6 +35,12 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   sessionCode: string = '';
   participantName: string = '';
 
+  // Leaderboard display properties
+  showLeaderboardOverlay: boolean = false;
+  leaderboardData: any = null;
+  leaderboardCountdown: number = 0;
+  private leaderboardTimer: any;
+
   // Timer properties
   timeRemaining: number = 30;
   // Remove syncInterval - we'll use SignalR timer sync instead
@@ -244,6 +250,11 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   private initializeSignalR(): void {
     if (!this.sessionCode || this.hubConnection) return;
 
+    console.log('🔧 [DEBUG PARTICIPANT] Initializing SignalR connection...');
+    console.log('   - Session code:', this.sessionCode);
+    console.log('   - Session ID:', this.sessionId);
+    console.log('   - Participant ID:', this.participantId);
+
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(environment.signalRUrl, {
         skipNegotiation: true,
@@ -254,26 +265,34 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
     // Add reconnection event handlers
     this.hubConnection.onreconnecting((error) => {
-      console.warn('[QuizPage] SignalR reconnecting...', error);
+      console.warn('⚠️ [DEBUG PARTICIPANT] SignalR reconnecting...');
+      console.warn('   - Error:', error);
+      console.warn('   - Session code:', this.sessionCode);
       this.snackBar.open('⚠️ Reconnecting...', 'Close', { duration: 2000 });
     });
 
     this.hubConnection.onreconnected(async (connectionId) => {
-      console.log('[QuizPage] SignalR reconnected:', connectionId);
+      console.log('✅ [DEBUG PARTICIPANT] SignalR reconnected!');
+      console.log('   - Connection ID:', connectionId);
+      console.log('   - Session code:', this.sessionCode);
       
       // Rejoin session after reconnection
       try {
+        console.log('📡 [DEBUG PARTICIPANT] Rejoining session...');
         await this.hubConnection!.invoke('JoinSession', this.sessionCode);
-        console.log('[QuizPage] Rejoined session after reconnection');
+        console.log('✅ [DEBUG PARTICIPANT] Rejoined session successfully');
         this.snackBar.open('✅ Reconnected', 'Close', { duration: 2000 });
       } catch (error) {
-        console.error('[QuizPage] Failed to rejoin after reconnection:', error);
+        console.error('❌ [DEBUG PARTICIPANT] Failed to rejoin after reconnection:', error);
       }
     });
 
     this.hubConnection.onclose((error) => {
-      console.error('[QuizPage] SignalR connection closed:', error);
-      this.snackBar.open('⚠️ Connection lost', 'Close', { duration: 3000 });
+      console.error('❌ [DEBUG PARTICIPANT] SignalR connection closed!');
+      console.error('   - Error:', error);
+      console.error('   - Session code:', this.sessionCode);
+      console.error('   - Was connected: true');
+      this.snackBar.open('⚠️ Connection lost - Please refresh the page', 'Close', { duration: 5000 });
     });
 
     this.hubConnection.on('SessionSync', (payload: any) => {
@@ -346,8 +365,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         const targetIndex = this.questionDetails.findIndex(q => q.questionId === questionId);
         if (targetIndex === this.currentIndex && targetIndex !== -1) {
           this.timeRemaining = Math.max(0, remainingSeconds);
-          // Log every 5 seconds to avoid spam
-          if (remainingSeconds % 5 === 0 || remainingSeconds <= 5) {
+          // Timer updates every second - logs filtered to reduce console spam
+          // Actual display updates smoothly every 1 second
+          if (remainingSeconds % 10 === 0 || remainingSeconds <= 5) {
             console.log('[QuizPage] ⏱️ Timer synced:', this.timeRemaining, 's for Q', targetIndex + 1);
           }
         } else if (targetIndex !== this.currentIndex) {
@@ -378,13 +398,88 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
     // Host toggles leaderboard visibility
     this.hubConnection.on('LeaderboardVisibilityToggled', (data: any) => {
-      console.log('[QuizPage] Leaderboard visibility toggled:', data);
+      console.log('\ud83d\udd0d [DEBUG PARTICIPANT] Leaderboard visibility toggled event received');
+      console.log('   - Raw data:', JSON.stringify(data, null, 2));
+      console.log('   - Session code:', this.sessionCode);
+      console.log('   - Session ID:', this.sessionId);
+      
       const isVisible = data?.IsVisible ?? data?.isVisible;
+      console.log('   - Visibility value:', isVisible);
+      
       if (isVisible) {
-        this.snackBar.open('📊 Leaderboard is now visible', 'Close', { duration: 2000 });
+        console.log('\u2705 [DEBUG PARTICIPANT] Leaderboard is now VISIBLE');
+        this.snackBar.open('\ud83d\udcca Leaderboard is now visible', 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('📊 Leaderboard is now hidden', 'Close', { duration: 2000 });
+        console.log('\ud83d\udd12 [DEBUG PARTICIPANT] Leaderboard is now HIDDEN');
+        this.snackBar.open('\ud83d\udcca Leaderboard is now hidden', 'Close', { duration: 2000 });
       }
+    });
+
+    // Show leaderboard after question
+    this.hubConnection.on('ShowLeaderboardAfterQuestion', (data: any) => {
+      console.log('\ud83d\udd0d [DEBUG PARTICIPANT] ShowLeaderboardAfterQuestion event received!');
+      console.log('   - Raw data:', JSON.stringify(data, null, 2));
+      console.log('   - Session code:', this.sessionCode);
+      console.log('   - Session ID:', this.sessionId);
+      console.log('   - Participant ID:', this.participantId);
+      
+      const questionId = data?.QuestionId ?? data?.questionId;
+      const leaderboard = data?.Leaderboard ?? data?.leaderboard;
+      const displayDuration = data?.DisplayDurationSeconds ?? data?.displayDurationSeconds ?? 5;
+      console.log('   - Question ID:', questionId);
+      console.log('   - Leaderboard object:', leaderboard);
+      console.log('   - Leaderboard rankings:', leaderboard?.rankings ?? leaderboard?.Rankings);
+      console.log('   - Display duration:', displayDuration, 'seconds');
+      
+      // CRITICAL: Check if leaderboard data exists
+      if (!leaderboard) {
+        console.error('❌ [DEBUG PARTICIPANT] No leaderboard data received!');
+        return;
+      }
+      
+      // Show leaderboard overlay on the same page
+      console.log('📡 [DEBUG PARTICIPANT] Displaying leaderboard overlay...');
+      this.showLeaderboardOverlay = true;
+      this.leaderboardData = leaderboard;
+      this.leaderboardCountdown = displayDuration; // Use duration from host
+      
+      this.snackBar.open('\ud83d\udcca Leaderboard displayed', 'Close', { duration: 2000 });
+      
+      // Start countdown timer
+      if (this.leaderboardTimer) {
+        clearInterval(this.leaderboardTimer);
+      }
+      
+      this.leaderboardTimer = setInterval(() => {
+        this.leaderboardCountdown--;
+        console.log('\u23f1\ufe0f [DEBUG PARTICIPANT] Leaderboard countdown:', this.leaderboardCountdown);
+        
+        if (this.leaderboardCountdown <= 0) {
+          console.log('\u2705 [DEBUG PARTICIPANT] Hiding leaderboard overlay');
+          this.showLeaderboardOverlay = false;
+          this.leaderboardData = null;
+          clearInterval(this.leaderboardTimer);
+        }
+      }, 1000);
+    });
+
+    // Show leaderboard at quiz end
+    this.hubConnection.on('ShowLeaderboardAtEnd', (data: any) => {
+      console.log('🔍 [DEBUG PARTICIPANT] ShowLeaderboardAtEnd event received!');
+      console.log('   - Raw data:', JSON.stringify(data, null, 2));
+      console.log('   - Session code:', this.sessionCode);
+      console.log('   - Session ID:', this.sessionId);
+      
+      const leaderboard = data?.Leaderboard ?? data?.leaderboard;
+      
+      this.snackBar.open('🏁 Quiz completed! Viewing final leaderboard...', 'Close', { duration: 3000 });
+      
+      // Show final leaderboard overlay (stays until manually closed)
+      this.showLeaderboardOverlay = true;
+      this.leaderboardData = leaderboard;
+      this.leaderboardCountdown = 0; // No auto-close for final leaderboard
+      
+      console.log('✅ [DEBUG PARTICIPANT] Displaying final leaderboard overlay');
     });
 
     // Host manually ended the quiz
@@ -419,25 +514,32 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       this.snackBar.open('🚀 Quiz has started!', 'Close', { duration: 2000 });
     });
 
+    console.log('📡 [DEBUG PARTICIPANT] Starting SignalR connection...');
     this.hubConnection.start()
       .then(() => {
-        console.log('[QuizPage] ✅ SignalR connected successfully');
-        console.log('[QuizPage] Session Code:', this.sessionCode);
-        console.log('[QuizPage] Participant ID:', this.participantId);
+        console.log('✅ [DEBUG PARTICIPANT] SignalR connected successfully!');
+        console.log('   - Session Code:', this.sessionCode);
+        console.log('   - Session ID:', this.sessionId);
+        console.log('   - Participant ID:', this.participantId);
+        console.log('   - Participant Name:', this.participantName);
         
         // Enable timer sync immediately when connecting - don't wait for QuizStarted
         // This ensures first question timer syncs properly
         this.timerSyncEnabled = true;
-        console.log('[QuizPage] ✅ Timer sync enabled on connection');
+        console.log('✅ [DEBUG PARTICIPANT] Timer sync enabled on connection');
         
+        console.log('📡 [DEBUG PARTICIPANT] Invoking JoinSession...');
         return this.hubConnection?.invoke('JoinSession', this.sessionCode);
       })
       .then(() => {
-        console.log('[QuizPage] ✅ Successfully joined session group:', this.sessionCode);
+        console.log('✅ [DEBUG PARTICIPANT] Successfully joined session group!');
+        console.log('   - Session code:', this.sessionCode);
+        console.log('   - Ready to receive events from host');
       })
       .catch((err: unknown) => {
-        console.error('[QuizPage] ❌ SignalR error:', err);
-        this.snackBar.open('⚠️ Connection error. Some features may not work.', 'Close', { duration: 3000 });
+        console.error('❌ [DEBUG PARTICIPANT] SignalR error:', err);
+        console.error('   - Error details:', JSON.stringify(err, null, 2));
+        this.snackBar.open('⚠️ Connection error. Please refresh the page.', 'Close', { duration: 5000 });
       });
   }
 
@@ -500,10 +602,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         const response = await this.participantService.submitParticipantAnswer(request);
         this.submitting = false;
 
-        if (isAutoSubmit) {
-          this.snackBar.open('⏰ Time\'s up! Question marked as unanswered.', 'Close', { duration: 2000 });
-        }
-
+        // Auto-submit completed silently
         this.submittedIndex = this.currentIndex;
         this.waitingForNext = true;
         return;
@@ -529,21 +628,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       const response = await this.participantService.submitParticipantAnswer(request);
       this.submitting = false;
 
-      // Show success popup for manual submit
-      if (!isAutoSubmit) {
-        this.snackBar.open('✅ Answer submitted successfully!', 'Close', { duration: 1500 });
-      }
-
+      // Update score silently without popups
       if (response.isCorrect) {
         this.score += 1;
-        if (!isAutoSubmit) {
-          this.snackBar.open('🎉 Correct!', 'Close', { duration: 1500 });
-        }
-      } else {
-        const correctOption = currentQuestionDetail.options.find(o => o.optionId === response.correctOptionId);
-        if (!isAutoSubmit) {
-          this.snackBar.open(`❌ Incorrect. Correct answer: ${correctOption?.optionText}`, 'Close', { duration: 2500 });
-        }
       }
 
       this.submittedIndex = this.currentIndex;
@@ -561,12 +648,29 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     // Clean up on component destroy
     this.timerSyncEnabled = false;
 
+    // Clear leaderboard timer
+    if (this.leaderboardTimer) {
+      clearInterval(this.leaderboardTimer);
+    }
+
     if (this.hubConnection) {
       if (this.sessionCode) {
         this.hubConnection.invoke('LeaveSession', this.sessionCode);
       }
       this.hubConnection.stop();
       this.hubConnection = undefined;
+    }
+  }
+
+  /**
+   * Close leaderboard overlay manually
+   */
+  closeLeaderboard() {
+    console.log('🔍 [DEBUG PARTICIPANT] Manually closing leaderboard');
+    this.showLeaderboardOverlay = false;
+    this.leaderboardData = null;
+    if (this.leaderboardTimer) {
+      clearInterval(this.leaderboardTimer);
     }
   }
 

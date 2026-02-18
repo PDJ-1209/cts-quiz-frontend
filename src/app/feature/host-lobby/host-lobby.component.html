@@ -172,14 +172,40 @@
             <h4 class="group-title">Display Control</h4>
             <div class="button-row">
               <button class="control-btn"
-                      (click)="toggleLeaderboard()"
+                      [class.active]="showLeaderboardAfterQuestion()"
+                      (click)="toggleShowAfterQuestion()"
                       [disabled]="quizEnded()">
-                {{ leaderboardVisible() ? '🔒 Hide Leaderboard' : '👁️ Show Leaderboard' }}
+                {{ showLeaderboardAfterQuestion() ? '✅ Showing After Questions' : '📊 Show After Each Question' }}
               </button>
               <button class="control-btn"
+                      [class.active]="showLeaderboardAtEndOnly()"
+                      (click)="toggleShowAtEndOnly()"
+                      [disabled]="quizEnded()">
+                {{ showLeaderboardAtEndOnly() ? '✅ Will Show at End' : '🏁 Show at End Only' }}
+              </button>
+            </div>
+            <div class="button-row">
+              <button class="control-btn primary"
                       (click)="viewLeaderboard()">
                 📊 View Leaderboard
               </button>
+            </div>
+
+            
+            <!-- Leaderboard Display Duration -->
+            <div class="button-row timer-settings" *ngIf="showLeaderboardAfterQuestion()">
+              <label class="timer-label">
+                ⏱️ Display Duration:
+                <input type="number" 
+                       class="timer-input"
+                       [value]="leaderboardDisplayDuration()"
+                       (input)="updateLeaderboardDuration($event)"
+                       min="3"
+                       max="30"
+                       step="1"
+                       [disabled]="quizEnded()">
+                <span class="timer-unit">seconds</span>
+              </label>
             </div>
           </div>
 
@@ -198,12 +224,76 @@
             <span class="info-icon">🤖</span>
             <h3>Auto Mode Active</h3>
             <p>The quiz is running automatically. You can monitor progress but cannot control navigation.</p>
-            <button class="control-btn" (click)="viewLeaderboard()">
-              📊 View Leaderboard
-            </button>
           </div>
         </div>
       }
     </div>
   }
+
+  <!-- Leaderboard Overlay -->
+  @if (showLeaderboardOverlay()) {
+    <div class="leaderboard-overlay">
+      <div class="leaderboard-modal">
+        <div class="leaderboard-header">
+          <h2>🏆 Current Leaderboard</h2>
+          @if (isLoadingLeaderboard()) {
+            <span class="loading-badge">Loading...</span>
+          }
+          <button class="close-btn" (click)="closeLeaderboardOverlay()">✕</button>
+        </div>
+        
+        <div class="leaderboard-content">
+          @if (isLoadingLeaderboard()) {
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Loading leaderboard...</p>
+            </div>
+          } @else if (leaderboardData() && leaderboardData().rankings && leaderboardData().rankings.length > 0) {
+            <div class="leaderboard-stats">
+              <p><strong>Quiz:</strong> {{ leaderboardData().quizTitle }}</p>
+              <p><strong>Total Participants:</strong> {{ leaderboardData().totalParticipants }}</p>
+              <p><strong>Last Updated:</strong> {{ leaderboardData().lastUpdated | date:'short' }}</p>
+            </div>
+            
+            <div class="rankings-list">
+              @for (entry of leaderboardData().rankings; track entry.participantId; let i = $index) {
+                <div class="ranking-item" 
+                     [class.top-1]="i === 0"
+                     [class.top-2]="i === 1"
+                     [class.top-3]="i === 2">
+                  <div class="rank-badge">
+                    @if (i === 0) {
+                      <span>🥇</span>
+                    } @else if (i === 1) {
+                      <span>🥈</span>
+                    } @else if (i === 2) {
+                      <span>🥉</span>
+                    } @else {
+                      <span>#{{ entry.rank }}</span>
+                    }
+                  </div>
+                  <div class="participant-info">
+                    <span class="participant-name">{{ entry.participantName }}</span>
+                    <span class="participant-stats">
+                      {{ entry.correctAnswers }}/{{ entry.totalQuestions }} correct
+                      @if (entry.formattedTime) {
+                        <span> • {{ entry.formattedTime }}</span>
+                      }
+                    </span>
+                  </div>
+                  <div class="score-badge">{{ entry.score }} pts</div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-data">
+              <p>📊 No rankings available yet</p>
+              <p class="hint">Participants need to submit answers to appear on the leaderboard</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 </div>
+
