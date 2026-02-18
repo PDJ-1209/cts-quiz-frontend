@@ -1,0 +1,219 @@
+<!-- Professional Navigation Header -->
+<div class="quiz-nav-header">
+  <div class="nav-container">
+    <!-- Navigation Pills with Professional Design -->
+    <ul class="nav nav-pills cognizant-tabs" #tabsRef>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'questions'" (click)="setTab('questions')">
+          <i class="fas fa-brain me-2"></i>
+          <span>Quiz Builder</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'template'" (click)="setTab('template')">
+          <i class="fas fa-file-alt me-2"></i>
+          <span>Templates</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'survey'" (click)="setTab('survey')">
+          <i class="fas fa-clipboard-list me-2"></i>
+          <span>Surveys</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'polls'" (click)="setTab('polls')">
+          <i class="fas fa-poll me-2"></i>
+          <span>Polls</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'management'" (click)="setTab('management')">
+          <i class="fas fa-cogs me-2"></i>
+          <span>Management</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'results'" (click)="setTab('results')">
+          <i class="fas fa-chart-bar me-2"></i>
+          <span>Analytics</span>
+        </button>
+      </li>
+
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab() === 'settings'" (click)="setTab('settings')">
+          <i class="fas fa-sliders-h me-2"></i>
+          <span>Settings</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- Professional Tab Content -->
+<div class="tab-content cognizant-content">
+  <ng-container>
+    <!-- Questions Tab -->
+    <div *ngIf="activeTab() === 'questions'" class="tab-pane">
+      <app-add-question></app-add-question>
+    </div>
+
+    <!-- Template Tab -->
+    <div *ngIf="activeTab() === 'template'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-file-alt me-2"></i>Quiz Templates</h3>
+        <p>Create and manage reusable quiz templates</p>
+      </div>
+      <app-template (switchToQuestionsTab)="setTab('questions')"></app-template>
+    </div>
+
+    <!-- Survey Tab -->
+    <div *ngIf="activeTab() === 'survey'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-clipboard-list me-2"></i>Create Survey</h3>
+        <p>Build interactive surveys and feedback forms</p>
+      </div>
+      <app-create-survey (switchToQuestionsTab)="setTab('survey')"></app-create-survey>
+    </div>
+
+    <!-- Polls Tab -->
+    <div *ngIf="activeTab() === 'polls'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-poll me-2"></i>Create Poll</h3>
+        <p>Design quick polls for instant feedback</p>
+      </div>
+      <app-create-poll (switchToQuestionsTab)="setTab('polls')"></app-create-poll>
+    </div>
+
+    <!-- Management Tab -->
+    <div *ngIf="activeTab() === 'management'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-cogs me-2"></i>Management</h3>
+        <p>Platform settings and configuration options</p>
+      </div>
+      <div class="settings-container">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="card-header">
+              <h5><i class="fas fa-cog me-2"></i>General Settings</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Configure general platform settings and preferences</p>
+            </div>
+          </div>
+          
+          <div class="settings-card">
+            <div class="card-header">
+              <h5><i class="fas fa-bell me-2"></i>Notification Settings</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Manage notification preferences and alerts</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Tab -->
+    <div *ngIf="activeTab() === 'results'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-chart-bar me-2"></i>Results & Content Management</h3>
+        <p>View results, analytics, and manage your learning materials</p>
+      </div>
+      
+      <!-- Results Section -->
+      <app-result></app-result>
+      
+      <!-- Content Management Section -->
+      <div class="content-management-section mt-4">
+        <div class="component-header">
+          <h4><i class="fas fa-cogs me-2"></i>Content Management</h4>
+          <p>Edit, organize and configure your learning materials</p>
+        </div>
+        <div class="management-container">
+          <div class="management-grid">
+            <!-- Quick Actions -->
+            <div class="management-card">
+              <div class="card-header">
+                <h5><i class="fas fa-brain me-2"></i>Quiz Management</h5>
+              </div>
+              <div class="card-body">
+                <p>Manage your quizzes and questions</p>
+                <button class="btn btn-primary btn-sm" (click)="setTab('questions')">
+                  <i class="fas fa-edit me-2"></i>Edit Quizzes
+                </button>
+              </div>
+            </div>
+            
+            <div class="management-card">
+              <div class="card-header">
+                <h5><i class="fas fa-clipboard-list me-2"></i>Survey Management</h5>
+              </div>
+              <div class="card-body">
+                <p>Manage your surveys and responses</p>
+                <button class="btn btn-success btn-sm" (click)="setTab('survey')">
+                  <i class="fas fa-edit me-2"></i>Edit Surveys
+                </button>
+              </div>
+            </div>
+            
+            <div class="management-card">
+              <div class="card-header">
+                <h5><i class="fas fa-poll me-2"></i>Poll Management</h5>
+              </div>
+              <div class="card-body">
+                <p>Manage your polls and results</p>
+                <button class="btn btn-warning btn-sm" (click)="setTab('polls')">
+                  <i class="fas fa-edit me-2"></i>Edit Polls
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div *ngIf="activeTab() === 'settings'" class="tab-pane">
+      <div class="component-header">
+        <h3><i class="fas fa-sliders-h me-2"></i>Platform Settings</h3>
+        <p>Configure your learning platform preferences and options</p>
+      </div>
+      <div class="settings-container">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="card-header">
+              <h5><i class="fas fa-cog me-2"></i>General Settings</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Configure general platform settings and preferences</p>
+            </div>
+          </div>
+          
+          <div class="settings-card">
+            <div class="card-header">
+              <h5><i class="fas fa-bell me-2"></i>Notification Settings</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">Manage notification preferences and alerts</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fallback for unknown tabs -->
+    <div *ngIf="!['questions', 'template', 'survey', 'polls', 'management', 'results', 'settings'].includes(activeTab())" class="tab-pane">
+      <div class="alert alert-warning">
+        <h3>⚠️ Unknown Tab: "{{ activeTab() }}"</h3>
+        <p>Available tabs: questions, template, survey, polls, management, results, settings</p>
+        <button class="btn btn-primary" (click)="setTab('questions')">Go to Questions</button>
+      </div>
+    </div>
+  </ng-container>
+</div>

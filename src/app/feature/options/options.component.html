@@ -1,0 +1,16 @@
+<div class="row g-3 my-3">
+  <div class="col-md-6" *ngFor="let opt of options">
+    <div class="form-check option-card p-4 rounded-4 border-2 h-100" 
+         [class.selected]="selected === opt"
+         (click)="onChange(opt)"
+         role="button"
+         tabindex="0">
+      <input class="form-check-input d-none" type="radio" 
+             [checked]="selected === opt"
+             [value]="opt">
+      <label class="form-check-label fw-semibold w-100 cursor-pointer">
+        {{ opt }}
+      </label>
+    </div>
+  </div>
+</div>

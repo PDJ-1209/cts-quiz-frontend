@@ -1,0 +1,75 @@
+<div class="host-panel" *ngIf="(settings$ | async) as settings">
+  <div class="panel-header">
+    <h3>🎮 Host Controls</h3>
+    <span class="game-status" [class.ended]="$any(settings).gameEnded">
+      {{ $any(settings).gameEnded ? 'Game Ended' : 'Game Active' }}
+    </span>
+  </div>
+
+  <div class="control-section">
+    <label>Leaderboard Visibility</label>
+    <div class="button-group">
+      <button 
+        class="control-btn"
+        [class.active]="$any(settings).visibilityMode === 'OFF'"
+        [disabled]="$any(settings).gameEnded"
+        (click)="setVisibility('OFF')"
+        aria-label="Hide leaderboard">
+        🚫 OFF
+      </button>
+      <button 
+        class="control-btn"
+        [class.active]="$any(settings).visibilityMode === 'ON'"
+        [disabled]="$any(settings).gameEnded"
+        (click)="setVisibility('ON')"
+        aria-label="Show leaderboard">
+        👁️ ON
+      </button>
+      <button 
+        class="control-btn"
+        [class.active]="$any(settings).visibilityMode === 'END_ONLY'"
+        [disabled]="$any(settings).gameEnded"
+        (click)="setVisibility('END_ONLY')"
+        aria-label="Show only at end">
+        🏁 END ONLY
+      </button>
+    </div>
+  </div>
+
+  <div class="control-section">
+    <label>Game State</label>
+    <div class="button-group">
+      <button 
+        *ngIf="!$any(settings).gameEnded"
+        class="control-btn end-game-btn"
+        (click)="endGame()"
+        aria-label="End game">
+        🏆 End Game
+      </button>
+      <button 
+        *ngIf="$any(settings).gameEnded"
+        class="control-btn new-game-btn"
+        (click)="startNewGame()"
+        aria-label="Start new game">
+        🔄 New Game
+      </button>
+    </div>
+  </div>
+
+  <div class="info-section">
+    <p class="info-text">
+      <span *ngIf="$any(settings).visibilityMode === 'OFF'">
+        ℹ️ Leaderboard is hidden from players
+      </span>
+      <span *ngIf="$any(settings).visibilityMode === 'ON'">
+        ℹ️ Leaderboard is visible and updating
+      </span>
+      <span *ngIf="$any(settings).visibilityMode === 'END_ONLY' && !$any(settings).gameEnded">
+        ℹ️ Leaderboard will reveal when game ends
+      </span>
+      <span *ngIf="$any(settings).visibilityMode === 'END_ONLY' && $any(settings).gameEnded">
+        ℹ️ Final standings revealed!
+      </span>
+    </p>
+  </div>
+</div>

@@ -1,0 +1,393 @@
+  <!-- ADD QUESTION COMPONENT - BOOTSTRAP LAYOUT -->
+
+  <!-- Professional Header -->
+  <div class="quiz-header bg-primary text-white py-4 mb-4">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h2 class="mb-1 fw-bold">🧠 Create Quiz</h2>
+          <p class="mb-0 text-white-50">Host: <span class="fw-semibold text-white">{{ hostName }}</span></p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <div class="text-white-50 small">
+            <i class="fas fa-calendar me-2"></i>{{ currentDateTime }}
+          </div>
+          <div class="text-white small">
+            <i class="fas fa-clock me-2"></i>Session Active
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row g-4">
+
+      <!-- MAIN CONTENT AREA (LEFT) -->
+      <div class="col-lg-8">
+
+        <!-- QUIZ NAME CARD -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0 text-white"><span class="me-2">📝</span>Quiz Information</h5>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-success btn-sm template-btn" (click)="openTemplate()">
+                📋 Template
+              </button>
+              <button type="button" class="btn btn-info btn-sm" (click)="startTutorial()" title="Start Tutorial">
+                🎓 Tutorial
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Quiz Name *</label>
+                <input type="text" class="form-control" [formControl]="form.controls.quizName"
+                  placeholder="e.g., Angular Fundamentals, React Basics" />
+                @if (form.controls.quizName.invalid && form.controls.quizName.touched) {
+                <div class="text-danger small mt-1">Quiz name is required</div>
+                }
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Category</label>
+                <input type="text" class="form-control" [formControl]="form.controls.category"
+                  placeholder="e.g., Angular, JavaScript" />
+              </div>
+            </div>
+            @if (questions().length > 0) {
+            <div class="text-muted mt-3">
+              ✨ {{ questions().length }} question{{ questions().length > 1 ? 's' : '' }} added to "{{
+              form.controls.quizName.value || 'this quiz' }}"
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- ADD QUESTION CARD -->
+        <div class="card shadow-sm mb-4 add-question-card">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white"><span class="me-2">❓</span>Add New Question</h5>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-light btn-sm" (click)="downloadSampleCSV()">
+                📄 Sample CSV
+              </button>
+              
+              <button type="button" class="btn btn-warning btn-sm" (click)="toggleSuggestion()">
+                💡 Suggestions
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <form [formGroup]="form">
+
+              <!-- Question Text -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Question *</label>
+                <textarea class="form-control" [formControl]="form.controls.question"
+                  placeholder="Enter your question here... (e.g., What is the capital of France?)" rows="3"></textarea>
+                <div class="form-text">{{ form.controls.question.value.length || 0 }}/1000 characters</div>
+                @if (form.controls.question.invalid && form.controls.question.touched) {
+                <div class="text-danger small mt-1">Question is required (min 10 chars).</div>
+                }
+              </div>
+
+              <!-- Question Type & Difficulty -->
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Question Type</label>
+                  <select class="form-select" [formControl]="form.controls.type">
+                    @for (t of questionTypes; track t) {
+                    <option [value]="t">{{ t }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Difficulty</label>
+                  <select class="form-select" [formControl]="form.controls.difficulty">
+                    @for (d of difficulties; track d) {
+                    <option [value]="d">{{ d }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <!-- Timer Input -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Time Limit (seconds)</label>
+                <input type="number" class="form-control" [formControl]="form.controls.timerSeconds"
+                  placeholder="Enter time limit in seconds (e.g., 30)" min="5" max="300" />
+                <div class="form-text">Time allowed for this question (5-300 seconds, default: 30)</div>
+                @if (form.controls.timerSeconds.invalid && form.controls.timerSeconds.touched) {
+                <div class="text-danger small mt-1">Timer must be between 5 and 300 seconds.</div>
+                }
+              </div>
+
+              <!-- Options (hidden for Short Answer) -->
+              @if (form.controls.type.value !== 'Short Answer') {
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Answer Options *</label>
+                @for (opt of options.controls; let i = $index; track i) {
+                <div class="input-group mb-2" [formGroup]="opt">
+                  <div class="input-group-text">
+                    <input type="checkbox" class="form-check-input mt-0" formControlName="correct">
+                  </div>
+                  <input class="form-control" type="text" formControlName="text" placeholder="Enter option text"
+                    [readonly]="form.controls.type.value === 'True/False'" (focus)="clearPlaceholderText($event, i)" />
+                  @if (options.length > 2 && form.controls.type.value !== 'True/False') {
+                  <button type="button" class="btn btn-outline-danger" (click)="removeOption(i)"
+                    title="Remove option">🗑️</button>
+                  }
+                </div>
+                }
+                @if (form.controls.type.value !== 'True/False') {
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" (click)="addOption()">
+                  ＋ Add Another Option
+                </button>
+                }
+                @if (!hasAtLeastOneCorrect()) {
+                <div class="text-danger small mt-1">Mark at least one option as correct.</div>
+                }
+              </div>
+              }
+
+              <!-- Tags -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Tags</label>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  @for (tagCtrl of tags.controls; let i = $index; track i) {
+                  <span class="badge bg-secondary">
+                    {{ tagCtrl.value }}
+                    <button type="button" class="btn-close btn-close-white ms-1" (click)="removeTag(i)"
+                      style="font-size: 10px;"></button>
+                  </span>
+                  }
+                </div>
+                <div class="input-group">
+                  <input #tagInput type="text" class="form-control" placeholder="Add tag..." />
+                  <button type="button" class="btn btn-outline-secondary" (click)="addTag(tagInput)">Add</button>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="mt-4">
+                <button type="button" class="btn btn-success w-100 py-3 fw-bold fs-5" (click)="onSubmit()" [disabled]="disableAdd()">
+                  ➕ Add Question
+                </button>
+              </div>
+
+            </form>
+
+            <!-- Suggestions -->
+            @if (suggestionsOpen()) {
+            <div class="card mt-3">
+              <div class="card-body text-center text-muted">
+                Suggestions will appear here (wire up your AI/logic).
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- PREVIEW CARD -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0 text-white"><span class="me-2">👁️</span>Questions Preview ({{ questions().length }})</h5>
+          </div>
+          <div class="card-body">
+            @if (questions().length === 0) {
+            <div class="text-center py-5">
+              <div class="display-1 mb-3">📝</div>
+              <p class="text-muted">No questions added yet. Create your first question above.</p>
+            </div>
+            } @else {
+            <div class="list-group mb-3">
+              @for (q of questions(); let i = $index; track q.text) {
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <span class="badge bg-primary rounded-pill">Q{{ i + 1 }}</span>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" type="button" title="Edit">✏️</button>
+                    <button class="btn btn-outline-danger" type="button" (click)="deleteQuestion(i)"
+                      title="Delete">🗑️</button>
+                  </div>
+                </div>
+                <div class="fw-semibold mb-2">{{ q.text }}</div>
+                @if (q.options.length) {
+                <div class="d-flex flex-column gap-1">
+                  @for (opt of q.options; track opt.text) {
+                  <div class="badge" [class.bg-success]="opt.isCorrect" [class.bg-light]="!opt.isCorrect"
+                    [class.text-dark]="!opt.isCorrect">
+                    {{ opt.text }}
+                  </div>
+                  }
+                </div>
+                }
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                  <span class="badge bg-info">{{ q.type }}</span>
+                  <span class="badge bg-warning text-dark">{{ q.difficulty }}</span>
+                  <span class="badge bg-secondary">{{ q.category }}</span>
+                  @if (q.timerSeconds) {
+                  <span class="badge bg-dark">{{ q.timerSeconds }}s</span>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            <button type="button" class="btn btn-primary w-100" (click)="publishFromPreview()" [disabled]="!canPublish()">
+              🚀 Create Quiz
+            </button>
+            @if (!canPublish()) {
+            <div class="text-muted text-center mt-2 small">
+              Add quiz basics and at least one question to enable publish.
+            </div>
+            }
+            }
+          </div>
+        </div>
+
+        <!-- QR CODE COMPONENT -->
+        @if (isQuizCreated()) {
+        <app-qrcode [quizNumber]="createdQuizNumber()" [quizId]="createdQuizId()" [showActions]="true"
+          (newQuizClick)="startNewQuiz()">
+        </app-qrcode>
+        }
+
+      </div>
+
+      <!-- SIDEBAR (RIGHT) -->
+      <div class="col-lg-4">
+
+        <!-- QUIZ SUMMARY CARD -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-info text-white">
+            <h5 class="mb-0 text-white"><span class="me-2">📊</span>Quiz Summary</h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item d-flex justify-content-between">
+                <span>Questions</span>
+                <span class="badge bg-primary rounded-pill">{{ questions().length }}</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between">
+                <span>Quiz Name</span>
+                <span class="fw-semibold">{{ form.controls.quizName.value || 'Untitled' }}</span>
+              </div>
+              @if (quizMeta(); as meta) {
+              <div class="list-group-item d-flex justify-content-between">
+                <span>Quiz Number</span>
+                <span class="fw-semibold">{{ meta.quizNumber }}</span>
+              </div>
+              <div class="list-group-item d-flex justify-content-between">
+                <span>Category</span>
+                <span class="fw-semibold">{{ meta.category }}</span>
+              </div>
+              } @else {
+              <div class="list-group-item text-muted">Enter quiz basics to generate Quiz Number.</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- CSV IMPORT CARD -->
+        <div class="card shadow-sm csv-import-card">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0 text-dark"><span class="me-2">📁</span>CSV Import/Export</h5>
+          </div>
+          <div class="card-body text-center">
+            <div class="fs-1 mb-3">⚡</div>
+            <h6 class="fw-bold">Create Quiz Faster with CSV!</h6>
+            <p class="text-muted small">Import multiple questions instantly from a CSV file.</p>
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="downloadSampleCSV()">
+                📋 View Format
+              </button>
+              <button type="button" class="btn btn-outline-warning btn-sm" (click)="csvFileInput.click()">
+                📁 Upload CSV
+              </button>
+              @if (questions().length > 0) {
+              <button type="button" class="btn btn-outline-success btn-sm" (click)="exportToCSV()">
+                💾 Export Questions
+              </button>
+              }
+            </div>
+            <input type="file" accept=".csv" (change)="onCSVFileSelected($event)" #csvFileInput style="display: none;">
+            <div class="text-muted small mt-2">{{ csvStatus() }}</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TUTORIAL OVERLAY -->
+  @if (tutorialActive()) {
+  <div class="tutorial-overlay">
+    <!-- Spotlight -->
+    @if (getSpotlightPosition(); as spotlightPos) {
+    <div class="tutorial-spotlight" 
+        [style.top]="spotlightPos.top"
+        [style.left]="spotlightPos.left"
+        [style.width]="spotlightPos.width"
+        [style.height]="spotlightPos.height">
+    </div>
+    }
+
+    <!-- Tutorial Popup -->
+    @if (getCurrentStep(); as step) {
+    <div class="tutorial-popup"
+        [style.top]="getPopupPosition()?.top || '50px'"
+        [style.left]="getPopupPosition()?.left || '50px'">
+      
+      <h4>{{ step.title }}</h4>
+      <p>{{ step.description }}</p>
+      
+      <!-- Debug info (remove later) -->
+      <div style="font-size: 10px; color: #999; margin-bottom: 10px;">
+        Step {{ currentTutorialStep() + 1 }} | Target: {{ step.targetElement }}
+      </div>
+      
+      <div class="tutorial-controls">
+        @if (step.skipable) {
+        <button class="tutorial-skip" (click)="skipTutorial()">
+          Skip Tutorial
+        </button>
+        }
+        
+        <div class="tutorial-navigation">
+          @if (currentTutorialStep() > 0) {
+          <button class="tutorial-btn secondary" (click)="previousTutorialStep()">
+            Previous
+          </button>
+          }
+          
+          @if (currentTutorialStep() < tutorialSteps().length - 1) {
+          <button class="tutorial-btn" (click)="nextTutorialStep()">
+            Next
+          </button>
+          } @else {
+          <button class="tutorial-btn" (click)="skipTutorial()">
+            Finish
+          </button>
+          }
+        </div>
+      </div>
+      
+      <div class="tutorial-progress">
+        Step {{ currentTutorialStep() + 1 }} of {{ tutorialSteps().length }}
+        
+        <div class="tutorial-step-indicator">
+          @for (step of tutorialSteps(); track step.id; let i = $index) {
+          <div class="tutorial-step-dot" 
+              [class.active]="i === currentTutorialStep()"
+              [class.completed]="i < currentTutorialStep()">
+          </div>
+          }
+        </div>
+      </div>
+      
+    </div>
+    }
+  </div>
+  }
