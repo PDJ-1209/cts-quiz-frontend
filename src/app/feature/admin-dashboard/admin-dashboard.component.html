@@ -29,6 +29,12 @@
             <span>Quiz Management</span>
           </button>
         </li>
+        <li>
+          <a routerLink="/template" class="nav-btn" routerLinkActive="active">
+            <i class="fas fa-clone"></i>
+            <span>Templates</span>
+          </a>
+        </li>
         <li [class.active]="selectedTab() === 'analytics'">
           <button (click)="selectTab('analytics')" class="nav-btn">
             <i class="fas fa-chart-line"></i>
@@ -272,47 +278,8 @@
         <div class="quiz-management-container">
           <div class="table-header">
             <h3><i class="fas fa-clipboard-list"></i> Quiz Management</h3>
-            <div class="quiz-stats-summary" *ngIf="quizManagementData()?.totalQuizzes !== undefined">
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalQuizzes || 0 }}</span>
-                <span class="stat-label">Total Quizzes</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalSurveys || 0 }}</span>
-                <span class="stat-label">Total Surveys</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalPolls || 0 }}</span>
-                <span class="stat-label">Total Polls</span>
-              </div>
-            </div>
           </div>
 
-          <!-- Search Bar for Quiz -->
-          <div class="search-filter-container quiz-search">
-            <div class="search-box">
-              <i class="fas fa-search"></i>
-              <input 
-                type="text"
-                placeholder="Search quizzes by name, creator, status..."
-                [value]="searchTerm()"
-                (input)="onSearchChange($any($event.target).value)"
-                class="search-input"
-              >
-              <div *ngIf="searchTerm()" class="search-results-badge">
-                Results across all quiz types
-              </div>
-            </div>
-            <button 
-              *ngIf="isFiltersActive()"
-              class="btn-clear-filters"
-              (click)="clearFilters()"
-            >
-              <i class="fas fa-times"></i> Clear
-            </button>
-          </div>
-
-          <!-- Quiz Management Sub-tabs -->
           <div class="quiz-tabs">
             <button 
               [class.active]="selectedQuizTab() === 'quizzes'"
@@ -511,6 +478,56 @@
                 <p>{{ searchTerm() ? 'Try adjusting your search criteria' : 'No polls have been created yet.' }}</p>
               </div>
             </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates Tab -->
+      <div *ngIf="selectedTab() === 'templates'" class="tab-content">
+        <div class="templates-panel">
+          <div class="templates-topbar">
+            <div>
+              <h3 class="topbar-title">Templates</h3>
+              <p class="topbar-sub">Manage predefined quiz templates and jump to other sections.</p>
+            </div>
+            <div class="topbar-actions">
+              <button class="btn-secondary" (click)="selectTab('overview')">Exit Templates</button>
+              <button class="btn-outline" (click)="selectTab('analytics')">Analytics</button>
+              <button class="btn-primary" (click)="navigateToTemplates()">Open Template Dashboard</button>
+            </div>
+          </div>
+
+          <div class="table-header">
+            <h3><i class="fas fa-clone"></i> Templates</h3>
+            <button class="btn-primary" (click)="navigateToTemplates()">Open Template Dashboard</button>
+          </div>
+
+          <div class="templates-grid">
+            <div class="template-card" *ngFor="let t of templates()">
+              <div class="template-card__header">
+                <div class="icon"><i class="fas fa-file-alt"></i></div>
+                <div>
+                  <div class="title">{{ t.templateName }}</div>
+                  <div class="badge" [class.pdf]="t.templateType === 'PDF'" [class.html]="t.templateType === 'HTML'" [class.excel]="t.templateType === 'EXCEL'">{{ t.templateType || 'N/A' }}</div>
+                  <div class="meta-row">
+                    <span class="chip">Category: {{ getTemplateCategory(t) }}</span>
+                    <span class="chip" *ngIf="getTemplateQuestionCount(t) as qc">{{ qc }} Qs</span>
+                  </div>
+                </div>
+              </div>
+              <p class="desc">{{ t.templateConfig || 'No configuration provided' }}</p>
+              <div class="footer">
+                <span>Created by: {{ t.createdBy || 'Admin' }}</span>
+                <div class="action-buttons">
+                  <button class="btn-sm btn-outline" (click)="selectTemplate(t)">View</button>
+                  <button class="btn-sm btn-outline" (click)="openEditTemplateModal(t)">Edit</button>
+                  <button class="btn-sm btn-danger" (click)="deleteTemplate(t)">Delete</button>
+                </div>
+              </div>
+            </div>
+            <div class="empty-state" *ngIf="templates().length === 0">
+              No templates found. <a href="javascript:void(0)" (click)="navigateToTemplates()">Create one</a>
+            </div>
           </div>
         </div>
       </div>

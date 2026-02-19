@@ -207,6 +207,15 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       route: '/host/leaderboard',
       color: '#FFD700',
       gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+    },
+    {
+      id: 'templates',
+      title: 'Use Templates',
+      description: 'Start from a predefined template and customize it',
+      icon: 'fas fa-clone',
+      route: '/template',
+      color: '#0EA5E9',
+      gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)'
     }
   ];
 

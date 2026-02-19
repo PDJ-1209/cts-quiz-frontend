@@ -5,5 +5,7 @@ export interface temp {
   templateType: string;
   templateConfig: string | null;
   createdBy: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 

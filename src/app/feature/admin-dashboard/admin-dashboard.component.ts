@@ -785,6 +785,42 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
            this.selectedRoleFilter() !== null || 
            this.selectedStatusFilter() !== 'all';
   }
+
+  // ===== Template Management Methods =====
+  
+  navigateToTemplates(): void {
+    this.router.navigate(['/template']);
+  }
+
+  selectTemplate(template: Template): void {
+    // Navigate to template editor
+    this.router.navigate(['/template']);
+  }
+
+  getTemplateCategory(template: Template): string {
+    if (!template || !template.templateConfig) return 'General';
+    try {
+      const config = typeof template.templateConfig === 'string' 
+        ? JSON.parse(template.templateConfig) 
+        : template.templateConfig;
+      return config.category || 'General';
+    } catch {
+      return 'General';
+    }
+  }
+
+  getTemplateQuestionCount(template: Template): number | null {
+    if (!template || !template.templateConfig) return null;
+    try {
+      const config = typeof template.templateConfig === 'string' 
+        ? JSON.parse(template.templateConfig) 
+        : template.templateConfig;
+      return config.questionCount || null;
+    } catch {
+      return null;
+    }
+  }
+
   ngOnDestroy() {
     // Cleanup handled by takeUntilDestroyed
   }
