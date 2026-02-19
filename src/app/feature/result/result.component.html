@@ -120,7 +120,6 @@
                   <th>Status</th>
                   <th>Created</th>
                   <th>Start Time</th>
-                  <th>End Time</th>
                   <th>Publish</th>
                   <th>Actions</th>
                 </tr>
@@ -150,18 +149,8 @@
                         [value]="startTimes[quiz.quizId] || ''"
                         (change)="onStartTimeChange(quiz.quizId, $event)"
                         placeholder="Start time"
-                        [disabled]="quiz.status.toLowerCase() === 'active'"
+                        [disabled]="quiz.status.toLowerCase() === 'published' || quiz.status.toLowerCase() === 'active' || quiz.status.toLowerCase() === 'completed'"
                         [id]="'start-' + quiz.quizId">
-                    </td>
-                    <td class="time-cell">
-                      <input 
-                        type="datetime-local" 
-                        class="form-control form-control-sm time-input"
-                        [value]="endTimes[quiz.quizId] || ''"
-                        (change)="onEndTimeChange(quiz.quizId, $event)"
-                        placeholder="End time"
-                        [disabled]="quiz.status.toLowerCase() === 'active'"
-                        [id]="'end-' + quiz.quizId">
                     </td>
                     <td class="publish-cell">
                       @if (quiz.status.toLowerCase() === 'draft') {
@@ -170,9 +159,14 @@
                           (click)="publishQuiz(quiz.quizNumber)">
                           📤 Publish
                         </button>
-                      } @else if (quiz.status.toLowerCase() === 'active') {
-                        <span class="badge bg-success">🟢 Active</span>
-                      } @else if (quiz.status.toLowerCase() === 'completed') {
+                      } @else if (quiz.status.toLowerCase() === 'published' || quiz.status.toLowerCase() === 'active') {
+                        <button 
+                          class="btn btn-sm btn-primary enter-lobby-btn"
+                          (click)="enterLobby(quiz.quizNumber, quiz.quizId)"
+                          title="Enter Host Lobby">
+                          🎮 Enter Lobby
+                        </button>
+                      } @else if (quiz.status && (quiz.status.toLowerCase() === 'completed' || quiz.status.toUpperCase() === 'COMPLETED')) {
                         <button 
                           class="btn btn-sm btn-warning republish-btn"
                           (click)="republishQuiz(quiz.quizNumber)">
@@ -183,11 +177,22 @@
                       }
                     </td>
                     <td>
-                      <button 
-                        class="btn btn-sm btn-outline-primary"
-                        (click)="toggleQR(quiz.quizId)">
-                        {{ showQRForQuizId() === quiz.quizId ? 'Hide QR' : 'Show QR' }}
-                      </button>
+                      <div class="btn-group btn-group-sm">
+                        <button 
+                          class="btn btn-outline-primary"
+                          (click)="toggleQR(quiz.quizId)"
+                          title="Show QR Code">
+                          {{ showQRForQuizId() === quiz.quizId ? 'Hide QR' : 'Show QR' }}
+                        </button>
+                        @if (quiz.status.toLowerCase() === 'completed') {
+                          <button 
+                            class="btn btn-outline-info"
+                            (click)="viewResults(quiz.quizNumber)"
+                            title="View Results & Analysis">
+                            📊 Results
+                          </button>
+                        }
+                      </div>
                     </td>
                   </tr>
                   @if (showQRForQuizId() === quiz.quizId) {

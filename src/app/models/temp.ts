@@ -7,5 +7,7 @@ export interface temp {
   categoryType?: string;
   selectedQuestionIds?: string;
   createdBy: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 

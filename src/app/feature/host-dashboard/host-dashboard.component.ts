@@ -230,13 +230,13 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
     },
     {
-      id: 'create-template',
-      title: 'Create Template',
-      description: 'Create a new template with questions by category',
-      icon: 'fas fa-file-alt',
-      route: '',
-      color: '#E83E8C',
-      gradient: 'linear-gradient(135deg, #E83E8C 0%, #BD2130 100%)'
+      id: 'templates',
+      title: 'Use Templates',
+      description: 'Start from a predefined template and customize it',
+      icon: 'fas fa-clone',
+      route: '/template',
+      color: '#0EA5E9',
+      gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)'
     }
   ];
 

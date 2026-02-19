@@ -153,4 +153,56 @@
       </button>
     </div>
   </div>
+
+  <!-- Leaderboard Overlay -->
+  <div *ngIf="showLeaderboardOverlay" class="leaderboard-overlay">
+    <div class="leaderboard-modal">
+      <div class="leaderboard-header">
+        <h2>🏆 Leaderboard</h2>
+        <span *ngIf="leaderboardCountdown > 0" class="countdown-timer">
+          Auto-close in {{ leaderboardCountdown }}s
+        </span>
+        <button class="close-btn" (click)="closeLeaderboard()">✕</button>
+      </div>
+      
+      <div class="leaderboard-content">
+        <div *ngIf="leaderboardData && leaderboardData.rankings && leaderboardData.rankings.length > 0; else noData">
+          <div class="leaderboard-stats">
+            <p><strong>Quiz:</strong> {{ leaderboardData.quizTitle }}</p>
+            <p><strong>Participants:</strong> {{ leaderboardData.totalParticipants }}</p>
+          </div>
+          
+          <div class="rankings-list">
+            <div *ngFor="let ranking of leaderboardData.rankings; let i = index" 
+                 class="ranking-item"
+                 [class.top-1]="i === 0"
+                 [class.top-2]="i === 1"
+                 [class.top-3]="i === 2">
+              <div class="rank-badge">
+                <span *ngIf="i === 0">🥇</span>
+                <span *ngIf="i === 1">🥈</span>
+                <span *ngIf="i === 2">🥉</span>
+                <span *ngIf="i > 2">#{{ ranking.rank }}</span>
+              </div>
+              <div class="participant-info">
+                <span class="participant-name">{{ ranking.participantName }}</span>
+                <span class="participant-stats">
+                  {{ ranking.correctAnswers }}/{{ ranking.totalQuestions }} correct
+                  <span *ngIf="ranking.formattedTime"> • {{ ranking.formattedTime }}</span>
+                </span>
+              </div>
+              <div class="score-badge">{{ ranking.score }} pts</div>
+            </div>
+          </div>
+        </div>
+        
+        <ng-template #noData>
+          <div class="no-data">
+            <p>📊 No rankings available yet</p>
+            <p class="hint">Participants need to submit answers to appear on the leaderboard</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
 </div>

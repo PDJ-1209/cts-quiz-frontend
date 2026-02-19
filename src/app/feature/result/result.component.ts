@@ -455,10 +455,6 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  viewResults(quizId: number) {
-    this.router.navigate(['/quiz', quizId, 'results']);
-  }
-
   editQuiz(quizId: number) {
     this.router.navigate(['/quiz', quizId, 'edit']);
   }
@@ -528,17 +524,9 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       const startTimeInput = this.startTimes[quiz.quizId];
       const endTimeInput = this.endTimes[quiz.quizId];
 
-      // Validate that both start and end times are provided
+      // Validate that start time is provided
       if (!startTimeInput) {
         this.snackBar.open('⚠️ Start time is required', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar'],
-        });
-        return;
-      }
-
-      if (!endTimeInput) {
-        this.snackBar.open('⚠️ End time is required', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
@@ -553,21 +541,12 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         startTime = new Date(startTimeInput).toISOString();
       }
 
+      // End time is optional
       if (endTimeInput) {
         const endDate = new Date(endTimeInput);
         endTime = endDate.toISOString();
         
-        // Validate end time is in the future
-        const now = new Date();
-        if (endDate <= now) {
-          this.snackBar.open('⚠️ End time must be in the future', 'Close', {
-            duration: 4000,
-            panelClass: ['warning-snackbar'],
-          });
-          return;
-        }
-
-        // Validate end time is after start time
+        // Only validate if end time is provided
         const startDate = new Date(startTimeInput);
         if (endDate <= startDate) {
           this.snackBar.open('⚠️ End time must be after start time', 'Close', {
@@ -593,7 +572,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
       console.log(`[PublishQuiz] Calling createQuizSession for QuizId=${quiz.quizId}, QuizNumber=${quizNumber}`);
 
-      // Create QuizSession using the new method designed for SignalR
+      // Create QuizSession with 'Active' status
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
         this.currentHostId,
@@ -607,6 +586,15 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Track this session for status monitoring
       this.activeSessionIds.set(quizNumber, sessionResponse.sessionId);
+
+      // Update Quiz status to 'Active' to stay synchronized
+      try {
+        await this.store.updateQuizStatus(quiz.quizId, 'Active');
+        console.log(`[PublishQuiz] Quiz status updated to Active`);
+      } catch (statusError) {
+        console.error('[PublishQuiz] Failed to update quiz status:', statusError);
+        // Continue anyway since session was created
+      }
 
       console.log('Session created:', sessionResponse);
 
@@ -913,6 +901,48 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       top: `${top}px`,
       left: `${left}px`
     };
+  }
+
+  /**
+   * Enter Host Lobby - Opens host dashboard in new tab with manual control mode
+   */
+  async enterLobby(quizNumber: string, quizId: number) {
+    try {
+      // Get the session code for this quiz
+      const session = await this.quizPublishService.getQuizSessionByCode(quizNumber);
+      
+      if (!session || !session.sessionCode) {
+        this.snackBar.open('⚠️ No active session found for this quiz', 'Close', {
+          duration: 4000,
+          panelClass: ['warning-snackbar']
+        });
+        return;
+      }
+
+      // Open host dashboard in new tab with session code and manual control flag
+      const url = `/host-lobby?sessionCode=${session.sessionCode}&quizId=${quizId}&mode=manual`;
+      window.open(url, '_blank');
+
+      this.snackBar.open('🎮 Opening Host Lobby in new tab...', 'Close', {
+        duration: 3000,
+        panelClass: ['success-snackbar']
+      });
+    } catch (error: any) {
+      console.error('Error entering lobby:', error);
+      this.snackBar.open('⚠️ Failed to enter lobby', 'Close', {
+        duration: 4000,
+        panelClass: ['error-snackbar']
+      });
+    }
+  }
+
+  /**
+   * View Results & Analysis - Navigate to results page
+   */
+  viewResults(quizNumber: string) {
+    this.router.navigate(['/results-analysis'], {
+      queryParams: { sessionCode: quizNumber }
+    });
   }
 
   ngOnDestroy() {

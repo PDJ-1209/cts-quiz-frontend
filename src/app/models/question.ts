@@ -1,8 +1,12 @@
 export interface Question {
   questionId?: number;
-  templateId: number;
+  quizId?: number;
+  templateId?: number;
   questionText: string;
   questionType?: string;
+  isRequired?: boolean;
+  points?: number;
+  order?: number;
   category?: string;
   difficultyLevel?: string;
   tags?: string;
@@ -11,4 +15,13 @@ export interface Question {
   createdAt?: Date;
   updatedAt?: Date;
   status?: string;
+  options?: Option[];
+}
+
+export interface Option {
+  optionId?: number;
+  questionId?: number;
+  optionText: string;
+  isCorrect?: boolean;
+  order?: number;
 }

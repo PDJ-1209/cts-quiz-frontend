@@ -153,7 +153,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
 
   private initializeSignalR(): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http:// localhost:5195/quizSessionHub', {
+      .withUrl('http://localhost:5195/quizSessionHub', {
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets
       })
