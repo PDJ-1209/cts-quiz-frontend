@@ -20,6 +20,11 @@
           <span class="stat-value">{{ entries.length }}</span>
         </span>
       </div>
+      <!-- Connection Status Indicator -->
+      <div class="connection-status" [class.connected]="isConnected" [class.disconnected]="!isConnected">
+        <span class="status-indicator"></span>
+        <span class="status-text">{{ isConnected ? 'Live' : 'Connecting...' }}</span>
+      </div>
     </div>
 
     <div 

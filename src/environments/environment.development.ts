@@ -1,17 +1,13 @@
-// This file can be replaced during build by using the `fileReplacements` array.
-// `ng build` replaces `environment.ts` with `environment.prod.ts`.
-// The list of file replacements can be found in `angular.json`.
-
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:5195/api',
-  signalRUrl: 'http://localhost:5195/hubs/quizHub',
+  signalRUrl: 'http://localhost:5195/quizSessionHub',
   enableLogging: true,
   demoMode: true, // For interview demo
   retryAttempts: 3,
-  requestTimeout: 10000,
+  requestTimeout: 10000,  
   apiEndpoints: {
-    template: '/template', // Admin area: api/template (doesn't follow area pattern)
+    template: '/Admin/Template', // Admin area: api/Admin/Template
     questions: '/host/question', // Host area: api/host/question
     dashboard: '/admin', // Admin area: api/admin
     users: '/userManagement', // Admin area: api/userManagement (doesn't follow area pattern)

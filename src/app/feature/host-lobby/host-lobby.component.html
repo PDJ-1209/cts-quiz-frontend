@@ -1,0 +1,299 @@
+<!-- Host Lobby - Professional UI matching app theme -->
+<div class="host-lobby-container">
+  <!-- Header Section -->
+  <header class="lobby-header">
+    <div class="header-content">
+      <div class="session-info">
+        <h1 class="lobby-title">🎮 HOST CONTROL CENTER</h1>
+        <div class="session-details">
+          <div class="session-code-display">
+            <span class="label">Session:</span>
+            <span class="code">{{ sessionCode() }}</span>
+          </div>
+          <div class="quiz-name">{{ sessionData()?.quizName || 'Loading...' }}</div>
+        </div>
+      </div>
+      
+      <div class="header-controls">
+        <!-- Mode Toggle -->
+        <button class="mode-toggle-btn" (click)="toggleMode()" [class.manual]="mode() === 'manual'" [class.auto]="mode() === 'auto'">
+          {{ mode() === 'manual' ? '🎮 MANUAL MODE' : '🤖 AUTO MODE' }}
+        </button>
+        
+        <!-- Connection Status -->
+        <div class="connection-status" [class.connected]="connectionStatus() === 'connected'"
+                                       [class.connecting]="connectionStatus() === 'connecting'"
+                                       [class.disconnected]="connectionStatus() === 'disconnected'">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ connectionStatus() | uppercase }}</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Waiting Room -->
+  @if (waitingForStart()) {
+    <div class="waiting-room">
+      <div class="waiting-content">
+        <div class="waiting-icon">⏰</div>
+        <h2>Waiting Room</h2>
+        <p class="waiting-message">Quiz will start in:</p>
+        <div class="countdown-timer">{{ countdownDisplay() }}</div>
+        
+        <div class="waiting-stats">
+          <div class="stat-item">
+            <span class="stat-icon">👥</span>
+            <span class="stat-value">{{ participantProgress().totalParticipants }}</span>
+            <span class="stat-label">Participants Joined</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📝</span>
+            <span class="stat-value">{{ totalQuestions() }}</span>
+            <span class="stat-label">Questions Ready</span>
+          </div>
+        </div>
+        
+        @if (mode() === 'manual') {
+          <button class="force-start-btn" (click)="forceStartQuiz()">
+            🚀 Force Start Quiz Now
+          </button>
+          <p class="manual-hint">In manual mode, you can start the quiz anytime</p>
+        } @else {
+          <p class="auto-hint">Auto mode: Quiz will start automatically at scheduled time</p>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Active Quiz Panel -->
+  @if (quizStarted() && !waitingForStart()) {
+    <div class="control-panel">
+      <!-- Current Question Display -->
+      <div class="current-question-card">
+        <div class="question-header">
+          <h3>📝 Current Question</h3>
+          <span class="question-counter">{{ currentQuestionNumber() }} / {{ totalQuestions() }}</span>
+        </div>
+        <div class="question-body">
+          <p class="question-text">{{ currentQuestionText() }}</p>
+          <div class="question-timer-display">
+            <span class="timer-icon">⏱️</span>
+            <span class="timer-value">{{ timerDisplay() }}</span>
+            <div class="timer-bar-wrapper">
+              <div class="timer-bar" [style.width.%]="timerProgress()"
+                                     [class.warning]="timerProgress() < 30"
+                                     [class.critical]="timerProgress() < 10">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Stats Grid -->
+      <div class="stats-grid">
+        <!-- Participant Progress Card -->
+        <div class="stat-card">
+          <div class="card-header">
+            <span class="card-icon">👥</span>
+            <h3>Participant Activity</h3>
+          </div>
+          <div class="card-body">
+            <div class="stat-value">
+              {{ participantProgress().submittedCount }} / {{ participantProgress().totalParticipants }}
+            </div>
+            <div class="stat-label">Submitted Answers</div>
+            <div class="progress-bar-container">
+              <div class="progress-bar" [style.width.%]="progressPercentage()">
+                <span class="progress-text">{{ progressPercentage() }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiz Status Card -->
+        <div class="stat-card">
+          <div class="card-header">
+            <span class="card-icon">📊</span>
+            <h3>Quiz Status</h3>
+          </div>
+          <div class="card-body">
+            <div class="status-badge" [class.active]="!quizEnded()" [class.ended]="quizEnded()">
+              {{ quizEnded() ? '🏁 ENDED' : '🔴 LIVE' }}
+            </div>
+            <div class="leaderboard-status">
+              <span class="toggle-label">Leaderboard:</span>
+              <span class="toggle-status" [class.visible]="leaderboardVisible()">
+                {{ leaderboardVisible() ? '👁️ VISIBLE' : '🔒 HIDDEN' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Host Control Buttons -->
+      @if (mode() === 'manual') {
+        <div class="control-buttons manual-controls">
+          <div class="controls-header">
+            <h3>🎮 Manual Controls</h3>
+            <p>You have full control over quiz navigation and timing</p>
+          </div>
+          
+          <div class="button-group">
+            <h4 class="group-title">Navigation Control</h4>
+            <div class="button-row">
+              <button class="control-btn" 
+                      (click)="forceNavigate(currentQuestionNumber() - 1)"
+                      [disabled]="currentQuestionNumber() <= 1 || quizEnded()">
+                ⬅️ Previous Question
+              </button>
+              <button class="control-btn"
+                      (click)="forceNavigate(currentQuestionNumber() + 1)"
+                      [disabled]="currentQuestionNumber() >= totalQuestions() || quizEnded()">
+                Next Question ➡️
+              </button>
+            </div>
+            <div class="button-row">
+              <input type="number" 
+                     class="question-input" 
+                     [(ngModel)]="jumpToQuestion" 
+                     [min]="1" 
+                     [max]="totalQuestions()"
+                     placeholder="Question #"
+                     [disabled]="quizEnded()">
+              <button class="control-btn primary"
+                      (click)="forceNavigate(jumpToQuestion)"
+                      [disabled]="quizEnded()">
+                🎯 Jump to Question
+              </button>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <h4 class="group-title">Display Control</h4>
+            <div class="button-row">
+              <button class="control-btn"
+                      [class.active]="showLeaderboardAfterQuestion()"
+                      (click)="toggleShowAfterQuestion()"
+                      [disabled]="quizEnded()">
+                {{ showLeaderboardAfterQuestion() ? '✅ Showing After Questions' : '📊 Show After Each Question' }}
+              </button>
+              <button class="control-btn"
+                      [class.active]="showLeaderboardAtEndOnly()"
+                      (click)="toggleShowAtEndOnly()"
+                      [disabled]="quizEnded()">
+                {{ showLeaderboardAtEndOnly() ? '✅ Will Show at End' : '🏁 Show at End Only' }}
+              </button>
+            </div>
+            <div class="button-row">
+              <button class="control-btn primary"
+                      (click)="viewLeaderboard()">
+                📊 View Leaderboard
+              </button>
+            </div>
+
+            
+            <!-- Leaderboard Display Duration -->
+            <div class="button-row timer-settings" *ngIf="showLeaderboardAfterQuestion()">
+              <label class="timer-label">
+                ⏱️ Display Duration:
+                <input type="number" 
+                       class="timer-input"
+                       [value]="leaderboardDisplayDuration()"
+                       (input)="updateLeaderboardDuration($event)"
+                       min="3"
+                       max="30"
+                       step="1"
+                       [disabled]="quizEnded()">
+                <span class="timer-unit">seconds</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="button-group danger-zone">
+            <h4 class="group-title">⚠️ Quiz Control</h4>
+            <button class="control-btn danger"
+                    (click)="manualEndQuiz()"
+                    [disabled]="quizEnded()">
+              🛑 End Quiz Now
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="auto-mode-info">
+          <div class="info-card">
+            <span class="info-icon">🤖</span>
+            <h3>Auto Mode Active</h3>
+            <p>The quiz is running automatically. You can monitor progress but cannot control navigation.</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Leaderboard Overlay -->
+  @if (showLeaderboardOverlay()) {
+    <div class="leaderboard-overlay">
+      <div class="leaderboard-modal">
+        <div class="leaderboard-header">
+          <h2>🏆 Current Leaderboard</h2>
+          @if (isLoadingLeaderboard()) {
+            <span class="loading-badge">Loading...</span>
+          }
+          <button class="close-btn" (click)="closeLeaderboardOverlay()">✕</button>
+        </div>
+        
+        <div class="leaderboard-content">
+          @if (isLoadingLeaderboard()) {
+            <div class="loading-state">
+              <div class="spinner"></div>
+              <p>Loading leaderboard...</p>
+            </div>
+          } @else if (leaderboardData() && leaderboardData().rankings && leaderboardData().rankings.length > 0) {
+            <div class="leaderboard-stats">
+              <p><strong>Quiz:</strong> {{ leaderboardData().quizTitle }}</p>
+              <p><strong>Total Participants:</strong> {{ leaderboardData().totalParticipants }}</p>
+              <p><strong>Last Updated:</strong> {{ leaderboardData().lastUpdated | date:'short' }}</p>
+            </div>
+            
+            <div class="rankings-list">
+              @for (entry of leaderboardData().rankings; track entry.participantId; let i = $index) {
+                <div class="ranking-item" 
+                     [class.top-1]="i === 0"
+                     [class.top-2]="i === 1"
+                     [class.top-3]="i === 2">
+                  <div class="rank-badge">
+                    @if (i === 0) {
+                      <span>🥇</span>
+                    } @else if (i === 1) {
+                      <span>🥈</span>
+                    } @else if (i === 2) {
+                      <span>🥉</span>
+                    } @else {
+                      <span>#{{ entry.rank }}</span>
+                    }
+                  </div>
+                  <div class="participant-info">
+                    <span class="participant-name">{{ entry.participantName }}</span>
+                    <span class="participant-stats">
+                      {{ entry.correctAnswers }}/{{ entry.totalQuestions }} correct
+                      @if (entry.formattedTime) {
+                        <span> • {{ entry.formattedTime }}</span>
+                      }
+                    </span>
+                  </div>
+                  <div class="score-badge">{{ entry.score }} pts</div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-data">
+              <p>📊 No rankings available yet</p>
+              <p class="hint">Participants need to submit answers to appear on the leaderboard</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
