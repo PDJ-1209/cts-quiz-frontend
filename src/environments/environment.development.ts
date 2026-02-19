@@ -5,7 +5,7 @@ export const environment = {
   enableLogging: true,
   demoMode: true, // For interview demo
   retryAttempts: 3,
-  requestTimeout: 10000,
+  requestTimeout: 10000,  
   apiEndpoints: {
     template: '/template', // Admin area: api/template (doesn't follow area pattern)
     questions: '/host/question', // Host area: api/host/question
