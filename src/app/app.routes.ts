@@ -67,6 +67,18 @@ export const routes: Routes = [
     data: { roles: ['Host'], roleIds: [2] }
   },
   { 
+    path: 'host-lobby', 
+    loadComponent: () => import('./feature/host-lobby/host-lobby.component').then(c => c.HostLobbyComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
+  { 
+    path: 'results-analysis', 
+    loadComponent: () => import('./feature/results-analysis/results-analysis.component').then(c => c.ResultsAnalysisComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
+  { 
     path: 'host/leaderboard', 
     loadComponent: () => import('./feature/leaderboard/leaderboard.component').then(c => c.LeaderboardComponent),
     canActivate: [roleGuard],
