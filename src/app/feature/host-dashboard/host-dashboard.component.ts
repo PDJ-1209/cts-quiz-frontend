@@ -11,7 +11,6 @@ import { SurveyService } from '../../services/survey.service';
 import { ActivityService, ActivityItem, RecentActivityResponse, ActivityStats } from '../../shared/services/activity.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
-import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -60,7 +59,7 @@ interface CalendarQuiz {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, AiChatbotComponent],
+  imports: [CommonModule, RouterModule],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
