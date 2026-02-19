@@ -135,7 +135,26 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
       this.serverTimeOffsetMs = serverTimeMs - Date.now();
       this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
-      // Don't call updateQuestionState() - let SignalR control timer and navigation
+      
+      // Sync with current question if quiz is in progress
+      if (response.currentQuestionId && response.currentQuestionStartTime) {
+        const targetIndex = this.questionDetails.findIndex(q => q.questionId === response.currentQuestionId);
+        if (targetIndex !== -1 && targetIndex !== this.currentIndex) {
+          this.currentIndex = targetIndex;
+          
+          // Calculate remaining time from session data
+          const now = new Date(response.serverTime!).getTime();
+          const startTime = new Date(response.currentQuestionStartTime).getTime();
+          const elapsed = (now - startTime) / 1000;
+          const remaining = Math.max(0, Math.floor((response.timerDurationSeconds || 30) - elapsed));
+          
+          this.timeRemaining = remaining;
+          this.currentQuestionStartMs = startTime;
+          this.currentQuestionEndMs = startTime + ((response.timerDurationSeconds || 30) * 1000);
+          console.log(`[QuizPage] Refreshed to Q${targetIndex + 1} with ${remaining}s remaining`);
+        }
+      }
+      
       console.log('[QuizPage] Session synced - waiting for SignalR updates');
     } catch (error) {
       console.error('[QuizPage] Failed to refresh session sync:', error);
@@ -168,6 +187,26 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
       this.serverTimeOffsetMs = serverTimeMs - Date.now();
       this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
+      
+      // Sync with current question if quiz is in progress
+      if (response.currentQuestionId && response.currentQuestionStartTime) {
+        const targetIndex = this.questionDetails.findIndex(q => q.questionId === response.currentQuestionId);
+        if (targetIndex !== -1) {
+          this.currentIndex = targetIndex;
+          
+          // Calculate remaining time from session data
+          const now = new Date(response.serverTime!).getTime();
+          const startTime = new Date(response.currentQuestionStartTime).getTime();
+          const elapsed = (now - startTime) / 1000;
+          const remaining = Math.max(0, Math.floor((response.timerDurationSeconds || 30) - elapsed));
+          
+          this.timeRemaining = remaining;
+          this.currentQuestionStartMs = startTime;
+          this.currentQuestionEndMs = startTime + ((response.timerDurationSeconds || 30) * 1000);
+          console.log(`[QuizPage] Synced to Q${targetIndex + 1} with ${remaining}s remaining`);
+        }
+      }
+      
       this.loading = false;
 
       // Initialize SignalR live sync (timer sync handled via SignalR)
@@ -333,14 +372,21 @@ export class QuizPageComponent implements OnInit, OnDestroy {
           // Enable timer sync mode
           this.timerSyncEnabled = true;
           
+          // Get question details before updating state
+          const currentQ = this.questionDetails[targetIndex];
+          
           // Update index immediately
           this.currentIndex = targetIndex;
           this.selected = null;
           this.submittedIndex = null;
           this.waitingForNext = false;
           
+          // Set question start time for timeSpent calculation
+          const now = this.getServerNowMs();
+          this.currentQuestionStartMs = now;
+          this.currentQuestionEndMs = now + ((currentQ?.timerSeconds || 30) * 1000);
+          
           // Reset timer to question's duration
-          const currentQ = this.questionDetails[targetIndex];
           if (currentQ) {
             this.timeRemaining = currentQ.timerSeconds || 30;
             console.log('[QuizPage] ✅ Timer reset to', this.timeRemaining, 'seconds');
@@ -378,6 +424,23 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Listen to LiveTimerUpdate from background service
+    this.hubConnection.on('LiveTimerUpdate', (data: any) => {
+      const questionId = data?.QuestionId ?? data?.questionId;
+      const remainingSeconds = data?.RemainingSeconds ?? data?.remainingSeconds;
+      
+      if (this.timerSyncEnabled && questionId !== undefined && remainingSeconds !== undefined) {
+        const targetIndex = this.questionDetails.findIndex(q => q.questionId === questionId);
+        if (targetIndex === this.currentIndex && targetIndex !== -1) {
+          this.timeRemaining = Math.max(0, remainingSeconds);
+          // Log only at 10-second intervals and last 5 seconds to reduce console spam
+          if (remainingSeconds % 10 === 0 || remainingSeconds <= 5) {
+            console.log('[QuizPage] ⏱️ Live timer update:', this.timeRemaining, 's for Q', targetIndex + 1);
+          }
+        }
+      }
+    });
+
     // Question started event with timer
     this.hubConnection.on('QuestionStarted', (data: any) => {
       console.log('[QuizPage] Question started:', data);
@@ -392,6 +455,11 @@ export class QuizPageComponent implements OnInit, OnDestroy {
           this.selected = null;
           this.submittedIndex = null;
           this.waitingForNext = false;
+          
+          // Set question start time for timeSpent calculation
+          const now = this.getServerNowMs();
+          this.currentQuestionStartMs = now;
+          this.currentQuestionEndMs = now + (timerSeconds * 1000);
         }
       }
     });
@@ -511,6 +579,13 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       console.log('[QuizPage] ===== QUIZ STARTED =====', sessionCode);
       this.timerSyncEnabled = true; // Reinforce timer sync is enabled
       console.log('[QuizPage] ✅ Timer sync confirmed enabled');
+      
+      // Initialize question start time for first question
+      const now = this.getServerNowMs();
+      this.currentQuestionStartMs = now;
+      const firstQuestionTimer = this.questionDetails[0]?.timerSeconds || 30;
+      this.currentQuestionEndMs = now + (firstQuestionTimer * 1000);
+      
       this.snackBar.open('🚀 Quiz has started!', 'Close', { duration: 2000 });
     });
 

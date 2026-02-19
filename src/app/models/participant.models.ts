@@ -44,6 +44,9 @@ export interface SessionQuestionsResponse {
   totalQuestions: number;
   startedAt?: string;
   serverTime?: string;
+  currentQuestionId?: number;
+  currentQuestionStartTime?: string;
+  timerDurationSeconds?: number;
   questions: QuestionDetail[];
 }
 

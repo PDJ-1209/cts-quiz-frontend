@@ -58,6 +58,13 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   currentHostId = computed(() => this.authService.currentUser()?.employeeId || '2463579');
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
   private statusCheckInterval: any;
+  private publishingInProgress = new Set<string>(); // Track quizzes currently being published
+  
+  // Leaderboard settings per session
+  leaderboardSettings: { [sessionCode: string]: { showAfterQuestion: boolean, showAtEndOnly: boolean, displayDuration?: number } } = {};
+  showLeaderboardPanel: { [quizId: number]: boolean } = {};
+  leaderboardDataCache: { [sessionCode: string]: any } = {};
+  leaderboardTimers: { [sessionCode: string]: number } = {}; // Duration in seconds
 
   // Content type selection
   selectedContentType = signal<'quizzes' | 'surveys' | 'polls'>('quizzes');
@@ -214,7 +221,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     await this.loadQuizzes();
     await this.loadSurveys();
     await this.loadPolls();
-    this.initializeQuizPublishService();
+    await this.initializeQuizPublishService();
     this.startStatusPolling();
     
     console.log('Loaded data summary:');
@@ -322,7 +329,15 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private initializeQuizPublishService() {
+  private async initializeQuizPublishService() {
+    // Initialize SignalR connection for leaderboard settings
+    try {
+      await this.quizPublishService.initializeConnection(this.currentHostId());
+      console.log('[ResultComponent] SignalR connection initialized for leaderboard management');
+    } catch (error) {
+      console.error('[ResultComponent] Failed to initialize SignalR connection:', error);
+    }
+    
     const connectionSub = this.quizPublishService.connectionState$.subscribe(state => {
       console.log('SignalR Connection State:', state);
     });
@@ -512,7 +527,15 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async publishQuiz(quizNumber: string) {
+    // Prevent duplicate calls
+    if (this.publishingInProgress.has(quizNumber)) {
+      console.log(`[PublishQuiz] Already publishing quiz ${quizNumber}, ignoring duplicate call`);
+      return;
+    }
+
     try {
+      this.publishingInProgress.add(quizNumber);
+      
       const quiz = this.hostQuizzes().find((q: QuizListItem) => q.quizNumber === quizNumber);
       
       if (!quiz) {
@@ -548,7 +571,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         const endDate = new Date(endTimeInput);
         endTime = endDate.toISOString();
         
-        // Only validate if end time is provided
+        // Validate end time is after start time
         const startDate = new Date(startTimeInput);
         if (endDate <= startDate) {
           this.snackBar.open('⚠️ End time must be after start time', 'Close', {
@@ -568,18 +591,17 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         startTimeISO: startTime,
         endTimeInput,
         endTimeISO: endTime,
-        currentTime: new Date().toISOString(),
-        currentTimeLocal: new Date().toString()
+        currentTime: new Date().toISOString()
       });
 
       console.log(`[PublishQuiz] Calling createQuizSession for QuizId=${quiz.quizId}, QuizNumber=${quizNumber}`);
 
-      // Create QuizSession with 'Active' status
+      // Create QuizSession with scheduled start time
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
         this.currentHostId(),
         quizNumber,
-        startTime,
+        startTime, // Send scheduled start time
         endTime,
         'Active'
       );
@@ -598,10 +620,14 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         // Continue anyway since session was created
       }
 
+      // Note: Quiz will auto-start at scheduled time via background service
+      // Or host can force start from lobby before scheduled time
+      console.log(`[PublishQuiz] Quiz scheduled to start at: ${startTime}`);
+
       console.log('Session created:', sessionResponse);
 
       this.snackBar.open(
-        `✅ Quiz ${quizNumber} published! Status: ${sessionResponse.status}`,
+        `✅ Quiz ${quizNumber} published! Scheduled start: ${new Date(startTime!).toLocaleString()}`,
         'Close',
         {
           duration: 5000,
@@ -630,11 +656,21 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         duration: 5000,
         panelClass: ['error-snackbar'],
       });
+    } finally {
+      this.publishingInProgress.delete(quizNumber);
     }
   }
 
   async republishQuiz(quizNumber: string) {
+    // Prevent duplicate calls
+    if (this.publishingInProgress.has(quizNumber)) {
+      console.log(`[RepublishQuiz] Already publishing quiz ${quizNumber}, ignoring duplicate call`);
+      return;
+    }
+
     try {
+      this.publishingInProgress.add(quizNumber);
+      
       const quiz = this.hostQuizzes().find((q: QuizListItem) => q.quizNumber === quizNumber);
       
       if (!quiz) {
@@ -651,7 +687,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
       // Validate that both start and end times are provided
       if (!startTimeInput) {
-        this.snackBar.open('⚠️ Start time is required', 'Close', {
+        this.snackBar.open('⚠️ Start time is required for republish', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
@@ -659,7 +695,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       if (!endTimeInput) {
-        this.snackBar.open('⚠️ End time is required', 'Close', {
+        this.snackBar.open('⚠️ End time is required for republish', 'Close', {
           duration: 4000,
           panelClass: ['warning-snackbar'],
         });
@@ -706,15 +742,14 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         endTimeISO: endTime
       });
 
-      // First, mark the old completed session (if any) - backend will create new one
-      // Create a new QuizSession with Active status
+      // Create a new QuizSession with scheduled start time
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
         this.currentHostId(),
         quizNumber,
-        startTime,
+        startTime, // Send scheduled start time
         endTime,
-        'Active'  // New session starts as Active
+        'Active'
       );
 
       console.log('New session created for republish:', sessionResponse);
@@ -731,8 +766,12 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       // Track this session for status monitoring
       this.activeSessionIds.set(quizNumber, sessionResponse.sessionId);
 
+      // Note: Quiz will auto-start at scheduled time via background service
+      // Or host can force start from lobby before scheduled time
+      console.log(`[RepublishQuiz] Quiz scheduled to start at: ${startTime}`);
+
       this.snackBar.open(
-        `✅ Quiz ${quizNumber} republished successfully! Status: Active`,
+        `✅ Quiz ${quizNumber} republished! Scheduled start: ${new Date(startTime!).toLocaleString()}`,
         'Close',
         {
           duration: 5000,
@@ -756,6 +795,8 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         duration: 5000,
         panelClass: ['error-snackbar'],
       });
+    } finally {
+      this.publishingInProgress.delete(quizNumber);
     }
   }
 
@@ -945,6 +986,98 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/results-analysis'], {
       queryParams: { sessionCode: quizNumber }
     });
+  }
+
+  /**
+   * Toggle leaderboard settings panel for a quiz
+   */
+  toggleLeaderboardPanel(quizId: number) {
+    this.showLeaderboardPanel[quizId] = !this.showLeaderboardPanel[quizId];
+  }
+
+  /**
+   * Update leaderboard setting - show after each question
+   */
+  async updateShowAfterQuestion(sessionCode: string, enabled: boolean) {
+    try {
+      // Update via SignalR
+      await this.quizPublishService.setShowLeaderboardAfterQuestion(sessionCode, enabled);
+      
+      if (!this.leaderboardSettings[sessionCode]) {
+        this.leaderboardSettings[sessionCode] = { showAfterQuestion: false, showAtEndOnly: false };
+      }
+      this.leaderboardSettings[sessionCode].showAfterQuestion = enabled;
+      
+      const message = enabled 
+        ? '✅ Leaderboard will show after each question' 
+        : '🔒 Leaderboard will NOT show after questions';
+      this.snackBar.open(message, 'Close', { duration: 3000 });
+    } catch (error) {
+      console.error('Failed to update leaderboard setting:', error);
+      this.snackBar.open('⚠️ Failed to update setting', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Update leaderboard setting - show at end only
+   */
+  async updateShowAtEndOnly(sessionCode: string, enabled: boolean) {
+    try {
+      // Update via SignalR
+      await this.quizPublishService.setShowLeaderboardAtEndOnly(sessionCode, enabled);
+      
+      if (!this.leaderboardSettings[sessionCode]) {
+        this.leaderboardSettings[sessionCode] = { showAfterQuestion: false, showAtEndOnly: false };
+      }
+      this.leaderboardSettings[sessionCode].showAtEndOnly = enabled;
+      
+      const message = enabled 
+        ? '✅ Leaderboard will show only at quiz end' 
+        : '🔒 End-only mode disabled';
+      this.snackBar.open(message, 'Close', { duration: 3000 });
+    } catch (error) {
+      console.error('Failed to update leaderboard setting:', error);
+      this.snackBar.open('⚠️ Failed to update setting', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Update leaderboard display timer duration
+   */
+  updateLeaderboardTimer(sessionCode: string, duration: number) {
+    if (duration < 1) duration = 1;
+    if (duration > 60) duration = 60;
+    
+    this.leaderboardTimers[sessionCode] = duration;
+    
+    if (!this.leaderboardSettings[sessionCode]) {
+      this.leaderboardSettings[sessionCode] = { showAfterQuestion: false, showAtEndOnly: false };
+    }
+    this.leaderboardSettings[sessionCode].displayDuration = duration;
+    
+    console.log(`[ResultComponent] Leaderboard timer set to ${duration}s for session ${sessionCode}`);
+    this.snackBar.open(`⏱️ Leaderboard will display for ${duration} seconds`, 'Close', { duration: 2000 });
+  }
+
+  /**
+   * View current leaderboard for an active session
+   */
+  async viewLeaderboardForQuiz(quizNumber: string) {
+    try {
+      const session = await this.quizPublishService.getQuizSessionByCode(quizNumber);
+      if (!session || !session.sessionId) {
+        this.snackBar.open('⚠️ No active session found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Open leaderboard in new window or navigate
+      this.router.navigate(['/host/leaderboard'], {
+        queryParams: { sessionId: session.sessionId }
+      });
+    } catch (error) {
+      console.error('Failed to view leaderboard:', error);
+      this.snackBar.open('⚠️ Failed to load leaderboard', 'Close', { duration: 3000 });
+    }
   }
 
   ngOnDestroy() {

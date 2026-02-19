@@ -289,6 +289,9 @@ export class ParticipantService {
         totalQuestions: response.TotalQuestions ?? response.totalQuestions,
         startedAt: response.StartedAt ?? response.startedAt,
         serverTime: response.ServerTime ?? response.serverTime,
+        currentQuestionId: response.CurrentQuestionId ?? response.currentQuestionId,
+        currentQuestionStartTime: response.CurrentQuestionStartTime ?? response.currentQuestionStartTime,
+        timerDurationSeconds: response.TimerDurationSeconds ?? response.timerDurationSeconds,
         questions: (response.Questions ?? response.questions)?.map((q: any) => ({
           questionId: q.QuestionId ?? q.questionId,
           questionText: q.QuestionText ?? q.questionText,
