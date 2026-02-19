@@ -29,11 +29,7 @@
     <div class="d-flex justify-content-between align-items-center py-3">
       <div class="cognizant-brand">
         <div class="cognizant-logo">
-          <svg width="40" height="40" viewBox="0 0 40 40">
-            <rect width="40" height="40" rx="8" fill="#0066CC"/>
-            <circle cx="20" cy="20" r="12" fill="white" opacity="0.9"/>
-            <path d="M14 20l4 4 8-8" stroke="#0066CC" stroke-width="2" fill="none"/>
-          </svg>
+          <img src="/Cognizant_logo.png" alt="Cognizant Logo" class="cognizant-logo-img" />
         </div>
         <div class="brand-text">
           <span class="brand-name">Cognizant</span>
@@ -58,68 +54,28 @@
             </button>
             
             <!-- Host Access - Only if user has Host role -->
-            <div class="host-access-group" *ngIf="canAccessHost()">
-              <button class="cognizant-btn-host" (click)="showHostOptions = !showHostOptions">
-                <i class="fas fa-graduation-cap me-1"></i>Host Dashboard
-                <i class="fas fa-chevron-down ms-1" [class.rotated]="showHostOptions"></i>
-              </button>
-              <div class="host-dropdown" [class.show]="showHostOptions">
-                <div class="dropdown-header">
-                  <h6>Learning Solutions</h6>
-                  <span class="subtitle">Choose your assessment type</span>
-                </div>
-                <button class="host-option featured" (click)="navigateToQuizCreation()">
-                  <div class="option-icon quiz-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L13.5 7L16 9.5V12.5H8V9.5L10.5 7L9 4L3 7V9H4V19H6V21H18V19H20V9H21ZM8 12.5H16V16.5H8V12.5Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Smart Quiz</span>
-                    <span class="option-description">Create interactive assessments</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <button class="host-option featured" (click)="showAccessAlert('survey')">
-                  <div class="option-icon survey-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3ZM9,17H7V15H9V17ZM9,13H7V11H9V13ZM9,9H7V7H9V9ZM17,17H11V15H17V17ZM17,13H11V11H17V13ZM17,9H11V7H17V9Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Survey Builder</span>
-                    <span class="option-description">Gather insights & feedback</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <button class="host-option featured" (click)="showAccessAlert('poll')">
-                  <div class="option-icon poll-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M22,21H2V3H4V19H6V10H10V19H12V6H16V19H18V14H22V21Z"/>
-                    </svg>
-                  </div>
-                  <div class="option-content">
-                    <span class="option-title">Live Polls</span>
-                    <span class="option-description">Real-time audience engagement</span>
-                  </div>
-                  <i class="fas fa-arrow-right option-arrow"></i>
-                </button>
-                <div class="dropdown-footer">
-                  <small>Powered by Cognizant AI</small>
-                </div>
-              </div>
-            </div>
+            <!-- <button class="cognizant-btn-host" *ngIf="canAccessHost()" (click)="navigateToQuizCreation()">
+              <i class="fas fa-graduation-cap me-1"></i>Host Dashboard
+            </button> -->
             
-            <!-- Admin Access - Only if user has Admin role -->
+<button
+  class="cognizant-btn-host"
+  *ngIf="canAccessHost() && !canAccessAdmin()"
+  (click)="navigateToQuizCreation()"
+>
+  <i class="fas fa-graduation-cap me-1"></i>Host Dashboard
+</button>
+
+            <!-- Admin Access - Only if user has Admin role --> 
             <button *ngIf="canAccessAdmin()" class="cognizant-btn-admin" (click)="router.navigate(['/admin/dashboard'])">
               <i class="fas fa-user-shield me-1"></i>Admin Dashboard
             </button>
             
             <!-- Admin Access Disabled for non-admin users -->
-            <button *ngIf="!canAccessAdmin() && isAuthenticated()" class="cognizant-btn-admin-disabled" (click)="showAccessAlert('admin')">
+            <!-- <button *ngIf="!canAccessAdmin() && isAuthenticated()" class="cognizant-btn-admin-disabled" (click)="showAccessAlert('admin')">
               <i class="fas fa-user-shield me-1"></i>Admin
               <span class="access-badge">Restricted</span>
-            </button>
+            </button> -->
             
           </div>
         </ng-template>
@@ -128,162 +84,199 @@
   </div>
 </header>
 
-<!-- Login Modal -->
+<!-- Login Modal with Split Screen -->
 <div class="auth-modal-overlay" *ngIf="showLoginForm()" (click)="showLoginForm.set(false)">
-  <div class="auth-modal" (click)="$event.stopPropagation()">
-    <div class="auth-modal-header">
-      <h3><i class="fas fa-sign-in-alt me-2"></i>Welcome Back</h3>
-      <button class="close-btn" (click)="showLoginForm.set(false)">
-        <i class="fas fa-times"></i>
-      </button>
+  <section class="login-container-split" (click)="$event.stopPropagation()">
+    <!-- Left side: Background Image (50% width, 100% height) -->
+    <div class="image-section">
+      <img src="/assets/login_image.jpg" alt="Login Background" class="background-image" />
     </div>
-    <form (ngSubmit)="onLogin()" #loginForm="ngForm" class="auth-form">
-      <div class="form-group">
-        <label for="employeeId">
-          <i class="fas fa-user me-2"></i>Employee ID
-        </label>
-        <input
-          type="text"
-          id="employeeId"
-          name="employeeId"
-          [(ngModel)]="loginData.employeeId"
-          required
-          class="form-control"
-          placeholder="Enter your Employee ID"
-          autocomplete="username"
-        />
+
+    <!-- Right side: Form Content (50% width) -->
+    <div class="auth-modal auth-modal-split">
+      <div class="auth-modal-header">
+        <h3><i class="fas fa-sign-in-alt me-2"></i>Welcome Back</h3>
+        <button class="close-btn" (click)="showLoginForm.set(false)">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="form-group">
-        <label for="password">
-          <i class="fas fa-lock me-2"></i>Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          [(ngModel)]="loginData.password"
-          required
-          class="form-control"
-          placeholder="Enter your password"
-          autocomplete="current-password"
-        />
-      </div>
-      <button type="submit" class="auth-submit-btn" [disabled]="isLoading()">
-        <span *ngIf="!isLoading()">
-          <i class="fas fa-sign-in-alt me-2"></i>Login
-        </span>
-        <span *ngIf="isLoading()">
-          <i class="fas fa-spinner fa-spin me-2"></i>Logging in...
-        </span>
-      </button>
-      <div class="auth-footer">
-        <p>Don't have an account? 
-          <a href="#" (click)="$event.preventDefault(); toggleRegistrationForm()">Register here</a>
-        </p>
-      </div>
-    </form>
-  </div>
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm" class="auth-form">
+        <div class="form-group">
+          <label for="employeeId">
+            <i class="fas fa-user me-2"></i>Employee ID
+          </label>
+          <input
+            type="text"
+            id="employeeId"
+            name="employeeId"
+            [(ngModel)]="loginData.employeeId"
+            required
+            class="form-control"
+            placeholder="Enter your Employee ID"
+            autocomplete="username"
+          />
+        </div>
+        <div class="form-group">
+          <label for="password">
+            <i class="fas fa-lock me-2"></i>Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            [(ngModel)]="loginData.password"
+            required
+            class="form-control"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+          />
+        </div>
+        <button type="submit" class="  auth-submit-btn" [disabled]="isLoading()">
+          <span *ngIf="!isLoading()">
+            <i class="fas fa-sign-in-alt me-2"></i>Login
+          </span>
+          <span *ngIf="isLoading()">
+            <i class="fas fa-spinner fa-spin me-2"></i>Logging in...
+          </span>
+        </button>
+        <div class="auth-footer">
+          <p>Don't have an account? 
+            <a href="#" (click)="$event.preventDefault(); toggleRegistrationForm()">Register here</a>
+          </p>
+        </div>
+      </form>
+    </div>
+  </section>
 </div>
 
-<!-- Registration Modal -->
+<!-- Registration Modal with Split Screen -->
 <div class="auth-modal-overlay" *ngIf="showRegistrationForm()" (click)="showRegistrationForm.set(false)">
-  <div class="auth-modal registration-modal" (click)="$event.stopPropagation()">
-    <div class="auth-modal-header">
-      <h3><i class="fas fa-user-plus me-2"></i>Create Account</h3>
-      <button class="close-btn" (click)="showRegistrationForm.set(false)">
-        <i class="fas fa-times"></i>
-      </button>
+  <section class="register-container-split" (click)="$event.stopPropagation()">
+    <!-- Left side: Background Image (50% width, 100% height) -->
+    <div class="image-section">
+      <img src="/assets/register_image.jpg" alt="Registration Background" class="background-image" />
     </div>
-    <form (ngSubmit)="onRegister()" #regForm="ngForm" class="auth-form registration-form">
-      <div class="form-row">
-        <div class="form-group half-width">
-          <label for="firstName">
-            <i class="fas fa-user me-2"></i>First Name
-          </label>
-          <input
-            type="text"
-            id="firstName"
-            name="firstName"
-            [(ngModel)]="registrationData.firstName"
-            required
-            class="form-control"
-            placeholder="First Name"
-          />
-        </div>
-        <div class="form-group half-width">
-          <label for="lastName">
-            <i class="fas fa-user me-2"></i>Last Name
-          </label>
-          <input
-            type="text"
-            id="lastName"
-            name="lastName"
-            [(ngModel)]="registrationData.lastName"
-            required
-            class="form-control"
-            placeholder="Last Name"
-          />
-        </div>
+
+    <!-- Right side: Form Content (50% width) -->
+    <div class="auth-modal registration-modal auth-modal-split">
+      <div class="auth-modal-header">
+        <h3><i class="fas fa-user-plus me-2"></i>Create Account</h3>
+        <button class="close-btn" (click)="showRegistrationForm.set(false)">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="form-row">
-        <div class="form-group half-width">
-          <label for="regEmployeeId">
-            <i class="fas fa-id-badge me-2"></i>Employee ID
-          </label>
-          <input
-            type="text"
-            id="regEmployeeId"
-            name="regEmployeeId"
-            [(ngModel)]="registrationData.employeeId"
-            required
-            class="form-control"
-            placeholder="Employee ID"
-          />
+      <form (ngSubmit)="onRegister()" #regForm="ngForm" class="auth-form registration-form">
+        <div class="form-row">
+          <div class="form-group half-width">
+            <label for="firstName">
+              <i class="fas fa-user me-2"></i>First Name
+            </label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              [(ngModel)]="registrationData.firstName"
+              required
+              class="form-control"
+              placeholder="First Name"
+            />
+          </div>
+          <div class="form-group half-width">
+            <label for="lastName">
+              <i class="fas fa-user me-2"></i>Last Name
+            </label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              [(ngModel)]="registrationData.lastName"
+              required
+              class="form-control"
+              placeholder="Last Name"
+            />
+          </div>
         </div>
-        <div class="form-group half-width">
-          <label for="email">
-            <i class="fas fa-envelope me-2"></i>Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            [(ngModel)]="registrationData.email"
-            required
-            class="form-control"
-            placeholder="email@cognizant.com"
-          />
+        <div class="form-row">
+          <div class="form-group half-width">
+            <label for="regEmployeeId">
+              <i class="fas fa-id-badge me-2"></i>Employee ID
+            </label>
+            <input
+              type="text"
+              id="regEmployeeId"
+              name="regEmployeeId"
+              [(ngModel)]="registrationData.employeeId"
+              required
+              class="form-control"
+              placeholder="Employee ID"
+            />
+          </div>
+          <div class="form-group half-width">
+            <label for="email">
+              <i class="fas fa-envelope me-2"></i>Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              [(ngModel)]="registrationData.email"
+              required
+              class="form-control"
+              placeholder="email@cognizant.com"
+            />
+          </div>
         </div>
-      </div>
-      <div class="form-group">
-        <label for="regPassword">
-          <i class="fas fa-lock me-2"></i>Password
-        </label>
-        <input
-          type="password"
-          id="regPassword"
-          name="regPassword"
-          [(ngModel)]="registrationData.password"
-          required
-          class="form-control"
-          placeholder="Create a secure password"
-        />
-      </div>
-      <button type="submit" class="auth-submit-btn" [disabled]="isLoading()">
-        <span *ngIf="!isLoading()">
-          <i class="fas fa-user-plus me-2"></i>Create Account
-        </span>
-        <span *ngIf="isLoading()">
-          <i class="fas fa-spinner fa-spin me-2"></i>Creating Account...
-        </span>
-      </button>
-      <div class="auth-footer">
-        <p>Already have an account? 
-          <a href="#" (click)="$event.preventDefault(); toggleLoginForm()">Login here</a>
-        </p>
-      </div>
-    </form>
-  </div>
+        <div class="form-group password-field">
+          <label for="regPassword">
+            <i class="fas fa-lock me-2"></i>Password
+          </label>
+          <div class="password-input-wrapper">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              id="regPassword"
+              name="regPassword"
+              [(ngModel)]="registrationData.password"
+              required
+              class="form-control"
+              placeholder="Create a secure password"
+            />
+            <button 
+              type="button" 
+              class="password-toggle-btn" 
+              (click)="togglePasswordVisibility()"
+              aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="24" height="24" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+                @if (showPassword()) {
+                  <!-- Eye Open Icon -->
+                  <path d="M512 256C320 256 160 384 96 512c64 128 224 256 416 256s352-128 416-256c-64-128-224-256-416-256z" stroke="#1F2937" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="512" cy="512" r="128" stroke="#1F2937" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="512" cy="512" r="48" fill="#1F2937"/>
+                } @else {
+                  <!-- Eye Closed Icon (with slash) -->
+                  <path d="M512 256C320 256 160 384 96 512c64 128 224 256 416 256s352-128 416-256c-64-128-224-256-416-256z" stroke="#1F2937" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="512" cy="512" r="128" stroke="#1F2937" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="192" y1="192" x2="832" y2="832" stroke="#1F2937" stroke-width="64" stroke-linecap="round"/>
+                }
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="auth-submit-btn" [disabled]="isLoading()">
+          <span *ngIf="!isLoading()">
+            <i class="fas fa-user-plus me-2"></i>Create Account
+          </span>
+          <span *ngIf="isLoading()">
+            <i class="fas fa-spinner fa-spin me-2"></i>Creating Account...
+          </span>
+        </button>
+        <div class="auth-footer">
+          <p>Already have an account? 
+            <a href="#" (click)="$event.preventDefault(); toggleLoginForm()">Login here</a>
+          </p>
+        </div>
+      </form>
+    </div>
+  </section>
 </div>
 
 <!-- Hero Section -->
@@ -515,7 +508,7 @@
           </div>
           
           <!-- Floating Tech Icons -->
-          <div class="cognizant-floating-tech">
+          <!-- <div class="cognizant-floating-tech">
             <div class="tech-icon tech-1">
               <i class="fab fa-angular"></i>
             </div>
@@ -528,7 +521,7 @@
             <div class="tech-icon tech-4">
               <i class="fab fa-python"></i>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -767,11 +760,7 @@
     <div class="footer-content text-center py-4">
       <div class="cognizant-brand-footer">
         <div class="cognizant-logo">
-          <svg width="32" height="32" viewBox="0 0 32 32">
-            <rect width="32" height="32" rx="6" fill="#0066CC"/>
-            <circle cx="16" cy="16" r="10" fill="white" opacity="0.9"/>
-            <path d="M11 16l3 3 7-7" stroke="#0066CC" stroke-width="2" fill="none"/>
-          </svg>
+          <img src="/Cognizant_logo.png" alt="Cognizant Logo" class="cognizant-logo-img" />
         </div>
         <span class="brand-name">Cognizant Quiz Platform</span>
       </div>

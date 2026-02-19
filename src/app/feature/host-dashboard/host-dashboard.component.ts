@@ -11,6 +11,7 @@ import { SurveyService } from '../../services/survey.service';
 import { ActivityService, ActivityItem, RecentActivityResponse, ActivityStats } from '../../shared/services/activity.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
+import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -59,7 +60,7 @@ interface CalendarQuiz {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AiChatbotComponent],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
@@ -91,6 +92,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Calendar-related signals
   showCalendar = signal(false);
+  showUserDropdown = signal(false);
   currentCalendarDate = signal(new Date());
   selectedDate = signal<Date | null>(null);
   selectedDateQuizzes = signal<CalendarQuiz[]>([]);
@@ -207,6 +209,15 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       route: '/host/leaderboard',
       color: '#FFD700',
       gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+    },
+    {
+      id: 'customize-theme',
+      title: 'Customize Theme',
+      description: 'Personalize the look and feel of your application',
+      icon: 'fas fa-palette',
+      route: '/host/themes',
+      color: '#E83E8C',
+      gradient: 'linear-gradient(135deg, #E83E8C 0%, #C2185B 100%)'
     }
   ];
 
@@ -435,9 +446,46 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
     this.router.navigate(['/login']);
   }
 
+  navigateToThemes(): void {
+    this.router.navigate(['/host/themes']);
+  }
+
   // Calendar methods
   toggleCalendar(): void {
     this.showCalendar.set(!this.showCalendar());
+  }
+
+  toggleUserDropdown(): void {
+    this.showUserDropdown.update(value => !value);
+  }
+
+  getHostInitial(): string {
+    const name = this.hostName();
+    if (!name) return 'H';
+    
+    const nameParts = name.trim().split(' ');
+    if (nameParts.length > 1) {
+      // First letter of first name + first letter of last name
+      return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+  }
+
+  handleDropdownAction(action: string): void {
+    this.showUserDropdown.set(false);
+    
+    switch(action) {
+      case 'tutorial':
+        this.resetTutorial();
+        break;
+      case 'themes':
+        // Implement themes functionality
+        console.log('Themes feature coming soon');
+        break;
+      case 'logout':
+        this.logout();
+        break;
+    }
   }
 
   getCurrentMonthYear(): string {

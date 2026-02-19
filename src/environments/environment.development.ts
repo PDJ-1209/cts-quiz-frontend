@@ -1,7 +1,9 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:5195/api',
+  apiBaseUrl: 'http://localhost:5195/api',
   signalRUrl: 'http://localhost:5195/quizSessionHub',
+  themeHubUrl: 'http://localhost:5195/themeHub',
   enableLogging: true,
   demoMode: true, // For interview demo
   retryAttempts: 3,
@@ -15,7 +17,8 @@ export const environment = {
     quiz: '/host/quiz', // Host area: api/host/quiz
     publish: '/host/publish', // Host area: api/host/publish
     session: '/participate/session', // Participate area: api/participate/session
-    participate: '/participate/quiz' // Participate area: api/participate/quiz
+    participate: '/participate/quiz', // Participate area: api/participate/quiz
+    ai: '/ai' // AI chatbot endpoint
   },
   features: {
     realTimeUpdates: true,

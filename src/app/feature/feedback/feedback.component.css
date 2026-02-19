@@ -1,27 +1,36 @@
-/* ========== CLASSIC BLUE THEME ========== */
+/* ========== THEME-RESPONSIVE FEEDBACK COMPONENT ========== */
 :host {
-  --primary: #1e40af;
-  --primary-light: #3b82f6;
-  --primary-dark: #1e3a8a;
-  --secondary: #60a5fa;
-  --accent: #93c5fd;
-  --bg: #ffffff;
-  --card-bg: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-  --text: #1e293b;
-  --text-light: #64748b;
-  --border: #e2e8f0;
+  --primary: var(--accent-color);
+  --primary-light: var(--accent-color);
+  --primary-dark: var(--accent-color);
+  --secondary: var(--accent-color);
+  --accent: var(--accent-color);
+  --bg: transparent; /* Let theme system handle background */
+  --card-bg: var(--card-bg);
+  --text: var(--text-color);
+  --text-light: var(--text-color);
+  --border: var(--accent-color);
 
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--app-font, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif);
   display: block;
   min-height: 100vh;
-  background: var(--bg);
+  background: transparent; /* Let theme background show through */
+  color: var(--text-color);
   padding: 60px 20px;
 }
 
 .feedback-card {
   background: var(--card-bg);
-  color: #ffffff;
+  color: var(--text-color);
   border-radius: 20px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 10px 30px rgba(var(--accent-color), 0.2);
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--accent-color);
+}
+
+.feedback-card-enhanced {
   box-shadow: 0 20px 60px rgba(30, 64, 175, 0.3);
   padding: 50px;
   max-width: 750px;
