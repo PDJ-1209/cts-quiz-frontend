@@ -92,6 +92,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Calendar-related signals
   showCalendar = signal(false);
+  showUserDropdown = signal(false);
   currentCalendarDate = signal(new Date());
   selectedDate = signal<Date | null>(null);
   selectedDateQuizzes = signal<CalendarQuiz[]>([]);
@@ -452,6 +453,39 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   // Calendar methods
   toggleCalendar(): void {
     this.showCalendar.set(!this.showCalendar());
+  }
+
+  toggleUserDropdown(): void {
+    this.showUserDropdown.update(value => !value);
+  }
+
+  getHostInitial(): string {
+    const name = this.hostName();
+    if (!name) return 'H';
+    
+    const nameParts = name.trim().split(' ');
+    if (nameParts.length > 1) {
+      // First letter of first name + first letter of last name
+      return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+  }
+
+  handleDropdownAction(action: string): void {
+    this.showUserDropdown.set(false);
+    
+    switch(action) {
+      case 'tutorial':
+        this.resetTutorial();
+        break;
+      case 'themes':
+        // Implement themes functionality
+        console.log('Themes feature coming soon');
+        break;
+      case 'logout':
+        this.logout();
+        break;
+    }
   }
 
   getCurrentMonthYear(): string {

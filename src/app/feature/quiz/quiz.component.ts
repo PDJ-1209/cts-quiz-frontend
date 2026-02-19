@@ -636,7 +636,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         this.submitting = true;
         const response = await this.participantService.submitParticipantAnswer(request);
         this.submitting = false;
-
         // Mark as missed in progress bar
         this.answerStates[this.currentIndex] = 'missed';
         // Save answerStates to localStorage
@@ -645,6 +644,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         if (isAutoSubmit) {
           this.snackBar.open('⏰ Time\'s up! Question marked as unanswered.', 'Close', { duration: 2000 });
         }
+
+        // Auto-submit completed silently
 
         this.submittedIndex = this.currentIndex;
         this.waitingForNext = true;
@@ -671,6 +672,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       const response = await this.participantService.submitParticipantAnswer(request);
       this.submitting = false;
 
+
       // Mark as answered in progress bar
       this.answerStates[this.currentIndex] = 'answered';
       // Save answerStates to localStorage
@@ -680,6 +682,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       if (!isAutoSubmit) {
         this.snackBar.open('✅ Answer submitted successfully!', 'Close', { duration: 1500 });
       }
+
+
+      // Update score silently without popups
 
       if (response.isCorrect) {
         this.score += 1;

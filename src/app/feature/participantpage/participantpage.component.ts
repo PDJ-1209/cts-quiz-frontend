@@ -73,6 +73,11 @@ export class ParticipantPageComponent implements OnInit {
     window.history.pushState(null, '', window.location.href);
   }
 
+  // Navigate back
+  goBack(): void {
+    this.router.navigate(['/']);
+  }
+
   // Name validation
   validateName(value: string): void {
     const hasInvalidChars = /[^a-zA-Z\s]/.test(value);

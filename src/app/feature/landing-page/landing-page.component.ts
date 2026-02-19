@@ -76,6 +76,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   showHostOptions = false;
   isLoading = signal(false);
   error = signal<string | null>(null);
+  showPassword = signal(false); // Password visibility toggle for registration
   
   // Fancy popup for validation messages
   popup = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -118,12 +119,12 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   // Features data - Cognizant enterprise focus
   features = [
     {
-      icon: 'fas fa-chart-analytics',
+      icon: 'fas fa-chart-line',
       title: 'AI-Powered Analytics',
       description: 'Advanced machine learning insights to identify skill gaps and optimize learning paths with predictive analytics.'
     },
     {
-      icon: 'fas fa-shield-check',
+      icon: 'fas fa-shield-alt',
       title: 'Enterprise Security',
       description: 'SOC 2 Type II compliance, end-to-end encryption, and enterprise-grade security protocols for global organizations.'
     },
@@ -148,7 +149,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       description: 'Multi-region deployment with localization support for 50+ countries and compliance with local regulations.'
     },
     {
-      icon: 'fas fa-integration',
+      icon: 'fas fa-plug',
       title: 'Enterprise Integration',
       description: 'Seamless integration with HRIS, LMS, and existing enterprise systems through comprehensive API gateway.'
     }
@@ -315,6 +316,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       // If employee ID doesn't exist, show specific error message
       if (!employeeExists) {
         this.showPopup('Employee ID does not exist.', 'error');
+        this.isLoading.set(false);
         return;
       }
       
@@ -335,17 +337,17 @@ export class LandingPageComponent implements OnInit, OnDestroy {
         // Remove the duplicate setTimeout redirect to prevent double redirects
       } else {
         // If employee ID exists but login failed, it must be wrong password
-        this.showPopup('Incorrect password.', 'error');
+        this.showPopup('Incorrect Password.', 'error');
       }
       
     } catch (error: any) {
       // If employee ID exists but login failed with error, it must be wrong password
       const errorMessage = error?.error?.message || error?.message || 'Login failed. Please check your credentials.';
       
-      if (errorMessage.toLowerCase().includes('invalid credentials')) {
-        this.showPopup('Incorrect password.', 'error');
+      if (errorMessage.toLowerCase().includes('invalid credentials') || errorMessage.toLowerCase().includes('password')) {
+        this.showPopup('Incorrect Password.', 'error');
       } else {
-        this.showPopup(errorMessage, 'error');
+        this.showPopup('Incorrect Password.', 'error');
       }
     } finally {
       this.isLoading.set(false);
@@ -353,9 +355,25 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   }
   
   async onRegister() {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!this.registrationData.email || !emailRegex.test(this.registrationData.email)) {
+      this.showPopup('Invalid Email ID.', 'error');
+      return;
+    }
+
     // Validate password length
     if (this.registrationData.password && this.registrationData.password.length < 8) {
       this.showPopup('Invalid password. Password must be at least 8 characters long.', 'error');
+      return;
+    }
+
+    // Validate password contains at least one uppercase letter and one special character
+    const hasUpperCase = /[A-Z]/.test(this.registrationData.password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(this.registrationData.password);
+    
+    if (!hasUpperCase || !hasSpecialChar) {
+      this.showPopup('Password must contain at least one uppercase letter and one special character.', 'error');
       return;
     }
     
@@ -371,9 +389,14 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       console.error('Registration failed:', error);
       const errorMsg = error?.error?.message || error?.message || 'Registration failed. Please try again.';
       
-      // Check for specific error: Employee ID and email already exist
-      if (errorMsg.toLowerCase().includes('employee') && errorMsg.toLowerCase().includes('email') && errorMsg.toLowerCase().includes('exist')) {
-        this.showPopup('Employee ID and email already exist.', 'error');
+      // Check for specific errors
+      if (errorMsg.toLowerCase().includes('employee') && errorMsg.toLowerCase().includes('exist')) {
+        this.showPopup('Employee ID already exists.', 'error');
+      } else if (errorMsg.toLowerCase().includes('email') && errorMsg.toLowerCase().includes('exist')) {
+        this.showPopup('Email ID already exists.', 'error');
+      } else if (errorMsg.toLowerCase().includes('employee') && errorMsg.toLowerCase().includes('email')) {
+        // Both exist
+        this.showPopup('Employee ID already exists.', 'error');
       } else {
         this.showPopup(errorMsg, 'error');
       }
@@ -460,5 +483,10 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   // Method to manually close popup
   closePopup(): void {
     this.popup.set(null);
+  }
+
+  // Toggle password visibility
+  togglePasswordVisibility(): void {
+    this.showPassword.set(!this.showPassword());
   }
 }
