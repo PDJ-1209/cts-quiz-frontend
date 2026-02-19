@@ -28,6 +28,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   finished = false;
   loading = true; 
   submitting = false; // Separate flag for answer submission
+  answerStates: { [key: number]: 'answered' | 'missed' } = {}; // Track answer states for progress bar
 
   participantId: number = 0;
   sessionId: number = 0;
@@ -71,6 +72,18 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.quizTitle = quizTitleStr || 'Quiz';
     this.sessionCode = sessionCodeStr || '';
     this.participantName = participantNameStr || '';
+
+    // Restore answerStates from localStorage
+    const savedAnswerStates = localStorage.getItem('answerStates');
+    if (savedAnswerStates) {
+      try {
+        this.answerStates = JSON.parse(savedAnswerStates);
+        console.log('[QuizPage] Restored answerStates from localStorage:', this.answerStates);
+      } catch (e) {
+        console.error('[QuizPage] Failed to parse answerStates:', e);
+        this.answerStates = {};
+      }
+    }
 
     this.blockBackNavigation();
 
@@ -296,6 +309,16 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
     if (state.finished) {
       if (!this.finished) {
+        // Mark any remaining unanswered questions as missed before finishing
+        for (let i = 0; i < this.questions.length; i++) {
+          if (!this.answerStates[i]) {
+            this.answerStates[i] = 'missed';
+            console.log(`[QuizPage] Question ${i + 1} marked as missed (quiz finished, no answer)`);
+          }
+        }
+        // Save answerStates to localStorage
+        localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
+
         this.finished = true;
         this.stopSyncTimer();
         localStorage.setItem('finalScore', this.score.toString());
@@ -309,6 +332,18 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.timeRemaining = state.remainingSeconds;
 
     if (this.currentIndex !== state.index) {
+      // Mark previous question as missed if it wasn't answered
+      const previousIndex = this.currentIndex;
+      if (previousIndex >= 0 && previousIndex < this.questions.length) {
+        // If we moved to next question and previous wasn't marked as answered or missed, it's missed
+        if (!this.answerStates[previousIndex]) {
+          this.answerStates[previousIndex] = 'missed';
+          console.log(`[QuizPage] Question ${previousIndex + 1} marked as missed (time expired, no answer)`);
+          // Save answerStates to localStorage
+          localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
+        }
+      }
+
       this.currentIndex = state.index;
       this.selected = null;
       this.submittedIndex = null;
@@ -343,6 +378,11 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         const response = await this.participantService.submitParticipantAnswer(request);
         this.submitting = false;
 
+        // Mark as missed in progress bar
+        this.answerStates[this.currentIndex] = 'missed';
+        // Save answerStates to localStorage
+        localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
+
         if (isAutoSubmit) {
           this.snackBar.open('⏰ Time\'s up! Question marked as unanswered.', 'Close', { duration: 2000 });
         }
@@ -371,6 +411,11 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       this.submitting = true;
       const response = await this.participantService.submitParticipantAnswer(request);
       this.submitting = false;
+
+      // Mark as answered in progress bar
+      this.answerStates[this.currentIndex] = 'answered';
+      // Save answerStates to localStorage
+      localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
 
       // Show success popup for manual submit
       if (!isAutoSubmit) {

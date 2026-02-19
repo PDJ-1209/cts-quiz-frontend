@@ -9,82 +9,87 @@
   <div *ngIf="!loading && !finished" class="quiz-active">
     <!-- Top Navigation Bar -->
     <div class="top-nav-bar">
-      <!-- Live Badge (Top Left) -->
+      <!-- Live Badge (Top Left) - Enhanced with White Border -->
       <div class="live-badge">
         <span class="live-dot"></span>
         <span class="live-text">LIVE</span>
       </div>
 
-      <!-- Quiz Title (Top Center) -->
+      <!-- Quiz Title (Top Center) - Uppercase -->
       <div class="quiz-title-display">
-        <h1>{{ quizTitle }}</h1>
+        <h1>{{ quizTitle.toUpperCase() }}</h1>
       </div>
 
-      <!-- User Info (Top Right) -->
-      <div class="user-info">
-        <div class="user-avatar">{{ participantName.charAt(0) || 'P' }}</div>
-        <div class="user-details">
-          <span class="user-name">{{ participantName || 'Participant' }}</span>
-          <span class="user-id">{{ participantId }}</span>
+      <!-- Timer (Top Right Corner) with Blinking for < 10s -->
+      <div class="timer-top-right">
+        <div class="timer-circle-compact" [class.critical-countdown]="timeRemaining <= 10">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
+            <circle cx="50" cy="50" r="45" class="timer-progress"
+                    [class.critical-progress]="timeRemaining <= 10"
+                    [style.strokeDashoffset]="283 - (283 * timeRemaining / (currentQuestion?.timerSeconds || 30))"></circle>
+          </svg>
+          <div class="timer-text">
+            <span class="time-value" [class.critical-time]="timeRemaining <= 10">{{ timeRemaining }}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Question Counter (Centered) -->
-    <div class="question-counter-center">
-      <span class="current">{{ currentIndex + 1 }}</span>
-      <span class="divider">/</span>
-      <span class="total">{{ questions.length }}</span>
-    </div>
-
-    <!-- Segmented Progress Bar -->
-    <div class="progress-bar-container">
-      <div class="progress-segments">
+    <!-- Responsive Progress Bar -->
+    <div class="progress-bar-wrapper-responsive">
+      <div class="progress-segments-responsive">
         <div *ngFor="let question of questions; let i = index" 
              class="progress-segment"
-             [class.completed]="i < currentIndex"
-             [class.active]="i === currentIndex">
+             [class.completed]="answerStates && answerStates[i] === 'answered'"
+             [class.active]="i === currentIndex"
+             [class.missed]="answerStates && answerStates[i] === 'missed'"
+             [class.future]="i > currentIndex">
+          <!-- Active progress animation -->
+          <div *ngIf="i === currentIndex" class="active-progress-fill"></div>
         </div>
       </div>
     </div>
 
-    <!-- Timer Circle (Below Progress) -->
-    <div class="timer-wrapper">
-      <div class="timer-circle" [class.warning]="timeRemaining <= 10" [class.critical]="timeRemaining <= 5">
-        <svg viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
-          <circle cx="50" cy="50" r="45" class="timer-progress"
-                  [style.strokeDashoffset]="283 - (283 * timeRemaining / (currentQuestion?.timerSeconds || 30))"></circle>
-        </svg>
-        <div class="timer-text">
-          <span class="time-value">{{ timeRemaining }}</span>
-          <span class="time-unit">sec</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Waiting State -->
-    <div *ngIf="waitingForNext" class="waiting-overlay">
-      <div class="waiting-card">
-        <div class="success-icon">✓</div>
-        <h3>Answer Submitted!</h3>
-        <p>Get ready for the next question...</p>
-        <div class="pulse-loader">
+    <!-- Waiting State with Dark Theme and Animations -->
+    <div *ngIf="waitingForNext" class="waiting-overlay animate__animated animate__fadeIn">
+      <div class="waiting-card-dark animate__animated animate__zoomIn">
+        <div class="success-icon-dark animate__animated animate__bounceIn animate__delay-1s">✓</div>
+        <h3 class="waiting-title">Answer Submitted!</h3>
+        <p class="waiting-subtitle">Get ready for the next question...</p>
+        <div class="pulse-loader-dark">
           <span></span><span></span><span></span>
         </div>
+        <!-- Timer Display in Waiting State -->
+        <div class="waiting-timer">
+          <div class="timer-circle-waiting">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" class="timer-bg"></circle>
+              <circle cx="50" cy="50" r="45" class="timer-progress"
+                      [class.critical-progress]="timeRemaining <= 10"
+                      [style.strokeDashoffset]="283 - (283 * timeRemaining / (currentQuestion?.timerSeconds || 30))"></circle>
+            </svg>
+            <div class="timer-text">
+              <span class="time-value" [class.critical-time]="timeRemaining <= 10">{{ timeRemaining }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Question & Options (Split Layout) -->
-    <div *ngIf="!waitingForNext" class="quiz-content">
-      <!-- Left Side: Question -->
+    <!-- Question & Options with Page Tear Animation -->
+    <div *ngIf="!waitingForNext" class="quiz-content" [class.page-tear-exit]="submitting">
+      <!-- Left Side: Question (60% width) -->
       <div class="question-section">
+        <!-- Question Number Outside Box (Top Left) -->
+        <div class="question-number-outside">Q{{ currentIndex + 1 }}</div>
+        
         <div class="question-card">
           <h2 class="question-text">{{ currentQuestion?.text }}</h2>
         </div>
       </div>
 
-      <!-- Right Side: Options + Submit -->
+      <!-- Right Side: Options + Submit (40% width) - Centered -->
       <div class="options-section">
         <div class="options-grid">
           <button *ngFor="let option of currentQuestion?.options; let i = index"
@@ -98,15 +103,19 @@
           </button>
         </div>
 
-        <button class="submit-btn" 
-                [disabled]="!selected || submitting"
-                [class.loading]="submitting"
-                (click)="submitAnswer()">
-          <span *ngIf="!submitting">Submit Answer →</span>
-          <span *ngIf="submitting">
-            <span class="spinner"></span> Submitting...
-          </span>
-        </button>
+        <div class="submit-container">
+          <button class="submit-btn" 
+                  [disabled]="!selected || submitting"
+                  [class.loading]="submitting"
+                  (click)="submitAnswer()">
+            <span *ngIf="!submitting">
+              <span class="submit-icon">🚀</span> Submit Answer
+            </span>
+            <span *ngIf="submitting">
+              <span class="spinner"></span> Submitting...
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

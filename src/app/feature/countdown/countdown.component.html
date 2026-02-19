@@ -1,43 +1,68 @@
-<div class="countdown-wrapper d-flex flex-column align-items-center justify-content-center min-vh-100 bg-light p-4">
-  
-  <!-- Clock Icon at top -->
-  <div class="clock-hero mb-4">
-    <div class="display-1">⏰</div>
+<section class="countdown-container-split">
+  <!-- Left side: Countdown Content (40% width) -->
+  <div class="content-section">
+    <!-- Animated Cat -->
+  <div class="cat-animation-container" [class.wake-up]="timeUntilStart().seconds <= 10 && timeUntilStart().minutes === 0 && timeUntilStart().hours === 0 && timeUntilStart().days === 0">
+    <div class="cat">
+      <div class="cat-body"></div>
+      <div class="cat-head">
+        <div class="cat-ear cat-ear-left"></div>
+        <div class="cat-ear cat-ear-right"></div>
+        <div class="cat-face">
+          <div class="cat-eye cat-eye-left"></div>
+          <div class="cat-eye cat-eye-right"></div>
+          <div class="cat-nose"></div>
+          <div class="cat-mouth"></div>
+        </div>
+      </div>
+      <div class="cat-tail"></div>
+      <div class="cat-paws">
+        <div class="cat-paw"></div>
+        <div class="cat-paw"></div>
+      </div>
+    </div>
+    <div class="zzz-bubbles">
+      <span class="zzz">Z</span>
+      <span class="zzz">Z</span>
+      <span class="zzz">Z</span>
+    </div>
   </div>
 
-  <!-- Heading with actual quiz start time -->
-  <h1 class="display-5 fw-bold text-primary mb-2">
-    {{ sessionData?.quizTitle || 'Quiz' }} - Waiting Room
+  <!-- Quiz Title with Animation -->
+  <h1 class="quiz-title-animated mb-1">
+    {{ sessionData?.quizTitle || 'Quiz' }}
   </h1>
-  <p class="text-muted mb-3">Quiz starts at <strong>{{ formattedStartTime }}</strong> on {{ formattedStartDate }}</p>
-  <p class="text-muted mb-5">Welcome, <strong>{{ participantName }}</strong>! Please stay on this screen.</p>
+  <p class="welcome-text mb-2">Welcome, <strong>{{ participantName.toUpperCase() }}</strong>! Please stay on this screen.</p>
+
+  <!-- Timer Heading -->
+  <h4 class="timer-heading mb-3">Quiz starts in</h4>
 
   <!-- Countdown timer display -->
-  <div class="countdown-display mb-5">
-    <div class="row g-3 text-center">
+  <div class="countdown-display mb-3">
+    <div class="row g-2 text-center">
       @if (timeUntilStart().days > 0) {
         <div class="col-3">
-          <div class="time-box p-3 bg-white rounded shadow-sm">
-            <div class="display-4 fw-bold text-primary">{{ timeUntilStart().days }}</div>
+          <div class="time-box p-2 bg-white rounded shadow-sm">
+            <div class="display-5 fw-bold text-primary">{{ timeUntilStart().days }}</div>
             <div class="text-muted small">Days</div>
           </div>
         </div>
       }
       <div class="col">
-        <div class="time-box p-3 bg-white rounded shadow-sm">
-          <div class="display-4 fw-bold text-primary">{{ timeUntilStart().hours.toString().padStart(2, '0') }}</div>
+        <div class="time-box p-2 bg-white rounded shadow-sm">
+          <div class="display-5 fw-bold text-primary">{{ timeUntilStart().hours.toString().padStart(2, '0') }}</div>
           <div class="text-muted small">Hours</div>
         </div>
       </div>
       <div class="col">
-        <div class="time-box p-3 bg-white rounded shadow-sm">
-          <div class="display-4 fw-bold text-primary">{{ timeUntilStart().minutes.toString().padStart(2, '0') }}</div>
+        <div class="time-box p-2 bg-white rounded shadow-sm">
+          <div class="display-5 fw-bold text-primary">{{ timeUntilStart().minutes.toString().padStart(2, '0') }}</div>
           <div class="text-muted small">Minutes</div>
         </div>
       </div>
       <div class="col">
-        <div class="time-box p-3 bg-white rounded shadow-sm">
-          <div class="display-4 fw-bold text-primary">{{ timeUntilStart().seconds.toString().padStart(2, '0') }}</div>
+        <div class="time-box p-2 bg-white rounded shadow-sm">
+          <div class="display-5 fw-bold text-primary">{{ timeUntilStart().seconds.toString().padStart(2, '0') }}</div>
           <div class="text-muted small">Seconds</div>
         </div>
       </div>
@@ -45,36 +70,29 @@
   </div>
 
   <!-- Session Information -->
-  <div class="session-info mb-4 p-3 bg-white rounded shadow-sm" style="max-width: 500px;">
-    <h5 class="mb-3 text-center">Session Details</h5>
-    <div class="row g-2 small">
-      <div class="col-6 text-end fw-bold">Session Code:</div>
-      <div class="col-6">{{ sessionCode }}</div>
-      
-      <div class="col-6 text-end fw-bold">Start Time:</div>
-      <div class="col-6">{{ formattedStartTime }}</div>
-      
-      <div class="col-6 text-end fw-bold">End Time:</div>
-      <div class="col-6">{{ formattedEndTime }}</div>
-      
-      <div class="col-6 text-end fw-bold">Status:</div>
-      <div class="col-6">
-        <span class="badge bg-warning">Waiting</span>
+  <div class="session-info mb-2 p-2 bg-white rounded shadow-sm" style="max-width: 500px; width: 100%;">
+    <h5 class="mb-2 text-center session-details-title">Session Details</h5>
+    <div class="session-details-content">
+      <div class="detail-row">
+        <span class="detail-label">Session Code:</span>
+        <span class="detail-value">{{ sessionCode }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Start Time:</span>
+        <span class="detail-value">{{ formattedStartTime }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">End Time:</span>
+        <span class="detail-value">{{ formattedEndTime }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Status:</span>
+        <span class="detail-value"><span class="badge bg-warning">Waiting</span></span>
       </div>
     </div>
   </div>
 
   <!-- Status message at bottom center -->
-  @if (isWaiting()) {
-    <div class="alert alert-info d-flex align-items-center gap-3 shadow-sm" role="alert" style="max-width: 500px;">
-      <div class="spinner-grow spinner-grow-sm text-info" role="status"></div>
-      <div class="text-start">
-        <div class="fw-bold">Connected and ready</div>
-        <div class="small">The quiz will start automatically at the scheduled time.</div>
-      </div>
-    </div>
-  }
-
   @if (hasStarted()) {
     <div class="alert alert-success d-flex align-items-center gap-3 shadow-sm" role="alert" style="max-width: 500px;">
       <div class="spinner-border spinner-border-sm text-success" role="status"></div>
@@ -84,4 +102,12 @@
       </div>
     </div>
   }
-</div>
+  </div>
+  <!-- End Content Section -->
+
+  <!-- Right side: LobbyBoy Image (60% width, 100% height) -->
+  <div class="image-section">
+    <img src="/assets/LobbyPage.jpg" alt="Lobby Boy" class="background-image" />
+  </div>
+
+</section>
