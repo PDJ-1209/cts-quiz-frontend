@@ -104,6 +104,38 @@ export class TemplateComponent implements OnInit {
     this.questionLoading = true;
     this.activeTemplateName = t.templateName;
 
+    // Check if this is a category template (templateType === 'CATEGORY')
+    if (t.templateType === 'CATEGORY') {
+      // Parse the config to get the category and question count
+      try {
+        const config = JSON.parse(t.templateConfig || '{}');
+        const category = config.category;
+        const questionCount = config.questionCount || 15;
+        
+        if (category) {
+          console.log(`Loading category template: ${category} with ${questionCount} questions`);
+          this.templateService.getQuestionsByCategory(category, questionCount).subscribe({
+            next: (qs: Question[]) => {
+              this.questions = qs || [];
+              this.questionLoading = false;
+              console.log(`✅ Loaded ${this.questions.length} questions for category ${category}`);
+            },
+            error: (error: any) => {
+              console.error('Error loading category questions:', error);
+              const msg = this.normalizeHttpError(error);
+              this.questions = [];
+              this.questionLoading = false;
+              alert('Failed to load questions. ' + msg);
+            }
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error parsing template config:', error);
+      }
+    }
+
+    // Fall back to loading by template ID for non-category templates
     this.templateService.getQuestionsByTemplateId(templateId, 100).subscribe({
       next: (qs: Question[]) => {
         this.questions = qs || [];
@@ -221,18 +253,8 @@ export class TemplateComponent implements OnInit {
     this.activeTemplateName = '';
   }
 
-  openModal(type: 'template' | 'category' = 'template'): void {
-    if (type === 'template') {
-      this.showModal = true;
-      this.showCategoryForm = false;
-      this.isEditing = false;
-      this.newTemplate = {
-        templateName: '',
-        templateType: 'PDF',
-        templateConfig: '',
-        createdBy: 1
-      };
-    } else if (type === 'category') {
+  openModal(type: 'category' = 'category'): void {
+    if (type === 'category') {
       this.showModal = true;
       this.showCategoryForm = true;
       this.selectedCategory = '';
@@ -286,7 +308,7 @@ export class TemplateComponent implements OnInit {
     try {
       // Create template with category configuration
       const categoryTemplate: temp = {
-        templateName: `${this.selectedCategory} Quiz Template`,
+        templateName: `${this.selectedCategory} Quiz Template - ${new Date().toLocaleDateString()}`,
         templateType: 'CATEGORY',
         templateConfig: JSON.stringify({
           category: this.selectedCategory,
@@ -297,48 +319,32 @@ export class TemplateComponent implements OnInit {
         createdBy: this.currentUserId || 1
       };
 
-      // Generate random questions for this category
-      await this.generateRandomQuestions(categoryTemplate);
+      // Create the template in database
+      const created = await this.templateService.createTemplate(categoryTemplate).toPromise();
+      console.log('✅ Category template created:', created);
       
-      this.showCategoryForm = false;
+      // Fetch questions by category (Tags) from backend
+      const questions = await this.templateService.getQuestionsByCategory(this.selectedCategory, this.requestedQuestionCount).toPromise();
+      console.log(`✅ Fetched ${questions?.length || 0} questions for ${this.selectedCategory}`, questions);
+      
+      // Close modal and show questions
       this.showModal = false;
-      this.loadTemplates(); // Refresh templates
+      this.showQuestionsPanel = true;
+      this.questions = questions || [];
+      this.activeTemplateName = categoryTemplate.templateName;
+      this.selectedTemplate = created || null;
       
     } catch (error) {
-      console.error('Error creating category template:', error);
-      alert('Failed to create template');
+      console.error('❌ Error creating category template:', error);
+      alert('Failed to create template: ' + this.normalizeHttpError(error));
     } finally {
       this.isSubmitting = false;
     }
   }
 
-  async generateRandomQuestions(template: temp): Promise<void> {
-    try {
-      // First create the template
-      await this.templateService.createTemplate(template).toPromise();
-      
-      // Then generate random questions using backend API
-      const questionRequest = {
-        category: this.selectedCategory,
-        questionCount: this.requestedQuestionCount,
-        tags: '', // Could be expanded to support tag filtering
-        difficulty: '' // Could be expanded to support difficulty filtering
-      };
-
-      const randomQuestions = await this.templateService.getRandomQuestionsByCategory(questionRequest).toPromise();
-      console.log(`Generated ${randomQuestions?.length || 0} random questions for ${this.selectedCategory}`);
-      
-    } catch (error) {
-      console.error('Error generating random questions:', error);
-      throw error;
-    }
-  }
-
   editTemplate(template: temp): void {
-    this.showModal = true;
-    this.isEditing = true;
-    this.newTemplate = { ...template };
-    this.selectedTemplate = template;
+    // Edit existing template if needed in future
+    alert('Edit functionality not available for category templates');
   }
 
   closeModal(): void {
@@ -370,66 +376,10 @@ export class TemplateComponent implements OnInit {
   }
 
   // CREATE - Add new template
-  addTemplate(): void {
-    if (!this.newTemplate.templateName || !this.newTemplate.templateName.trim()) {
-      alert('Template name is required');
-      return;
-    }
-    this.isSubmitting = true;
-
-  const templateData: temp = {
-    templateName: this.newTemplate.templateName.trim(),
-    templateType: this.newTemplate.templateType || 'PDF',
-    templateConfig: this.newTemplate.templateConfig?.trim() || '',
-    createdBy: Number(this.newTemplate.createdBy || 1)
-  };    console.log('Creating template:', templateData);
-
-    this.templateService.createTemplate(templateData).subscribe({
-      next: (response: any) => {
-        console.log('✅ Template created successfully:', response);
-        alert('Template created successfully!');
-        this.closeModal();
-        this.loadTemplates();
-      },
-      error: (error: any) => {
-        console.error('❌ Error creating template:', error);
-        const msg = this.normalizeHttpError(error);
-        alert('Failed to create template: ' + msg);
-        this.isSubmitting = false;
-      }
-    });
-  }
+  // (Functionality removed - only category templates are supported)
 
   // UPDATE
-  saveTemplate(): void {
-    if (!this.newTemplate.templateName?.trim()) {
-      alert('Template name is required');
-      return;
-    }
-
-    const templateId = this.newTemplate.templateId || (this.newTemplate as any).id;
-    if (!templateId) {
-      alert('Template ID is missing');
-      return;
-    }
-
-    console.log('Updating template:', this.newTemplate);
-    this.isSubmitting = true;
-    this.templateService.updateTemplate(templateId, this.newTemplate).subscribe({
-      next: (response: any) => {
-        console.log('Template updated successfully:', response);
-        alert('Template updated successfully!');
-        this.loadTemplates();
-        this.closeModal();
-      },
-      error: (error: any) => {
-        console.error('Error updating template:', error);
-        const msg = this.normalizeHttpError(error);
-        alert('Failed to update template. ' + msg);
-        this.isSubmitting = false;
-      }
-    });
-  }
+  // (Functionality removed - only category templates are supported)
 
   deleteTemplate(template: temp): void {
     const templateId = template.templateId || (template as any).id;
@@ -452,14 +402,6 @@ export class TemplateComponent implements OnInit {
         alert('Failed to delete template. ' + msg);
       }
     });
-  }
-
-  submitForm(): void {
-    if (this.isEditing) {
-      this.saveTemplate();
-    } else {
-      this.addTemplate();
-    }
   }
 
   // —— Utility: Convert Angular HttpErrorResponse into readable text
