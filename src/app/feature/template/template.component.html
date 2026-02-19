@@ -1,13 +1,17 @@
 <section class="page">
-  <!-- Templates View -->
-  <div class="view-container" *ngIf="!showQuestionsPanel">
+  <!-- Toast Notification -->
+  <div class="toast" *ngIf="toast" [class.success]="toast.type === 'success'" [class.error]="toast.type === 'error'" [class.warning]="toast.type === 'warning'">
+    {{ toast.message }}
+  </div>
+
+  <!-- Templates List View -->
+  <div class="view-container" *ngIf="!isEditorMode">
     <header class="page-header">
       <h1>Template Library</h1>
       <p class="sub">Pre-configured setups for quick sessions.</p>
 
       <div class="actions">
-        <button class="btn-secondary" (click)="openModal('category')">+ Category Template</button>
-        <button class="btn-primary" (click)="openModal('template')">+ New Template</button>
+        <button class="btn-primary" (click)="openModal('category')">+ Create Template</button>
       </div>
     </header>
 
@@ -24,14 +28,14 @@
           <button class="menu-btn" (click)="editTemplate(t); $event.stopPropagation()" title="Edit">✏️</button>
         </div>
 
-        <div class="badge"
-             [class.pdf]="t.templateType==='PDF'"
-             [class.html]="t.templateType==='HTML'"
-             [class.excel]="t.templateType==='EXCEL'">
-          {{ t.templateType }}
+        <div class="template-meta">
+          <span class="meta-chip" *ngIf="getConfigValue(t, 'category')">
+            📁 {{ getConfigValue(t, 'category') }}
+          </span>
+          <span class="meta-chip" *ngIf="getConfigValue(t, 'questionCount')">
+            📝 {{ getConfigValue(t, 'questionCount') }} Questions
+          </span>
         </div>
-
-        <p class="desc">{{ t.templateConfig || 'No configuration' }}</p>
         <div class="footer">
           <span class="createdBy">Created by: {{ t.createdBy }}</span>
           <button class="delete-btn" (click)="deleteTemplate(t); $event.stopPropagation()" title="Delete">🗑️</button>
@@ -44,65 +48,165 @@
     </div>
   </div>
 
-  <!-- Questions Full View -->
-  <div class="questions-full-view" *ngIf="showQuestionsPanel">
-    <div class="qf-header">
-      <div class="qf-header-content">
-        <button class="btn-back" (click)="closeQuestionsPanel()">← Back to Templates</button>
-        <h1 class="qf-title">{{ activeTemplateName }}</h1>
+  <!-- Template Editor View -->
+  <div class="editor-view" *ngIf="isEditorMode">
+    <!-- Editor Header -->
+    <div class="editor-header">
+      <div class="header-left">
+        <button class="btn-back" (click)="closeEditor()">← Back to Templates</button>
+        <div class="title-section">
+          <input 
+            class="title-input" 
+            [(ngModel)]="editorMeta.name" 
+            (ngModelChange)="markDirty()" 
+            placeholder="Template Name *"
+          />
+          <div class="meta-chips">
+            <span class="meta-chip" *ngIf="editorMeta.category">{{ editorMeta.category }}</span>
+            <span class="meta-chip">{{ editorQuestions.length }} Questions</span>
+            <span class="meta-chip" *ngIf="editorTemplate?.createdAt">Created: {{ editorTemplate?.createdAt | date:'medium' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" (click)="addQuestion('top')">+ Add Question</button>
+        <button 
+          class="btn-primary save-btn" 
+          *ngIf="editorDirty"
+          [disabled]="!canSave()"
+          (click)="saveTemplate()"
+        >
+          {{ editorSaving ? 'Saving...' : (isNewTemplate ? 'Save Template' : 'Update Template') }}
+        </button>
       </div>
     </div>
 
-    <div class="qf-container">
-      <div *ngIf="questionLoading" class="loading-state">
-        <p>Loading questions...</p>
+    <!-- Metadata Section -->
+    <div class="editor-meta">
+      <div class="meta-grid">
+        <label>
+          <span>Category</span>
+          <input [(ngModel)]="editorMeta.category" (ngModelChange)="markDirty()" placeholder="e.g., Angular" />
+        </label>
+        <label>
+          <span>Tags (comma separated)</span>
+          <input [(ngModel)]="editorMeta.tags" (ngModelChange)="markDirty()" placeholder="tag1, tag2" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Validation Errors -->
+    <div class="validation-errors" *ngIf="validationErrors.length > 0">
+      <div class="error-title">⚠️ Fix the following before saving:</div>
+      <ul>
+        <li *ngFor="let e of validationErrors">{{ e }}</li>
+      </ul>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="editorLoading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading questions...</p>
+    </div>
+
+    <!-- Questions List -->
+    <div class="questions-editor" *ngIf="!editorLoading">
+      <div *ngIf="editorQuestions.length === 0" class="empty-state">
+        <p>📭 No questions yet. Click "Add Question" to get started.</p>
       </div>
 
-      <div *ngIf="!questionLoading" class="questions-list">
-        <div *ngIf="questions.length === 0" class="empty-state">
-          <p>📭 No questions yet. Create one to get started!</p>
+      <div *ngFor="let q of editorQuestions; let i = index" class="question-card">
+        <div class="question-header">
+          <div class="order-controls">
+            <span class="q-number">#{{ q.order || i + 1 }}</span>
+            <button class="icon-btn" (click)="moveQuestion(q, 'up')" [disabled]="i === 0" title="Move up">↑</button>
+            <button class="icon-btn" (click)="moveQuestion(q, 'down')" [disabled]="i === editorQuestions.length - 1" title="Move down">↓</button>
+          </div>
+          <div class="question-actions">
+            <button class="btn-link danger" (click)="deleteQuestionFromEditor(q)">Delete</button>
+          </div>
         </div>
 
-        <div *ngFor="let q of questions; let i = index" class="question-item">
-          <div class="q-number">{{ i + 1 }}</div>
-          <div class="q-content">
-            <p class="q-text">{{ q.questionText || 'No text' }}</p>
+        <div class="question-body">
+          <div class="field">
+            <label>Question Text *</label>
+            <textarea 
+              [(ngModel)]="q.questionText" 
+              (ngModelChange)="markDirty()" 
+              rows="2" 
+              placeholder="Enter question text..."
+            ></textarea>
           </div>
-          <div class="q-actions">
-            <button class="q-btn edit-btn" (click)="editQuestion(q)" title="Edit">✏️</button>
-            <button class="q-btn delete-btn" (click)="deleteQuestion(q)" title="Delete">🗑️</button>
+
+          <div class="question-settings">
+            <label>
+              <span>Type</span>
+              <select [(ngModel)]="q.questionType" (ngModelChange)="onQuestionTypeChange(q)">
+                <option *ngFor="let t of questionTypes" [value]="t">{{ t }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Points</span>
+              <input type="number" min="0" [(ngModel)]="q.points" (ngModelChange)="markDirty()" />
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="q.isRequired" (ngModelChange)="markDirty()" />
+              <span>Required</span>
+            </label>
+          </div>
+
+          <!-- Options Section (for MCQ/Single/Multiple types) -->
+          <div class="options-section" *ngIf="isOptionBasedType(q.questionType)">
+            <div class="options-header">
+              <span>Options</span>
+              <button class="btn-sm" (click)="addOptionToQuestion(q)">+ Add Option</button>
+            </div>
+            
+            <div *ngFor="let opt of q.options; let oi = index" class="option-row">
+              <input 
+                type="text" 
+                [(ngModel)]="opt.optionText" 
+                (ngModelChange)="markDirty()" 
+                placeholder="Option text..."
+                class="option-input"
+              />
+              <label class="correct-toggle">
+                <input 
+                  type="checkbox" 
+                  [(ngModel)]="opt.isCorrect" 
+                  (change)="onOptionCorrectToggle(q, opt)"
+                />
+                <span>Correct</span>
+              </label>
+              <button 
+                class="icon-btn delete-opt" 
+                (click)="deleteOptionFromQuestion(q, opt)" 
+                [disabled]="(q.options?.length || 0) <= 2"
+                title="Delete option"
+              >✕</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="add-question-section">
-        <h3>Add New Question</h3>
-        <div class="add-q-form">
-          <textarea
-            [(ngModel)]="newQuestionText"
-            name="newQuestionText"
-            placeholder="Enter your question here..."
-            rows="3"
-            class="q-input">
-          </textarea>
-          <button class="btn-add-question" (click)="addQuestion()">+ Add Question</button>
-        </div>
+      <!-- Add Question at Bottom -->
+      <div class="add-question-bottom">
+        <button class="btn-secondary" (click)="addQuestion('bottom')">+ Add Question</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Create Template Modal -->
   <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>{{ showCategoryForm ? 'Create Category Template' : (isEditing ? 'Edit Template' : 'Add New Template') }}</h2>
+        <h2>Create Template</h2>
         <button class="close-btn" (click)="closeModal()">&times;</button>
       </div>
 
-      <!-- Category Template Form -->
-      <div *ngIf="showCategoryForm" class="category-form">
+      <div class="category-form">
         <div class="category-intro">
-          <p>Create a quiz template with auto-generated questions from our question bank.</p>
+          <p>Select a category to auto-populate your template, or choose "Others" to start with a blank template.</p>
         </div>
 
         <div class="form-group">
@@ -113,14 +217,23 @@
           </select>
         </div>
 
-        <div *ngIf="selectedCategory" class="availability-info">
+        <!-- Show this section for "Others (Blank Template)" -->
+        <div *ngIf="selectedCategory === 'Others (Blank Template)'" class="blank-template-info">
+          <div class="info-card blank-info">
+            <i class="fas fa-file-alt"></i>
+            <span>Create a blank template and add your own questions manually.</span>
+          </div>
+        </div>
+
+        <!-- Show this section for regular categories -->
+        <div *ngIf="selectedCategory && selectedCategory !== 'Others (Blank Template)'" class="availability-info">
           <div class="info-card">
             <i class="fas fa-info-circle"></i>
             <span>{{ availableQuestions }} questions available for {{ selectedCategory }}</span>
           </div>
         </div>
 
-        <div class="form-group" *ngIf="selectedCategory">
+        <div class="form-group" *ngIf="selectedCategory && selectedCategory !== 'Others (Blank Template)'">
           <label for="questionCount">Number of Questions *</label>
           <input
             type="number"
@@ -134,85 +247,31 @@
           <small class="form-help">Maximum: {{ availableQuestions }} questions</small>
         </div>
 
-        <div class="template-preview" *ngIf="selectedCategory && requestedQuestionCount > 0">
-          <h4>Template Preview</h4>
-          <div class="preview-card">
-            <div class="preview-header">
-              <strong>{{ selectedCategory }} Quiz Template</strong>
-              <span class="badge">AUTO-GENERATED</span>
-            </div>
-            <div class="preview-details">
-              <div><i class="fas fa-tag"></i> Category: {{ selectedCategory }}</div>
-              <div><i class="fas fa-question-circle"></i> Questions: {{ requestedQuestionCount }}</div>
-              <div><i class="fas fa-clock"></i> Est. Duration: {{ requestedQuestionCount * 2 }} minutes</div>
-            </div>
-          </div>
-        </div>
-
         <div class="modal-actions">
           <button type="button" class="btn-cancel" (click)="closeModal()">Cancel</button>
+          
+          <!-- Button for blank template -->
           <button 
+            *ngIf="selectedCategory === 'Others (Blank Template)'"
+            type="button" 
+            class="btn-submit"
+            (click)="createBlankTemplate()"
+          >
+            Create Blank Template
+          </button>
+          
+          <!-- Button for category-based template -->
+          <button 
+            *ngIf="selectedCategory && selectedCategory !== 'Others (Blank Template)'"
             type="button" 
             class="btn-submit" 
-            [disabled]="!selectedCategory || requestedQuestionCount <= 0 || requestedQuestionCount > availableQuestions || isSubmitting"
+            [disabled]="requestedQuestionCount <= 0 || isSubmitting"
             (click)="createCategoryTemplate()"
           >
-            {{ isSubmitting ? 'Creating Template...' : 'Create Template' }}
+            {{ isSubmitting ? 'Loading Questions...' : 'Create Template' }}
           </button>
         </div>
       </div>
-
-      <!-- Regular Template Form -->
-      <form *ngIf="!showCategoryForm" (ngSubmit)="submitForm()" class="modal-form">
-        <div class="form-group">
-          <label for="templateName">Template Name *</label>
-          <input
-            type="text"
-            id="templateName"
-            [(ngModel)]="newTemplate.templateName"
-            name="templateName"
-            placeholder="e.g., Invoice Template"
-            required />
-        </div>
-
-        <div class="form-group">
-          <label for="templateType">Template Type *</label>
-          <select id="templateType" [(ngModel)]="newTemplate.templateType" name="templateType" required>
-            <option value="PDF">PDF</option>
-            <option value="HTML">HTML</option>
-            <option value="EXCEL">EXCEL</option>
-            <option value="WORD">WORD</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="templateConfig">Template Configuration</label>
-          <textarea
-            id="templateConfig"
-            [(ngModel)]="newTemplate.templateConfig"
-            name="templateConfig"
-            placeholder="Enter template configuration (JSON format)"
-            rows="4">
-          </textarea>
-        </div>
-
-        <div class="form-group">
-          <label for="createdBy">Created By (User ID)</label>
-          <input
-            type="number"
-            id="createdBy"
-            [(ngModel)]="newTemplate.createdBy"
-            name="createdBy"
-            placeholder="Auto-set to 1 if empty" />
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" (click)="closeModal()">Cancel</button>
-          <button type="submit" class="btn-submit" [disabled]="isSubmitting">
-            {{ isEditing ? 'Update Template' : (isSubmitting ? 'Creating...' : 'Create Template') }}
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 </section>

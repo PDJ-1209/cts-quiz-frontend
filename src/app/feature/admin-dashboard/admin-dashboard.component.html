@@ -1,8 +1,11 @@
 <div class="admin-container">
   <!-- Sidebar -->
-  <div class="admin-sidebar">
+  <div class="admin-sidebar" [class.collapsed]="sidebarCollapsed()">
     <div class="sidebar-header">
       <img src="/Cognizant_logo.png" alt="Cognizant" class="logo">
+      <div class="logo-collapsed">
+        <i class="fas fa-building"></i>
+      </div>
       <h3>Admin Portal</h3>
     </div>
 
@@ -26,11 +29,11 @@
             <span>Quiz Management</span>
           </button>
         </li>
-        <li [class.active]="selectedTab() === 'reports'">
-          <button (click)="selectTab('reports')" class="nav-btn">
-            <i class="fas fa-chart-bar"></i>
-            <span>Reports</span>
-          </button>
+        <li>
+          <a routerLink="/template" class="nav-btn" routerLinkActive="active">
+            <i class="fas fa-clone"></i>
+            <span>Templates</span>
+          </a>
         </li>
         <li [class.active]="selectedTab() === 'analytics'">
           <button (click)="selectTab('analytics')" class="nav-btn">
@@ -68,6 +71,9 @@
     <!-- Header -->
     <header class="admin-header">
       <div class="header-left">
+        <button class="collapse-btn" (click)="toggleSidebar()" title="Toggle Sidebar">
+          <i class="fas" [class.fa-bars]="sidebarCollapsed()" [class.fa-times]="!sidebarCollapsed()"></i>
+        </button>
         <h1>{{ getTabTitle() }}</h1>
         <p>{{ getTabSubtitle() }}</p>
       </div>
@@ -75,6 +81,9 @@
         <div class="current-time">
           {{ getCurrentDateTime() }}
         </div>
+        <button class="theme-toggle-btn" (click)="toggleTheme()" [title]="getThemeButtonTitle()">
+          <i [class]="getThemeIcon()"></i>
+        </button>
         <div class="user-badge">
           <i class="fas fa-crown"></i>
           <span>{{ currentUser()?.employeeId }}</span>
@@ -92,7 +101,7 @@
               <i class="fas fa-users"></i>
             </div>
             <div class="stat-info">
-              <h3>{{ stats().totalUsers }}</h3>
+              <h3 class="animated-number">{{ displayedStats().totalUsers }}</h3>
               <p>Total Users</p>
             </div>
           </div>
@@ -101,7 +110,7 @@
               <i class="fas fa-user-tie"></i>
             </div>
             <div class="stat-info">
-              <h3>{{ stats().activeHosts }}</h3>
+              <h3 class="animated-number">{{ displayedStats().activeHosts }}</h3>
               <p>Active Hosts</p>
             </div>
           </div>
@@ -110,7 +119,7 @@
               <i class="fas fa-clipboard-list"></i>
             </div>
             <div class="stat-info">
-              <h3>{{ stats().totalQuizzes }}</h3>
+              <h3 class="animated-number">{{ displayedStats().totalQuizzes }}</h3>
               <p>Total Quizzes</p>
             </div>
           </div>
@@ -119,7 +128,7 @@
               <i class="fas fa-play-circle"></i>
             </div>
             <div class="stat-info">
-              <h3>{{ stats().activeSessions }}</h3>
+              <h3 class="animated-number">{{ displayedStats().activeSessions }}</h3>
               <p>Active Sessions</p>
             </div>
           </div>
@@ -127,7 +136,7 @@
 
         <div class="overview-charts">
           <div class="chart-card">
-            <h4>Recent Activity</h4>
+            <h4><i class="fas fa-history"></i> Recent Activity</h4>
             <div class="activity-list" *ngIf="!isLoading(); else loadingActivity">
               <div *ngFor="let activity of recentActivity()" class="activity-item">
                 <i [class]="activity.icon + ' ' + activity.color"></i>
@@ -152,7 +161,61 @@
       <!-- Users Tab -->
       <div *ngIf="selectedTab() === 'users'" class="tab-content">
         <div class="table-header">
-          <h3>User Management</h3>
+          <h3><i class="fas fa-users"></i> User Management</h3>
+        </div>
+
+        <!-- Search & Filter Section -->
+        <div class="search-filter-container">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+              type="text"
+              placeholder="Search by name, email, ID..."
+              [value]="searchTerm()"
+              (input)="onSearchChange($any($event.target).value)"
+              class="search-input"
+            >
+            <div *ngIf="searchTerm()" class="search-results-badge">
+              {{ filteredUsers().length }} results
+            </div>
+          </div>
+
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label>Filter by Role:</label>
+              <select 
+                [value]="selectedRoleFilter() || ''"
+                (change)="onRoleFilterChange($any($event.target).value)"
+                class="filter-select"
+              >
+                <option value="">All Roles</option>
+                <option *ngFor="let role of roles()" [value]="role.roleId">
+                  {{ role.roleName }}
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Filter by Status:</label>
+              <select 
+                [value]="selectedStatusFilter()"
+                (change)="onStatusFilterChange($any($event.target).value)"
+                class="filter-select"
+              >
+                <option value="all">All Users</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+              </select>
+            </div>
+
+            <button 
+              *ngIf="isFiltersActive()"
+              class="btn-clear-filters"
+              (click)="clearFilters()"
+            >
+              <i class="fas fa-times"></i> Clear Filters
+            </button>
+          </div>
         </div>
 
         <div class="users-table-container">
@@ -168,7 +231,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let user of users()">
+              <tr *ngFor="let user of filteredUsers()">
                 <td>{{ user.employeeId }}</td>
                 <td>{{ formatUserName(user) }}</td>
                 <td>{{ user.email }}</td>
@@ -202,6 +265,11 @@
               </tr>
             </tbody>
           </table>
+          <div *ngIf="filteredUsers().length === 0" class="empty-state">
+            <i class="fas fa-search"></i>
+            <h3>No users found</h3>
+            <p>Try adjusting your search or filter criteria</p>
+          </div>
         </div>
       </div>
 
@@ -209,51 +277,36 @@
       <div *ngIf="selectedTab() === 'quizzes'" class="tab-content">
         <div class="quiz-management-container">
           <div class="table-header">
-            <h3>Quiz Management</h3>
-            <div class="quiz-stats-summary" *ngIf="quizManagementData()?.totalQuizzes !== undefined">
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalQuizzes || 0 }}</span>
-                <span class="stat-label">Total Quizzes</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalSurveys || 0 }}</span>
-                <span class="stat-label">Total Surveys</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-number">{{ quizManagementData()?.totalPolls || 0 }}</span>
-                <span class="stat-label">Total Polls</span>
-              </div>
-            </div>
+            <h3><i class="fas fa-clipboard-list"></i> Quiz Management</h3>
           </div>
 
-          <!-- Quiz Management Sub-tabs -->
           <div class="quiz-tabs">
             <button 
               [class.active]="selectedQuizTab() === 'quizzes'"
               (click)="selectQuizTab('quizzes')"
               class="quiz-tab-btn">
               <i class="fas fa-clipboard-question"></i>
-              Quizzes ({{ quizzes().length }})
+              Quizzes ({{ filteredQuizzes().length }})
             </button>
             <button 
               [class.active]="selectedQuizTab() === 'surveys'"
               (click)="selectQuizTab('surveys')"
               class="quiz-tab-btn">
               <i class="fas fa-clipboard-list"></i>
-              Surveys ({{ surveys().length }})
+              Surveys ({{ filteredSurveys().length }})
             </button>
             <button 
               [class.active]="selectedQuizTab() === 'polls'"
               (click)="selectQuizTab('polls')"
               class="quiz-tab-btn">
               <i class="fas fa-poll"></i>
-              Polls ({{ polls().length }})
+              Polls ({{ filteredPolls().length }})
             </button>
           </div>
 
           <!-- Quizzes Content -->
           <div *ngIf="selectedQuizTab() === 'quizzes'" class="quiz-content">
-            <div class="quizzes-table-container" *ngIf="quizzes().length > 0; else noQuizzes">
+            <div class="quizzes-table-container" *ngIf="filteredQuizzes().length > 0; else noQuizzes">
               <table class="quizzes-table">
                 <thead>
                   <tr>
@@ -268,7 +321,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let quiz of quizzes()">
+                  <tr *ngFor="let quiz of filteredQuizzes()">
                     <td>{{ quiz.quizId }}</td>
                     <td>{{ quiz.quizNumber || 'N/A' }}</td>
                     <td>{{ quiz.createdBy || 'Unknown' }}</td>
@@ -304,14 +357,14 @@
               <div class="empty-state">
                 <i class="fas fa-clipboard-question"></i>
                 <h3>No Quizzes Found</h3>
-                <p>No quizzes have been created yet.</p>
+                <p>{{ searchTerm() ? 'Try adjusting your search criteria' : 'No quizzes have been created yet.' }}</p>
               </div>
             </ng-template>
           </div>
 
           <!-- Surveys Content -->
           <div *ngIf="selectedQuizTab() === 'surveys'" class="quiz-content">
-            <div class="surveys-table-container" *ngIf="surveys().length > 0; else noSurveys">
+            <div class="surveys-table-container" *ngIf="filteredSurveys().length > 0; else noSurveys">
               <table class="surveys-table">
                 <thead>
                   <tr>
@@ -325,7 +378,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let survey of surveys()">
+                  <tr *ngFor="let survey of filteredSurveys()">
                     <td>{{ survey.surveyId }}</td>
                     <td>{{ survey.title }}</td>
                     <td>{{ survey.description || 'No description' }}</td>
@@ -362,14 +415,14 @@
               <div class="empty-state">
                 <i class="fas fa-clipboard-list"></i>
                 <h3>No Surveys Found</h3>
-                <p>No surveys have been created yet.</p>
+                <p>{{ searchTerm() ? 'Try adjusting your search criteria' : 'No surveys have been created yet.' }}</p>
               </div>
             </ng-template>
           </div>
 
           <!-- Polls Content -->
           <div *ngIf="selectedQuizTab() === 'polls'" class="quiz-content">
-            <div class="polls-table-container" *ngIf="polls().length > 0; else noPolls">
+            <div class="polls-table-container" *ngIf="filteredPolls().length > 0; else noPolls">
               <table class="polls-table">
                 <thead>
                   <tr>
@@ -384,7 +437,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let poll of polls()">
+                  <tr *ngFor="let poll of filteredPolls()">
                     <td>{{ poll.pollId }}</td>
                     <td>{{ poll.pollTitle }}</td>
                     <td>{{ poll.pollQuestion }}</td>
@@ -422,195 +475,59 @@
               <div class="empty-state">
                 <i class="fas fa-poll"></i>
                 <h3>No Polls Found</h3>
-                <p>No polls have been created yet.</p>
+                <p>{{ searchTerm() ? 'Try adjusting your search criteria' : 'No polls have been created yet.' }}</p>
               </div>
             </ng-template>
           </div>
         </div>
       </div>
 
-      <!-- Reports Tab -->
-      <div *ngIf="selectedTab() === 'reports'" class="tab-content">
-        <div class="reports-container">
+      <!-- Templates Tab -->
+      <div *ngIf="selectedTab() === 'templates'" class="tab-content">
+        <div class="templates-panel">
+          <div class="templates-topbar">
+            <div>
+              <h3 class="topbar-title">Templates</h3>
+              <p class="topbar-sub">Manage predefined quiz templates and jump to other sections.</p>
+            </div>
+            <div class="topbar-actions">
+              <button class="btn-secondary" (click)="selectTab('overview')">Exit Templates</button>
+              <button class="btn-outline" (click)="selectTab('analytics')">Analytics</button>
+              <button class="btn-primary" (click)="navigateToTemplates()">Open Template Dashboard</button>
+            </div>
+          </div>
+
           <div class="table-header">
-            <h3><i class="fas fa-chart-bar"></i> Reports & Analytics</h3>
-            <div class="reports-refresh">
-              <button class="btn btn-outline" (click)="loadReportsAnalytics(); loadFeedbackAnalytics()" [disabled]="isLoadingReports()">
-                <i class="fas fa-sync" [class.fa-spin]="isLoadingReports()"></i>
-                Refresh Data
-              </button>
-            </div>
+            <h3><i class="fas fa-clone"></i> Templates</h3>
+            <button class="btn-primary" (click)="navigateToTemplates()">Open Template Dashboard</button>
           </div>
 
-          <!-- Analytics Summary Cards -->
-          <div class="analytics-summary" *ngIf="reportsAnalytics(); else loadingReports">
-            <div class="analytics-card">
-              <div class="card-icon">
-                <i class="fas fa-star"></i>
-              </div>
-              <div class="card-content">
-                <h3>{{ (reportsAnalytics()?.averageParticipants || 0) | number:'1.1-1' }}</h3>
-                <p>Avg Participants</p>
-              </div>
-            </div>
-
-            <div class="analytics-card">
-              <div class="card-icon">
-                <i class="fas fa-users"></i>
-              </div>
-              <div class="card-content">
-                <h3>{{ reportsAnalytics()?.totalParticipants || 0 }}</h3>
-                <p>Total Participants</p>
-              </div>
-            </div>
-
-            <div class="analytics-card" *ngIf="feedbackAnalytics()">
-              <div class="card-icon">
-                <i class="fas fa-thumbs-up"></i>
-              </div>
-              <div class="card-content">
-                <h3>{{ (feedbackAnalytics()?.averageRating || 0) | number:'1.1-1' }}</h3>
-                <p>Average Rating</p>
-              </div>
-            </div>
-
-            <div class="analytics-card" *ngIf="feedbackAnalytics()">
-              <div class="card-icon">
-                <i class="fas fa-comments"></i>
-              </div>
-              <div class="card-content">
-                <h3>{{ feedbackAnalytics()?.totalResponses || 0 }}</h3>
-                <p>Total Feedback</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Charts Section -->
-          <div class="charts-grid">
-            <!-- Quizzes by Month Chart -->
-            <div class="chart-card" *ngIf="reportsAnalytics()?.quizzesByMonth?.length > 0">
-              <div class="chart-header">
-                <h4><i class="fas fa-chart-line"></i> Quizzes Created Over Time</h4>
-              </div>
-              <div class="chart-content">
-                <div class="bar-chart">
-                  <div 
-                    class="bar-item" 
-                    *ngFor="let item of reportsAnalytics()?.quizzesByMonth"
-                    [style.height.%]="getBarHeight(item.count, reportsAnalytics()?.quizzesByMonth)"
-                    [title]="item.month + ': ' + item.count + ' quizzes'">
-                    <div class="bar-value">{{ item.count }}</div>
-                    <div class="bar-label">{{ formatMonth(item.month) }}</div>
+          <div class="templates-grid">
+            <div class="template-card" *ngFor="let t of templates()">
+              <div class="template-card__header">
+                <div class="icon"><i class="fas fa-file-alt"></i></div>
+                <div>
+                  <div class="title">{{ t.templateName }}</div>
+                  <div class="badge" [class.pdf]="t.templateType === 'PDF'" [class.html]="t.templateType === 'HTML'" [class.excel]="t.templateType === 'EXCEL'">{{ t.templateType || 'N/A' }}</div>
+                  <div class="meta-row">
+                    <span class="chip">Category: {{ getTemplateCategory(t) }}</span>
+                    <span class="chip" *ngIf="getTemplateQuestionCount(t) as qc">{{ qc }} Qs</span>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Top Hosts Chart -->
-            <div class="chart-card" *ngIf="reportsAnalytics()?.topHosts?.length > 0">
-              <div class="chart-header">
-                <h4><i class="fas fa-user-crown"></i> Top Quiz Hosts</h4>
-              </div>
-              <div class="chart-content">
-                <div class="horizontal-bar-chart">
-                  <div 
-                    class="host-bar" 
-                    *ngFor="let host of reportsAnalytics()?.topHosts.slice(0, 5)">
-                    <div class="host-info">
-                      <span class="host-name">Host {{ host.hostId }}</span>
-                      <span class="host-count">{{ host.quizCount }} quizzes</span>
-                    </div>
-                    <div class="host-progress">
-                      <div 
-                        class="host-bar-fill" 
-                        [style.width.%]="getPercentage(host.quizCount, reportsAnalytics()?.topHosts)">
-                      </div>
-                    </div>
-                  </div>
+              <p class="desc">{{ t.templateConfig || 'No configuration provided' }}</p>
+              <div class="footer">
+                <span>Created by: {{ t.createdBy || 'Admin' }}</span>
+                <div class="action-buttons">
+                  <button class="btn-sm btn-outline" (click)="selectTemplate(t)">View</button>
+                  <button class="btn-sm btn-outline" (click)="openEditTemplateModal(t)">Edit</button>
+                  <button class="btn-sm btn-danger" (click)="deleteTemplate(t)">Delete</button>
                 </div>
               </div>
             </div>
-
-            <!-- Feedback Analytics -->
-            <div class="chart-card" *ngIf="feedbackAnalytics()?.emojiStats?.length > 0">
-              <div class="chart-header">
-                <h4><i class="fas fa-smile"></i> Feedback Distribution</h4>
-              </div>
-              <div class="chart-content">
-                <div class="emoji-chart">
-                  <div 
-                    class="emoji-item" 
-                    *ngFor="let emoji of feedbackAnalytics()?.emojiStats">
-                    <div class="emoji-icon">{{ emoji.emoji }}</div>
-                    <div class="emoji-count">{{ emoji.count }}</div>
-                    <div class="emoji-bar">
-                      <div 
-                        class="emoji-fill" 
-                        [style.width.%]="getEmojiPercentage(emoji.count, feedbackAnalytics()?.emojiStats)">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="empty-state" *ngIf="templates().length === 0">
+              No templates found. <a href="javascript:void(0)" (click)="navigateToTemplates()">Create one</a>
             </div>
-
-            <!-- Quiz Statistics -->
-            <div class="chart-card">
-              <div class="chart-header">
-                <h4><i class="fas fa-chart-pie"></i> Quick Statistics</h4>
-              </div>
-              <div class="chart-content">
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <i class="fas fa-calendar-week"></i>
-                    <div>
-                      <span class="stat-label">This Month</span>
-                      <span class="stat-value">{{ getCurrentMonthQuizzes() }}</span>
-                    </div>
-                  </div>
-                  <div class="stat-item">
-                    <i class="fas fa-clock"></i>
-                    <div>
-                      <span class="stat-label">Last 7 Days</span>
-                      <span class="stat-value">{{ getRecentQuizzes() }}</span>
-                    </div>
-                  </div>
-                  <div class="stat-item">
-                    <i class="fas fa-trophy"></i>
-                    <div>
-                      <span class="stat-label">Active Hosts</span>
-                      <span class="stat-value">{{ reportsAnalytics()?.topHosts?.length || 0 }}</span>
-                    </div>
-                  </div>
-                  <div class="stat-item" *ngIf="feedbackAnalytics()">
-                    <i class="fas fa-heart"></i>
-                    <div>
-                      <span class="stat-label">Satisfaction</span>
-                      <span class="stat-value">{{ getSatisfactionLevel() }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <ng-template #loadingReports>
-            <div class="loading-state">
-              <i class="fas fa-chart-bar fa-spin"></i>
-              <h3>Loading Reports...</h3>
-              <p>Fetching analytics data from the server...</p>
-            </div>
-          </ng-template>
-
-          <!-- No Data State -->
-          <div class="no-data-state" *ngIf="!isLoadingReports() && !reportsAnalytics()">
-            <i class="fas fa-chart-line"></i>
-            <h3>No Analytics Data Available</h3>
-            <p>Start creating quizzes and collecting feedback to see analytics here.</p>
-            <button class="btn btn-primary" (click)="loadReportsAnalytics(); loadFeedbackAnalytics()">
-              <i class="fas fa-refresh"></i>
-              Refresh Data
-            </button>
           </div>
         </div>
       </div>
