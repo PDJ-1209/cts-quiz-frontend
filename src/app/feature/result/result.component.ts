@@ -54,6 +54,10 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   quizAnalytics: { [key: number]: Analytics } = {};
   startTimes: { [key: number]: string } = {};
   endTimes: { [key: number]: string } = {};
+  surveyStartTimes: { [key: number]: string } = {};
+  surveyEndTimes: { [key: number]: string } = {};
+  pollStartTimes: { [key: number]: string } = {};
+  pollEndTimes: { [key: number]: string } = {};
   loading = signal(false);
   currentHostId = computed(() => this.authService.currentUser()?.employeeId || '2463579');
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
@@ -61,6 +65,10 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Content type selection
   selectedContentType = signal<'quizzes' | 'surveys' | 'polls'>('quizzes');
+  
+  // QR code signals for each content type
+  showQRForSurveyId = signal<number | null>(null);
+  showQRForPollId = signal<number | null>(null);
 
   // Tutorial properties
   private tutorialService = inject(TutorialService);
@@ -759,7 +767,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  onStartTimeChange(quizId: number, event: Event) {
+  onStartTimeChange(quizId: number, event: any) {
     const input = event.target as HTMLInputElement;
     this.startTimes![quizId] = input.value;
     console.log(`Start time for quiz ${quizId}:`, input.value);
@@ -945,6 +953,194 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/results-analysis'], {
       queryParams: { sessionCode: quizNumber }
     });
+  }
+
+  // ============================================
+  // SURVEY METHODS
+  // ============================================
+  
+  toggleSurveyQR(surveyId: number) {
+    if (this.showQRForSurveyId() === surveyId) {
+      this.showQRForSurveyId.set(null);
+    } else {
+      this.showQRForSurveyId.set(surveyId);
+    }
+  }
+
+  getSurveySessionCode(surveyId: number): string | null {
+    const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+    return survey?.sessionId?.toString() || null;
+  }
+
+  formatCreatedDate(survey: SurveyOverview): Date {
+    // If survey has a created date property, use it
+    return new Date(); // Placeholder - add created date to survey model
+  }
+
+  onSurveyStartTimeChange(surveyId: number, event: any) {
+    const input = event.target as HTMLInputElement;
+    this.surveyStartTimes[surveyId] = input.value;
+    console.log(`Survey start time for ${surveyId}:`, input.value);
+  }
+
+  async publishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.surveyStartTimes[surveyId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      
+      // Create session for survey
+      const sessionCode = `SURVEY-${surveyId}-${Date.now()}`;
+      
+      this.snackBar.open(`✅ Survey published! Session: ${sessionCode}`, 'Close', { duration: 5000 });
+      
+      await this.loadSurveys();
+    } catch (error) {
+      console.error('Error publishing survey:', error);
+      this.snackBar.open('⚠️ Failed to publish survey', 'Close', { duration: 5000 });
+    }
+  }
+
+  async republishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.surveyStartTimes[surveyId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      this.snackBar.open('✅ Survey republished successfully!', 'Close', { duration: 5000 });
+      await this.loadSurveys();
+    } catch (error) {
+      console.error('Error republishing survey:', error);
+      this.snackBar.open('⚠️ Failed to republish survey', 'Close', { duration: 5000 });
+    }
+  }
+
+  enterSurveyLobby(surveyId: number) {
+    const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+    if (!survey || !survey.sessionId) {
+      this.snackBar.open('⚠️ No active session found for this survey', 'Close', { duration: 4000 });
+      return;
+    }
+
+    const url = `/host-lobby?sessionCode=${survey.sessionId}&surveyId=${surveyId}&type=survey&mode=manual`;
+    window.open(url, '_blank');
+    this.snackBar.open('🎮 Opening Survey Lobby in new tab...', 'Close', { duration: 3000 });
+  }
+
+  viewSurveyResults(surveyId: number) {
+    this.router.navigate(['/result-survey', surveyId]);
+  }
+
+  // ============================================
+  // POLL METHODS
+  // ============================================
+  
+  togglePollQR(pollId: number) {
+    if (this.showQRForPollId() === pollId) {
+      this.showQRForPollId.set(null);
+    } else {
+      this.showQRForPollId.set(pollId);
+    }
+  }
+
+  getPollSessionCode(pollId: number): string | null {
+    const poll = this.hostPolls().find(p => p.pollId === pollId);
+    return poll?.sessionId?.toString() || null;
+  }
+
+  formatPollCreatedDate(poll: PollOverview): Date {
+    // If poll has a created date property, use it
+    return new Date(); // Placeholder - add created date to poll model
+  }
+
+  onPollStartTimeChange(pollId: number, event: any) {
+    const input = event.target as HTMLInputElement;
+    this.pollStartTimes[pollId] = input.value;
+    console.log(`Poll start time for ${pollId}:`, input.value);
+  }
+
+  async publishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.pollStartTimes[pollId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      
+      // Create session for poll
+      const sessionCode = `POLL-${pollId}-${Date.now()}`;
+      
+      this.snackBar.open(`✅ Poll published! Session: ${sessionCode}`, 'Close', { duration: 5000 });
+      
+      await this.loadPolls();
+    } catch (error) {
+      console.error('Error publishing poll:', error);
+      this.snackBar.open('⚠️ Failed to publish poll', 'Close', { duration: 5000 });
+    }
+  }
+
+  async republishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.pollStartTimes[pollId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      this.snackBar.open('✅ Poll republished successfully!', 'Close', { duration: 5000 });
+      await this.loadPolls();
+    } catch (error) {
+      console.error('Error republishing poll:', error);
+      this.snackBar.open('⚠️ Failed to republish poll', 'Close', { duration: 5000 });
+    }
+  }
+
+  enterPollLobby(pollId: number) {
+    const poll = this.hostPolls().find(p => p.pollId === pollId);
+    if (!poll || !poll.sessionId) {
+      this.snackBar.open('⚠️ No active session found for this poll', 'Close', { duration: 4000 });
+      return;
+    }
+
+    const url = `/host-lobby?sessionCode=${poll.sessionId}&pollId=${pollId}&type=poll&mode=manual`;
+    window.open(url, '_blank');
+    this.snackBar.open('🎮 Opening Poll Lobby in new tab...', 'Close', { duration: 3000 });
+  }
+
+  viewPollResults(pollId: number) {
+    this.router.navigate(['/result-poll', pollId]);
   }
 
   ngOnDestroy() {

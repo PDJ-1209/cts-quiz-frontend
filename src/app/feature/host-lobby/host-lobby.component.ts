@@ -57,6 +57,7 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   quizId = signal<number>(0);
   sessionId = signal<number>(0);
   mode = signal<'manual' | 'auto'>('manual');
+  contentType = signal<'quiz' | 'survey' | 'poll'>('quiz'); // NEW: Content type detection
   connectionStatus = signal<'connecting' | 'connected' | 'disconnected'>('connecting');
   
   // Session and quiz state
@@ -120,20 +121,25 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   currentQuestionText = computed(() => this.currentQuestion()?.questionText || 'Loading...');
   currentQuestionNumber = computed(() => this.currentQuestion()?.questionNumber || 1);
   totalQuestions = computed(() => this.allQuestions().length);
+  
+  // NEW: Computed property to determine if leaderboard should be shown
+  showLeaderboard = computed(() => this.contentType() === 'quiz');
 
   ngOnInit() {
     console.log('[HostLobby] Component initialized');
     // Get query parameters
     this.route.queryParams.subscribe(async params => {
       const code = params['sessionCode'] || '';
-      const id = +params['quizId'] || 0;
+      const id = +params['quizId'] || +params['surveyId'] || +params['pollId'] || 0;
       const mode = params['mode'] === 'auto' ? 'auto' : 'manual';
+      const type = params['type'] || 'quiz'; // NEW: Detect content type
       
-      console.log('[HostLobby] Params:', { sessionCode: code, quizId: id, mode });
+      console.log('[HostLobby] Params:', { sessionCode: code, id, mode, type });
       
       this.sessionCode.set(code);
       this.quizId.set(id);
       this.mode.set(mode);
+      this.contentType.set(type as 'quiz' | 'survey' | 'poll'); // NEW: Set content type
       
       if (this.sessionCode()) {
         console.log('[HostLobby] Loading session data...');

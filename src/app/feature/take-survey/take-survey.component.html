@@ -1,0 +1,129 @@
+<div class="survey-container" *ngIf="!loading">
+  <div class="survey-header">
+    <h1>{{ survey?.title || 'Survey' }}</h1>
+    <p class="survey-description" *ngIf="survey && survey.description">{{ survey.description }}</p>
+    <p class="anonymous-badge" *ngIf="survey && survey.isAnonymous">
+      🔒 This survey is anonymous
+    </p>
+  </div>
+
+  <form class="survey-form" *ngIf="survey && survey.questions && survey.questions.length > 0">
+    <div class="question-card" *ngFor="let question of (survey.questions || []); let i = index">
+      <div class="question-header">
+        <span class="question-number">Question {{ i + 1 }}</span>
+        <span class="required-badge" *ngIf="question.isRequired">*Required</span>
+      </div>
+
+      <h3 class="question-text">{{ question.questionText }}</h3>
+
+      <!-- Single Select (Radio Buttons) -->
+      <div *ngIf="isSingleSelect(question.questionType)" class="options-container">
+        <mat-radio-group 
+          [value]="responses.get(question.surveyQuestionId)?.selectedOptionId"
+          (change)="onSingleSelectChange(question.surveyQuestionId, $event.value)">
+          <mat-radio-button 
+            *ngFor="let option of question.options" 
+            [value]="option.optionId"
+            class="option-item">
+            {{ option.optionText }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <!-- Multi-Select (Checkboxes) -->
+      <div *ngIf="isMultiSelect(question.questionType)" class="options-container">
+        <mat-checkbox 
+          *ngFor="let option of question.options"
+          [checked]="isMultiSelectChecked(question.surveyQuestionId, option.optionId)"
+          (change)="onMultiSelectChange(question.surveyQuestionId, option.optionId, $event.checked)"
+          class="option-item">
+          {{ option.optionText }}
+        </mat-checkbox>
+      </div>
+
+      <!-- Ranking (Drag & Drop) -->
+      <div *ngIf="isRanking(question.questionType)" class="ranking-container">
+        <p class="ranking-instruction">📋 Drag and drop to rank options (1 = highest priority)</p>
+        <div 
+          cdkDropList
+          (cdkDropListDropped)="onRankingDrop($event, question.surveyQuestionId)"
+          class="ranking-list">
+          <div 
+            *ngFor="let option of getRankingOptions(question.surveyQuestionId); let rankIndex = index"
+            cdkDrag
+            class="ranking-item">
+            <span class="rank-number">{{ rankIndex + 1 }}</span>
+            <span class="drag-handle" cdkDragHandle>☰</span>
+            <span class="option-text">{{ option.optionText }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Text Input -->
+      <div *ngIf="isText(question.questionType)" class="text-input-container">
+        <textarea 
+          [(ngModel)]="responses.get(question.surveyQuestionId)!.responseText"
+          [name]="'text_' + question.surveyQuestionId"
+          placeholder="Enter your answer here..."
+          rows="4"
+          class="text-input">
+        </textarea>
+      </div>
+
+      <!-- Numeric/Rating Input -->
+      <div *ngIf="isNumeric(question.questionType)" class="numeric-input-container">
+        <div class="rating-scale" *ngIf="question.scaleMin && question.scaleMax">
+          <span class="scale-label">{{ question.scaleMin }}</span>
+          <input 
+            type="range"
+            [(ngModel)]="responses.get(question.surveyQuestionId)!.responseNumber"
+            [name]="'number_' + question.surveyQuestionId"
+            [min]="question.scaleMin"
+            [max]="question.scaleMax"
+            class="scale-slider">
+          <span class="scale-label">{{ question.scaleMax }}</span>
+          <span class="scale-value">{{ responses.get(question.surveyQuestionId)?.responseNumber || question.scaleMin }}</span>
+        </div>
+        <input 
+          *ngIf="!question.scaleMin && !question.scaleMax"
+          type="number"
+          [(ngModel)]="responses.get(question.surveyQuestionId)!.responseNumber"
+          [name]="'number_' + question.surveyQuestionId"
+          placeholder="Enter a number"
+          class="number-input">
+      </div>
+
+      <!-- Answered Indicator -->
+      <div class="answered-indicator" *ngIf="isQuestionAnswered(question)">
+        ✅ Answered
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="submit-container">
+      <button 
+        type="button"
+        (click)="submitSurvey()"
+        [disabled]="!canSubmit() || submitting"
+        class="submit-btn"
+        [class.disabled]="!canSubmit()">
+        <span *ngIf="!submitting">Submit Survey</span>
+        <span *ngIf="submitting">Submitting... ⏳</span>
+      </button>
+      <p class="required-note" *ngIf="!canSubmit()">
+        * Please answer all required questions to submit
+      </p>
+    </div>
+  </form>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!survey || !survey.questions || survey.questions.length === 0">
+    <p>📋 No questions available in this survey.</p>
+  </div>
+</div>
+
+<!-- Loading state -->
+<div class="loading-container" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>Loading survey...</p>
+</div>

@@ -10,7 +10,9 @@ import {
   PublishSurveyResponse,
   SurveyResult,
   CreateSurveyApiRequest,
-  SurveyOverview
+  SurveyOverview,
+  SurveyAnalyticsDto,
+  SurveySubmissionResponse
 } from '../models/isurvey';
 import { CreateQuizSessionRequest, CreateQuizSessionResponse } from '../models/quiz-publish.models';
 
@@ -45,14 +47,17 @@ export class SurveyService {
   // --- Survey Management ---
 
   createSurvey(request: CreateSurveyRequest): Observable<CreateSurveyResponse> {
+    // Convert session_id: 0 to null for draft mode
+    const sessionId = request.session_id && request.session_id > 0 ? request.session_id : null;
+    
     const payload: CreateSurveyApiRequest = {
-      sessionId: request.session_id ?? null,
+      sessionId: sessionId,
       title: request.title,
       description: request.description,
       isAnonymous: request.is_anonymous,
       status: 'draft',
       questions: (request.questions || []).map((q) => ({
-        sessionId: request.session_id ?? 0,
+        sessionId: sessionId,
         questionText: q.question_text,
         questionType: q.question_type,
         questionOrder: q.question_order,
@@ -134,7 +139,71 @@ export class SurveyService {
   }
 
   // Participant: submit survey responses
-  submitSurveyResponses(payload: any): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/Participate/Survey/submit`, payload);
+  submitSurveyResponses(payload: any): Observable<SurveySubmissionResponse> {
+    return this.http.post<SurveySubmissionResponse>(`${environment.apiUrl}/Participate/Survey/submit`, payload);
+  }
+  
+  // Get survey analytics (multi-select and ranking support)
+  getSurveyAnalytics(surveyId: number): Observable<SurveyAnalyticsDto> {
+    return this.http.get<SurveyAnalyticsDto>(`${environment.apiUrl}/Participate/Survey/analytics/${surveyId}`);
+  }
+
+  // Batch create surveys
+  createSurveyBatch(surveys: CreateSurveyRequest[]): Observable<any> {
+    const payloads: CreateSurveyApiRequest[] = surveys.map(survey => ({
+      sessionId: survey.session_id ?? null,
+      title: survey.title,
+      description: survey.description,
+      isAnonymous: survey.is_anonymous,
+      status: 'draft',
+      questions: (survey.questions || []).map((q) => ({
+        sessionId: survey.session_id ?? 0,
+        questionText: q.question_text,
+        questionType: q.question_type,
+        questionOrder: q.question_order,
+        isRequired: q.is_required,
+        scaleMin: q.scale_min,
+        scaleMax: q.scale_max,
+        options: (q.options || []).map((opt) => ({
+          optionText: opt.option_text,
+          displayOrder: opt.display_order
+        }))
+      }))
+    }));
+
+    return this.http.post<any>(`${this.apiBaseV2}/batch`, payloads);
+  }
+
+  // Update survey
+  updateSurvey(surveyId: number, request: CreateSurveyRequest): Observable<SurveyOverview> {
+    const payload: CreateSurveyApiRequest = {
+      sessionId: request.session_id ?? null,
+      title: request.title,
+      description: request.description,
+      isAnonymous: request.is_anonymous,
+      status: 'draft',
+      questions: (request.questions || []).map((q) => ({
+        sessionId: request.session_id ?? 0,
+        questionText: q.question_text,
+        questionType: q.question_type,
+        questionOrder: q.question_order,
+        isRequired: q.is_required,
+        scaleMin: q.scale_min,
+        scaleMax: q.scale_max,
+        options: (q.options || []).map((opt) => ({
+          optionText: opt.option_text,
+          displayOrder: opt.display_order
+        }))
+      }))
+    };
+
+    return this.http.put<any>(`${this.apiBaseV2}/${surveyId}`, payload).pipe(
+      map((response) => this.mapSurveyOverview(response))
+    );
+  }
+
+  // Publish survey with session
+  publishSurveyWithSession(surveyId: number, sessionId: number): Observable<any> {
+    return this.http.post(`${this.apiBaseV2}/${surveyId}/publish`, { sessionId });
   }
 }

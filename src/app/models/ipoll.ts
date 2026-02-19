@@ -40,6 +40,7 @@ export interface CreatePollRequest {
   poll_question: string;
   poll_anonymous: boolean;
   selection_type: string;
+  poll_status?: string;
   options: CreatePollOptionRequest[];
 }
 
@@ -73,6 +74,7 @@ export interface PollOverview {
   pollAnonymous: boolean;
   pollStatus: string;
   selectionType: string;
+  startTime?: string;
   options: PollOptionOverview[];
 }
 

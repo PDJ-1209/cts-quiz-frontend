@@ -34,14 +34,6 @@
               </div>
             </div>
             <div class="col-md-12">
-              <textarea formControlName="pollQuestion" class="form-control cts-textarea mb-3" 
-                       rows="2" placeholder="What is your poll question? *"
-                       [class.is-invalid]="submitted && f['pollQuestion'].errors"></textarea>
-              <div *ngIf="submitted && f['pollQuestion'].errors" class="invalid-feedback">
-                Question is required
-              </div>
-            </div>
-            <div class="col-md-12">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="pollAnonymous" formControlName="pollAnonymous">
                 <label class="form-check-label" for="pollAnonymous">
@@ -53,67 +45,112 @@
         </div>
       </div>
 
-      <!-- Question Type Card -->
-      <div class="card builder-card border-top-blue mb-4 shadow-sm">
-        <div class="card-body p-4">
-          <div class="d-flex justify-content-between mb-3">
-            <span class="q-label">🎯 Poll Options</span>
-          </div>
-
-          <div class="row mb-3 question-type-selector">
-            <div class="col-md-6">
-              <select formControlName="questionType" class="form-select cts-input" (change)="onQuestionTypeChange()">
-                <option *ngFor="let type of questionTypes" [value]="type.value">
-                  {{ type.label }}
-                </option>
-              </select>
+      <!-- Questions Cards -->
+      <div formArrayName="questions">
+        <div *ngFor="let question of questions.controls; let qi = index" [formGroupName]="qi" 
+             class="card builder-card border-top-blue mb-4 shadow-sm">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-3">
+              <span class="q-label">❓ Question {{ qi + 1 }}</span>
+              <button type="button" class="btn btn-warning btn-sm text-white fw-bold">Suggestions</button>
             </div>
-          </div>
 
-          <div class="alert alert-info mb-3">
-            <i class="fas fa-info-circle"></i> Poll must have at least 2 options.
-          </div>
-
-          <div formArrayName="options">
-            <div *ngFor="let option of options.controls; let i = index" [formGroupName]="i" class="input-group mb-2">
-              <span class="input-group-text bg-white"><i class="bi bi-circle"></i></span>
-              <input formControlName="optionLabel" class="form-control" 
-                     placeholder="Option {{ i + 1 }}" [readonly]="!isCustomType()"
-                     [class.is-invalid]="submitted && option.get('optionLabel')?.errors">
-              <button class="btn btn-outline-danger" (click)="removeOption(i)" 
-                      *ngIf="options.length > 2 && isCustomType()">×</button>
+            <textarea formControlName="questionText" class="form-control cts-textarea mb-3" 
+                     rows="2" placeholder="What is your poll question? *"
+                     [class.is-invalid]="submitted && question.get('questionText')?.errors"></textarea>
+            <div *ngIf="submitted && question.get('questionText')?.errors" class="invalid-feedback d-block">
+              Question text is required
             </div>
-            <button type="button" class="btn btn-link btn-sm text-decoration-none" 
-                    (click)="addOption()" *ngIf="isCustomType()">+ Add Option</button>
+
+            <div class="row mb-3 question-type-selector">
+              <div class="col-md-6">
+                <select formControlName="questionType" class="form-select cts-input" 
+                        (change)="onQuestionTypeChange(qi)">
+                  <option *ngFor="let type of questionTypes" [value]="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="alert alert-info mb-3">
+              <i class="fas fa-info-circle"></i> Question must have at least 2 options.
+            </div>
+
+            <div formArrayName="options">
+              <div *ngFor="let option of getOptions(qi).controls; let oi = index" [formGroupName]="oi" 
+                   class="input-group mb-2">
+                <span class="input-group-text bg-white"><i class="bi bi-circle"></i></span>
+                <input formControlName="optionLabel" class="form-control" 
+                       placeholder="Option {{ oi + 1 }}" [readonly]="!isCustomType(qi)"
+                       [class.is-invalid]="submitted && option.get('optionLabel')?.errors">
+                <button class="btn btn-outline-danger" (click)="removeOption(qi, oi)" 
+                        *ngIf="getOptions(qi).length > 2 && isCustomType(qi)">×</button>
+              </div>
+              <button type="button" class="btn btn-link btn-sm text-decoration-none" 
+                      (click)="addOption(qi)" *ngIf="isCustomType(qi)">+ Add Option</button>
+            </div>
+
+            <button type="button" class="btn btn-danger btn-sm mt-3" (click)="removePollQuestion(qi)" 
+                    *ngIf="questions.length > 1">
+              <i class="fas fa-trash-alt"></i> Remove Question
+            </button>
           </div>
         </div>
       </div>
+
+      <!-- Add Question Button -->
+      <div class="text-center mt-4">
+        <button type="button" class="btn btn-primary btn-lg w-50" (click)="addPollQuestion()">
+          <i class="fas fa-plus-circle"></i> Add Question
+        </button>
+      </div>
     </div>
 
-    <!-- Poll Summary Card -->
+    <!-- Poll Preview Card -->
     <div class="col-lg-4 col-md-12">
-      <div class="poll-summary-card card shadow-sm">
-        <div class="card-body p-4">
-          <h6 class="fw-bold border-bottom pb-2">Poll Summary</h6>
-          <div class="d-flex justify-content-between my-3">
-            <span class="text-muted">Options</span>
-            <span class="badge bg-primary rounded-pill px-3">{{ options.length }}</span>
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><span class="me-2">👁️</span>Poll Preview ({{ questions.length }} questions)</h5>
+        </div>
+        <div class="card-body">
+          @if (questions.length === 0) {
+          <div class="text-center py-5">
+            <div class="display-1 mb-3">📊</div>
+            <p class="text-muted">No questions added yet. Create your first poll question above.</p>
           </div>
-          <div class="d-flex justify-content-between my-3">
-            <span class="text-muted">Type</span>
-            <span class="badge bg-info rounded-pill px-3">{{ getSelectedTypeLabel() }}</span>
+          } @else {
+          <div class="list-group mb-3">
+            @for (q of questions.controls; let i = $index; track i) {
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-warning text-dark rounded-pill">Q{{ i + 1 }}</span>
+                <button class="btn btn-outline-danger btn-sm" type="button" (click)="removePollQuestion(i)"
+                  title="Delete">🗑️</button>
+              </div>
+              <div class="fw-semibold mb-2">{{ q.get('questionText')?.value || 'No question text' }}</div>
+              <div class="d-flex flex-column gap-1">
+                @for (opt of getOptions(i).controls; track $index) {
+                <div class="badge bg-light text-dark">
+                  {{ opt.get('optionLabel')?.value || 'Option ' + ($index + 1) }}
+                </div>
+                }
+              </div>
+              <div class="d-flex gap-2 flex-wrap mt-2">
+                <span class="badge bg-info">{{ getQuestionTypeLabel(q.get('questionType')?.value) }}</span>
+              </div>
+            </div>
+            }
           </div>
-          <div class="d-grid gap-2">
-            <button class="btn btn-primary py-2 fw-bold" (click)="onSubmit()" [disabled]="loading">
-              {{ loading ? 'Creating...' : 'Create Poll' }}
-            </button>
-            <button class="btn btn-success py-2 fw-bold" (click)="convertToQuiz()" [disabled]="loading">
-              🔄 Convert to Quiz Format
-            </button>
+          <button type="button" class="btn btn-warning text-dark w-100 fw-bold" (click)="onSubmit()" [disabled]="loading || questions.length === 0">
+            {{ loading ? '⏳ Creating...' : '🚀 Create Poll' }}
+          </button>
+          @if (questions.length === 0) {
+          <div class="text-muted text-center mt-2 small">
+            Add at least one question to create poll.
           </div>
-          <small class="text-muted mt-2 d-block text-center">
-            Convert poll to quiz format and switch to Questions tab
-          </small>
+          }
+          }
         </div>
       </div>
     </div>

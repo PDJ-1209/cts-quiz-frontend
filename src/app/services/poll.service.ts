@@ -93,4 +93,57 @@ export class PollService {
       map((response) => this.mapPollOverview(response))
     );
   }
+
+  // Batch create polls
+  createPollBatch(polls: CreatePollRequest[]): Observable<any> {
+    const payloads: CreatePollApiRequest[] = polls.map(poll => ({
+      sessionId: poll.session_id,
+      pollTitle: poll.poll_title,
+      pollQuestion: poll.poll_question,
+      pollAnonymous: poll.poll_anonymous,
+      pollStatus: 'draft',
+      selectionType: poll.selection_type,
+      options: (poll.options || []).map(option => ({
+        optionLabel: option.option_label,
+        optionOrder: option.option_order
+      }))
+    }));
+
+    return this.http.post<any>(`${this.apiBaseV2}/batch`, payloads);
+  }
+
+  // Update poll
+  updatePoll(pollId: number, poll: CreatePollRequest): Observable<PollOverview> {
+    const payload: CreatePollApiRequest = {
+      sessionId: poll.session_id,
+      pollTitle: poll.poll_title,
+      pollQuestion: poll.poll_question,
+      pollAnonymous: poll.poll_anonymous,
+      pollStatus: poll.poll_status || 'draft',
+      selectionType: poll.selection_type,
+      options: (poll.options || []).map(option => ({
+        optionLabel: option.option_label,
+        optionOrder: option.option_order
+      }))
+    };
+
+    return this.http.put<any>(`${this.apiBaseV2}/${pollId}`, payload).pipe(
+      map((response) => this.mapPollOverview(response))
+    );
+  }
+
+  // Delete poll
+  deletePoll(pollId: number): Observable<any> {
+    return this.http.delete(`${this.apiBaseV2}/${pollId}`);
+  }
+
+  // Publish poll
+  publishPoll(pollId: number, sessionId: number): Observable<any> {
+    return this.http.post(`${this.apiBaseV2}/${pollId}/publish`, { sessionId });
+  }
+
+  // Get poll analytics
+  getPollAnalytics(pollId: number): Observable<any> {
+    return this.http.get(`${this.apiBaseV2}/${pollId}/analytics`);
+  }
 }

@@ -73,7 +73,7 @@ export interface CreateSurveyApiRequest {
 }
 
 export interface CreateSurveyQuestionApiRequest {
-  sessionId: number;
+  sessionId?: number | null;
   questionText: string;
   questionType: string;
   questionOrder: number;
@@ -93,16 +93,19 @@ export interface CreateSurveyQuestionOptionApiRequest {
 export interface SurveyOverview {
   surveyId: number;
   sessionId?: number | null;
+  sessionCode?: string;
   title: string;
   description?: string | null;
   isAnonymous: boolean;
   status: string;
+  startTime?: string;
+  endTime?: string;
   questions?: SurveyQuestionOverview[];
 }
 
 export interface SurveyQuestionOverview {
   surveyQuestionId: number;
-  sessionId: number;
+  sessionId?: number | null;
   questionText: string;
   questionType: string;
   questionOrder: number;
@@ -155,12 +158,17 @@ export interface SurveyResponse {
   response_text?: string;
   response_number?: number;
   selected_option_id?: number;
+  // NEW: For multi-select questions
+  selected_option_ids?: number[];
+  // NEW: For ranking questions
+  option_rank?: number;
 }
 
 export interface SurveySubmissionResponse {
   success: boolean;
   message: string;
   responseCount: number;
+  submittedAt: string;
 }
 
 // 5. Analytics & Results
@@ -175,8 +183,11 @@ export interface QuestionResult {
   questionId: number;
   questionText: string;
   questionType: string;
+  responseCount: number;
   options?: OptionResult[];
   textResponses?: string[];
+  numericStats?: NumericStats;
+  rankingStats?: RankingStats[];
 }
 
 export interface OptionResult {
@@ -184,6 +195,62 @@ export interface OptionResult {
   optionText: string;
   count: number;
   percentage: number;
+}
+
+export interface NumericStats {
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  allValues: number[];
+}
+
+export interface RankingStats {
+  optionId: number;
+  optionText: string;
+  averageRank: number;
+  rankDistribution: { [rank: number]: number };
+}
+
+// Analytics DTOs (matching backend)
+export interface SurveyAnalyticsDto {
+  surveyId: number;
+  title: string;
+  totalResponses: number;
+  questions: QuestionAnalyticsDto[];
+}
+
+export interface QuestionAnalyticsDto {
+  surveyQuestionId: number;
+  questionText: string;
+  questionType: string;
+  responseCount: number;
+  optionStats?: OptionAnalyticsDto[];
+  textResponses?: string[];
+  numericStats?: NumericAnalyticsDto;
+  rankingStats?: RankingAnalyticsDto[];
+}
+
+export interface OptionAnalyticsDto {
+  optionId: number;
+  optionText: string;
+  count: number;
+  percentage: number;
+}
+
+export interface NumericAnalyticsDto {
+  average: number;
+  median: number;
+  min: number;
+  max: number;
+  allValues: number[];
+}
+
+export interface RankingAnalyticsDto {
+  optionId: number;
+  optionText: string;
+  averageRank: number;
+  rankDistribution: { [rank: number]: number };
 }
 
 // 6. Miscellaneous

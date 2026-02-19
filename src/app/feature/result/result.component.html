@@ -225,49 +225,102 @@
               <table class="table table-hover">
                 <thead>
                   <tr>
-                    <th>Survey ID</th>
-                    <th>Title</th>
-                    <th>Questions</th>
-                    <th>Status</th>
+                    <th>Session Code</th>
+                    <th>Survey Name</th>
+                    <th>Number of Questions</th>
                     <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (survey of hostSurveys(); track survey.surveyId) {
                     <tr>
-                      <td><code class="text-primary">{{ survey.surveyId }}</code></td>
-                      <td><strong>{{ survey.title }}</strong></td>
+                      <td><code class="text-primary">{{ getSurveySessionCode(survey.surveyId) || 'N/A' }}</code></td>
+                      <td><strong>{{ survey.title || '(Unnamed Survey)' }}</strong></td>
                       <td><span class="badge bg-info">{{ survey.questions?.length || 0 }}</span></td>
-                      <td>
-                        <span 
-                          class="badge" 
-                          [class.bg-warning]="survey.status.toLowerCase() === 'draft'"
-                          [class.bg-success]="survey.status.toLowerCase() !== 'draft'">
-                          {{ survey.status || 'Draft' }}
-                        </span>
-                      </td>
                       <td>
                         <span class="badge" [class.bg-success]="survey.isAnonymous" [class.bg-secondary]="!survey.isAnonymous">
                           {{ survey.isAnonymous ? 'Yes' : 'No' }}
                         </span>
                       </td>
-                      <td>{{ survey.sessionId || 'N/A' }}</td>
+                      <td class="text-center">
+                        <span 
+                          class="badge" 
+                          [class.bg-warning]="survey.status.toLowerCase() === 'draft'"
+                          [class.bg-success]="survey.status.toLowerCase() === 'active'"
+                          [class.bg-info]="survey.status.toLowerCase() === 'completed'"
+                          [class.bg-primary]="survey.status.toLowerCase() === 'published'">
+                          {{ survey.status || 'Draft' }}
+                        </span>
+                      </td>
+                      <td>{{ formatCreatedDate(survey) | date:'short' }}</td>
+                      <td class="time-cell">
+                        <input 
+                          type="datetime-local" 
+                          class="form-control form-control-sm time-input"
+                          [value]="surveyStartTimes[survey.surveyId] || ''"
+                          (change)="onSurveyStartTimeChange(survey.surveyId, $event)"
+                          placeholder="Start time"
+                          [disabled]="survey.status.toLowerCase() === 'published' || survey.status.toLowerCase() === 'active' || survey.status.toLowerCase() === 'completed'"
+                          [id]="'survey-start-' + survey.surveyId">
+                      </td>
+                      <td class="publish-cell">
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success publish-btn"
+                            (click)="publishSurvey(survey.surveyId)">
+                            📤 Publish
+                          </button>
+                        } @else if (survey.status.toLowerCase() === 'published' || survey.status.toLowerCase() === 'active') {
+                          <button 
+                            class="btn btn-sm btn-primary enter-lobby-btn"
+                            (click)="enterSurveyLobby(survey.surveyId)"
+                            title="Enter Survey Lobby">
+                            🎮 Enter Lobby
+                          </button>
+                        } @else if (survey.status.toLowerCase() === 'completed') {
+                          <button 
+                            class="btn btn-sm btn-warning republish-btn"
+                            (click)="republishSurvey(survey.surveyId)">
+                            🔄 Republish
+                          </button>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
                       <td>
                         <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Survey">
-                            <i class="fas fa-eye"></i>
+                          <button 
+                            class="btn btn-outline-primary"
+                            (click)="toggleSurveyQR(survey.surveyId)"
+                            title="Show QR Code">
+                            {{ showQRForSurveyId() === survey.surveyId ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Survey">
-                            <i class="fas fa-edit"></i>
-                          </button>
-                          <button class="btn btn-outline-danger" title="Delete Survey">
-                            <i class="fas fa-trash"></i>
-                          </button>
+                          @if (survey.status.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-outline-info"
+                              (click)="viewSurveyResults(survey.surveyId)"
+                              title="View Results & Analysis">
+                              📊 Results
+                            </button>
+                          }
                         </div>
                       </td>
                     </tr>
+                    @if (showQRForSurveyId() === survey.surveyId) {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [surveyId]="survey.surveyId"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -288,51 +341,102 @@
               <table class="table table-hover">
                 <thead>
                   <tr>
-                    <th>Poll ID</th>
-                    <th>Title</th>
-                    <th>Question</th>
-                    <th>Options</th>
-                    <th>Status</th>
+                    <th>Session Code</th>
+                    <th>Poll Name</th>
+                    <th>Number of Questions</th>
                     <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (poll of hostPolls(); track poll.pollId) {
                     <tr>
-                      <td><code class="text-primary">{{ poll.pollId }}</code></td>
-                      <td><strong>{{ poll.pollTitle }}</strong></td>
-                      <td>{{ poll.pollQuestion }}</td>
-                      <td><span class="badge bg-info">{{ poll.options.length || 0 }}</span></td>
-                      <td>
-                        <span 
-                          class="badge" 
-                          [class.bg-warning]="poll.pollStatus.toLowerCase() === 'draft'"
-                          [class.bg-success]="poll.pollStatus.toLowerCase() !== 'draft'">
-                          {{ poll.pollStatus || 'Draft' }}
-                        </span>
-                      </td>
+                      <td><code class="text-primary">{{ getPollSessionCode(poll.pollId) || 'N/A' }}</code></td>
+                      <td><strong>{{ poll.pollTitle || '(Unnamed Poll)' }}</strong></td>
+                      <td><span class="badge bg-info">1</span></td>
                       <td>
                         <span class="badge" [class.bg-success]="poll.pollAnonymous" [class.bg-secondary]="!poll.pollAnonymous">
                           {{ poll.pollAnonymous ? 'Yes' : 'No' }}
                         </span>
                       </td>
-                      <td>{{ poll.sessionId || 'N/A' }}</td>
+                      <td class="text-center">
+                        <span 
+                          class="badge" 
+                          [class.bg-warning]="poll.pollStatus.toLowerCase() === 'draft'"
+                          [class.bg-success]="poll.pollStatus.toLowerCase() === 'active'"
+                          [class.bg-info]="poll.pollStatus.toLowerCase() === 'completed'"
+                          [class.bg-primary]="poll.pollStatus.toLowerCase() === 'published'">
+                          {{ poll.pollStatus || 'Draft' }}
+                        </span>
+                      </td>
+                      <td>{{ formatPollCreatedDate(poll) | date:'short' }}</td>
+                      <td class="time-cell">
+                        <input 
+                          type="datetime-local" 
+                          class="form-control form-control-sm time-input"
+                          [value]="pollStartTimes[poll.pollId] || ''"
+                          (change)="onPollStartTimeChange(poll.pollId, $event)"
+                          placeholder="Start time"
+                          [disabled]="poll.pollStatus.toLowerCase() === 'published' || poll.pollStatus.toLowerCase() === 'active' || poll.pollStatus.toLowerCase() === 'completed'"
+                          [id]="'poll-start-' + poll.pollId">
+                      </td>
+                      <td class="publish-cell">
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success publish-btn"
+                            (click)="publishPoll(poll.pollId)">
+                            📤 Publish
+                          </button>
+                        } @else if (poll.pollStatus.toLowerCase() === 'published' || poll.pollStatus.toLowerCase() === 'active') {
+                          <button 
+                            class="btn btn-sm btn-primary enter-lobby-btn"
+                            (click)="enterPollLobby(poll.pollId)"
+                            title="Enter Poll Lobby">
+                            🎮 Enter Lobby
+                          </button>
+                        } @else if (poll.pollStatus.toLowerCase() === 'completed') {
+                          <button 
+                            class="btn btn-sm btn-warning republish-btn"
+                            (click)="republishPoll(poll.pollId)">
+                            🔄 Republish
+                          </button>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
                       <td>
                         <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Poll">
-                            <i class="fas fa-eye"></i>
+                          <button 
+                            class="btn btn-outline-primary"
+                            (click)="togglePollQR(poll.pollId)"
+                            title="Show QR Code">
+                            {{ showQRForPollId() === poll.pollId ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Poll">
-                            <i class="fas fa-edit"></i>
-                          </button>
-                          <button class="btn btn-outline-danger" title="Delete Poll">
-                            <i class="fas fa-trash"></i>
-                          </button>
+                          @if (poll.pollStatus.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-outline-info"
+                              (click)="viewPollResults(poll.pollId)"
+                              title="View Results & Analysis">
+                              📊 Results
+                            </button>
+                          }
                         </div>
                       </td>
                     </tr>
+                    @if (showQRForPollId() === poll.pollId) {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [pollId]="poll.pollId"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
