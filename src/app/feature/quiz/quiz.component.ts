@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
 import { QuestionDetail, SubmitAnswerRequest } from '../../models/participant.models';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 import * as signalR from '@microsoft/signalr';
 
 type Question = { id: string; text: string; options: string[]; answer: string; timerSeconds: number; };

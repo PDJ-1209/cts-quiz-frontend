@@ -8,7 +8,7 @@ import {
   ReactiveFormsModule
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../../Service/auth.service';
+import { AuthService } from '../../services/auth.service';
 
 type RegistrationForm = FormGroup<{
   firstName: FormControl<string>;

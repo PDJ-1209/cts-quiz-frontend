@@ -11,6 +11,7 @@ import { SurveyService } from '../../services/survey.service';
 import { ActivityService, ActivityItem, RecentActivityResponse, ActivityStats } from '../../shared/services/activity.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
+import { AiChatbotComponent } from '../ai-chatbot/ai-chatbot.component';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -59,7 +60,7 @@ interface CalendarQuiz {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, AiChatbotComponent],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
@@ -207,6 +208,15 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       route: '/host/leaderboard',
       color: '#FFD700',
       gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+    },
+    {
+      id: 'customize-theme',
+      title: 'Customize Theme',
+      description: 'Personalize the look and feel of your application',
+      icon: 'fas fa-palette',
+      route: '/host/themes',
+      color: '#E83E8C',
+      gradient: 'linear-gradient(135deg, #E83E8C 0%, #C2185B 100%)'
     }
   ];
 
@@ -433,6 +443,10 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  navigateToThemes(): void {
+    this.router.navigate(['/host/themes']);
   }
 
   // Calendar methods

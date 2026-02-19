@@ -13,8 +13,8 @@
               <img src="/Cognizant_logo.png" alt="Cognizant" class="cognizant-logo-img">
             </div>
             <div class="brand-text">
-              <h4 class="mb-0 text-white fw-bold brand-title">Host Dashboard</h4>
-              <small class="text-light opacity-75 brand-subtitle">Cognizant Learning Platform</small>
+              <h4 class="mb-0 fw-bold brand-title">Host Dashboard</h4>
+              <small class="brand-subtitle">Cognizant Learning Platform</small>
             </div>
           </div>
         </div>
@@ -30,15 +30,20 @@
           <i class="fas fa-calendar-alt me-1"></i>
           <span class="d-none d-lg-inline">Calendar</span>
         </button>
+        <!-- Theme Customization Button -->
+        <button class="btn btn-outline-light btn-sm" (click)="navigateToThemes()" title="Customize Themes">
+          <i class="fas fa-palette me-1"></i>
+          <span class="d-none d-lg-inline">Themes</span>
+        </button>
         <!-- Logout Button -->
         <button class="btn btn-outline-danger btn-sm" (click)="logout()" title="Logout">
           <i class="fas fa-sign-out-alt me-1"></i>
           <span class="d-none d-lg-inline">Logout</span>
         </button>
-        <div class="user-info text-end text-white ms-2">
+        <div class="user-info text-end ms-2">
           <div class="fw-bold user-name">{{ hostName() }}</div>
           <div class="datetime-display">
-            <small class="opacity-75">{{ currentDay() }} - {{ currentDateTime() }}</small>
+            <small>{{ currentDay() }} - {{ currentDateTime() }}</small>
           </div>
         </div>
       </div>
@@ -411,3 +416,6 @@
   }
 </div>
 }
+
+<!-- AI Chatbot Integration -->
+<app-ai-chatbot></app-ai-chatbot>

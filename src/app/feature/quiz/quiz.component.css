@@ -1,14 +1,15 @@
 /* ===== GAMING STYLE QUIZ PAGE ===== */
 .quiz-game-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #ffffff 0%, #e6f2ff 25%, #cce5ff 50%, #99ccff 75%, #66b3ff 100%) !important;
+  /* Background handled by theme system globally */
   background-size: cover;
   background-attachment: fixed;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--app-font, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  color: var(--text-color);
   overflow: hidden;
   position: relative;
 }
@@ -43,15 +44,15 @@
 /* ===== LOADING SCREEN ===== */
 .loading-screen {
   text-align: center;
-  color: white;
+  color: var(--text-color);
 }
 
 .loading-spinner {
   width: 60px;
   height: 60px;
   margin: 0 auto 20px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border: 4px solid rgba(var(--text-color), 0.3);
+  border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -81,11 +82,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #0066CC 0%, #0052a3 100%) !important;
+  background: var(--card-bg) !important;
   backdrop-filter: blur(10px);
-  border-bottom: 2px solid rgba(0, 245, 255, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.3);
+  border-bottom: 2px solid var(--accent-color);
+  box-shadow: 0 4px 20px rgba(var(--accent-color), 0.3);
   flex-shrink: 0;
+  color: var(--text-color);
 }
 
 /* ===== LIVE BADGE (TOP LEFT) - WHITE BORDER ===== */
@@ -686,12 +688,14 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: white;
-  border: 3px solid rgba(0, 102, 204, 0.25);
+  background: var(--card-bg);
+  border: 3px solid var(--accent-color);
   border-radius: 18px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.95rem;
+  font-family: var(--app-font);
+  color: var(--text-color);
   text-align: left;
   overflow: hidden;
   width: 100%;
@@ -713,8 +717,8 @@
 
 .option-btn:hover:not(:disabled) {
   transform: translateY(-5px) scale(1.03);
-  border-color: #0066CC;
-  box-shadow: 0 10px 30px rgba(0, 102, 204, 0.35);
+  border-color: var(--accent-color);
+  box-shadow: 0 10px 30px rgba(var(--accent-color), 0.35);
 }
 
 .option-btn:hover:not(:disabled)::before {
@@ -722,10 +726,10 @@
 }
 
 .option-btn.selected {
-  background: linear-gradient(135deg, #0066CC, #00F5FF);
-  border-color: #00F5FF;
-  color: white;
-  box-shadow: 0 10px 35px rgba(0, 245, 255, 0.6);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--text-color);
+  box-shadow: 0 10px 35px rgba(var(--accent-color), 0.6);
   animation: optionSelected 0.4s ease;
   transform: scale(1.05);
 }
