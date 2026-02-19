@@ -51,6 +51,17 @@ export class AddQuestionComponent implements AfterViewInit {
   private router = inject(Router);
   private tutorialService = inject(TutorialService);
 
+  onCategoryChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'Other') {
+      this.showCategoryInput.set(true);
+      this.form.controls.category.setValue('');
+    } else {
+      this.showCategoryInput.set(false);
+      this.form.controls.category.setValue(value);
+    }
+  }
+
   // Header properties
   hostName = 'Quiz Master'; // You can make this dynamic later
   currentDateTime = new Date().toLocaleString('en-US', {
@@ -64,7 +75,37 @@ export class AddQuestionComponent implements AfterViewInit {
 
   readonly questionTypes = ['Multiple Choice', 'True/False', 'Short Answer'] as const;
   readonly difficulties = ['Easy', 'Medium', 'Hard'] as const;
+  
+  readonly categories = [
+    'Java',
+    'Database',
+    'Angular',
+    'Python',
+    'JavaScript',
+    'Human Resource',
+    'Dotnet',
+    'Data Structure',
+    'C++',
+    'HTML/CSS',
+    'Machine Learning',
+    'Artificial Intelligence',
+    'Cloud Computing',
+    'Networking',
+    'Security',
+    'Testing',
+    'DevOps',
+    'Agile',
+    'Project Management',
+    'UI/UX Design',
+    'Mobile Development',
+    'Data Science',
+    'Big Data',
+    'React',
+    'Node.js',
+    'Other'
+  ] as const;
 
+  showCategoryInput = signal(false);
   suggestionsOpen = signal(false);
   csvStatus = signal<string>('');
 

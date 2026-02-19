@@ -51,8 +51,17 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Category</label>
+                @if (!showCategoryInput()) {
+                <select class="form-select" (change)="onCategoryChange($event)">
+                  <option value="">Select Category</option>
+                  @for (cat of categories; track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                  }
+                </select>
+                } @else {
                 <input type="text" class="form-control" [formControl]="form.controls.category"
-                  placeholder="e.g., Angular, JavaScript" />
+                  placeholder="Enter custom category" />
+                }
               </div>
             </div>
             @if (questions().length > 0) {

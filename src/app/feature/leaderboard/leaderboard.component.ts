@@ -10,6 +10,7 @@ import {
   inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil, combineLatest, debounceTime } from 'rxjs';
 
 import { LeaderboardEngineService } from '../../services/leaderboard-engine.service';
@@ -17,6 +18,7 @@ import { HostControlService } from '../../services/host-control.service';
 import { MotionEffectsService } from '../../services/motion-effects.service';
 import { RealtimeFeedService } from '../../services/realtime-feed.service';
 import { SignalrService } from '../../services/signalr.service';
+import { LeaderboardService, LeaderboardSnapshot, LeaderboardUpdate } from '../../services/leaderboard.service';
 
 import { LeaderboardEntry } from '../../models/leaderboard-entry.model';
 import { Player } from '../../models/player.model';
@@ -53,10 +55,14 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
   isVisible = true;
   isCinematicReveal = false;
   config = DEFAULT_GAME_CONFIG;
+  sessionId: number = 0;
+  isConnected = false;
 
   private destroy$ = new Subject<void>();
   private updateDebounce$ = new Subject<void>();
   private signalrService = inject(SignalrService);
+  private leaderboardService = inject(LeaderboardService);
+  private route = inject(ActivatedRoute);
 
   constructor(
     private engine: LeaderboardEngineService,
@@ -67,6 +73,35 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.engine.setConfig(this.config);
+
+    // Get session ID from route params or localStorage
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const sessionIdFromRoute = params['sessionId'];
+      const storedSessionId = localStorage.getItem('currentSessionId');
+      
+      if (sessionIdFromRoute) {
+        this.sessionId = parseInt(sessionIdFromRoute, 10);
+        localStorage.setItem('currentSessionId', this.sessionId.toString());
+      } else if (storedSessionId) {
+        this.sessionId = parseInt(storedSessionId, 10);
+      }
+      
+      if (this.sessionId) {
+        // Initialize LeaderboardHub connection
+        this.signalrService.initLeaderboardHub(this.sessionId);
+        // Load initial leaderboard data
+        this.loadLeaderboard();
+      }
+    });
+
+    // Track connection status
+    this.signalrService.leaderboardConnectionEstablished$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((connected: boolean) => {
+        this.isConnected = connected;
+        console.log('[Leaderboard] Connection status:', connected ? 'Connected' : 'Disconnected');
+        this.cdr.markForCheck();
+      });
 
     // Watch host settings for visibility
     this.hostControl.settings$
@@ -82,18 +117,42 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       });
 
-    // Subscribe to real-time SignalR leaderboard updates
+    // Subscribe to LeaderboardHub updates
+    this.signalrService.leaderboardUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((leaderboardData: LeaderboardSnapshot) => {
+        console.log('[Leaderboard] LeaderboardHub snapshot received:', leaderboardData);
+        this.updateFromLeaderboardSnapshot(leaderboardData);
+      });
+
+    this.signalrService.scoreUpdated$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((update: LeaderboardUpdate) => {
+        console.log('[Leaderboard] Score update received:', update);
+        this.handleScoreUpdate(update);
+      });
+
+    this.signalrService.showLeaderboard$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((leaderboardData: LeaderboardSnapshot) => {
+        console.log('[Leaderboard] Show leaderboard event:', leaderboardData);
+        this.updateFromLeaderboardSnapshot(leaderboardData);
+        this.isVisible = true;
+        this.cdr.markForCheck();
+      });
+
+    // Legacy QuizSessionHub events (kept for backward compatibility)
     this.signalrService.hostLeaderboardUpdated$
       .pipe(takeUntil(this.destroy$))
       .subscribe((leaderboardData) => {
-        console.log('[Leaderboard] Real-time update received:', leaderboardData);
+        console.log('[Leaderboard] Real-time update received (legacy):', leaderboardData);
         this.updateFromSignalRData(leaderboardData);
       });
 
     this.signalrService.showHostLeaderboard$
       .pipe(takeUntil(this.destroy$))
       .subscribe((leaderboardData) => {
-        console.log('[Leaderboard] Show leaderboard event:', leaderboardData);
+        console.log('[Leaderboard] Show leaderboard event (legacy):', leaderboardData);
         this.updateFromSignalRData(leaderboardData);
         this.triggerCinematicReveal();
       });
@@ -121,6 +180,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    if (this.sessionId) {
+      this.signalrService.leaveSessionLeaderboard(this.sessionId);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -339,7 +401,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Update leaderboard from SignalR data
+   * Update leaderboard from SignalR data (legacy compatibility)
    */
   private updateFromSignalRData(leaderboardData: any): void {
     if (!leaderboardData || !leaderboardData.entries) {
@@ -355,19 +417,22 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
         avatarUrl: entry.avatar || ''
       };
 
+      const stats = this.engine.getPlayerStats(player.playerId) || this.engine.initializePlayer(player.playerId);
+      stats.totalScore = entry.score || 0;
+      stats.streakCorrect = entry.streak || 0;
+      stats.averageSpeedMs = entry.averageTime || 0;
+      stats.cumulativeSpeedMs = entry.totalTime || 0;
+      stats.totalCorrect = entry.correctAnswers || 0;
+      stats.currentRank = entry.rank || index + 1;
+      stats.previousRank = entry.lastRank || index + 1;
+
       return {
-        rank: entry.rank || index + 1,
         player: player,
-        score: entry.score || 0,
-        streak: entry.streak || 0,
-        averageTime: entry.averageTime || 0,
-        totalTime: entry.totalTime || 0,
-        correctAnswers: entry.correctAnswers || 0,
+        stats: stats,
         isHighlighted: false,
         showDeltaLabel: false,
         highlightType: 'rank-up',
-        lastRank: entry.lastRank || index + 1,
-        rankDelta: (entry.lastRank || index + 1) - (entry.rank || index + 1)
+        justEntered: false
       };
     });
 
@@ -387,4 +452,179 @@ export class LeaderboardComponent implements OnInit, OnDestroy, AfterViewInit {
       this.cdr.markForCheck();
     }
   }
+
+  /**
+   * Load initial leaderboard data from API
+   */
+  private loadLeaderboard(): void {
+    if (!this.sessionId) return;
+
+    this.leaderboardService.getLeaderboard(this.sessionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: LeaderboardSnapshot) => {
+          console.log('[Leaderboard] Initial data loaded:', response);
+          this.updateFromHttpResponse(response);
+        },
+        error: (error: any) => {
+          console.error('[Leaderboard] Failed to load initial data:', error);
+        }
+      });
+  }
+
+  /**
+   * Update from HTTP API response
+   */
+  private updateFromHttpResponse(response: any): void {
+    if (!response || !response.rankings) return;
+
+    const newEntries: LeaderboardEntry[] = response.rankings.map((entry: any) => {
+      const stats = this.engine.getPlayerStats(entry.participantId) || this.engine.initializePlayer(entry.participantId);
+      
+      // Update stats from API data
+      stats.totalScore = entry.score;
+      stats.totalCorrect = entry.correctAnswers;
+      stats.totalAnswered = entry.totalQuestions;
+      stats.cumulativeSpeedMs = entry.totalTimeInMs;
+      stats.averageSpeedMs = entry.averageSpeedMs;
+      stats.streakCorrect = entry.streakCorrect;
+      stats.currentRank = entry.rank;
+      stats.previousRank = entry.previousRank;
+      stats.accuracyPercent = entry.totalQuestions > 0 ? Math.round((entry.correctAnswers / entry.totalQuestions) * 100) : 0;
+
+      return {
+        player: {
+          playerId: entry.participantId,
+          nickname: entry.participantName,
+          color: this.generateColor(entry.participantId),
+          avatarUrl: entry.avatarUrl || ''
+        },
+        stats: stats,
+        isHighlighted: entry.hasRankChange,
+        highlightType: entry.rankDelta > 0 ? 'rank-up' : (entry.rankDelta < 0 ? 'rank-down' : undefined),
+        showDeltaLabel: entry.hasRankChange,
+        justEntered: false
+      };
+    });
+
+    this.entries = newEntries;
+    this.isVisible = response.showToParticipants;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Update from LeaderboardHub snapshot
+   */
+  private updateFromLeaderboardSnapshot(snapshot: LeaderboardSnapshot): void {
+    if (!snapshot || !snapshot.rankings) return;
+
+    const oldPositions = this.captureRowPositions();
+
+    const newEntries: LeaderboardEntry[] = snapshot.rankings.map((entry: any) => {
+      const stats = this.engine.getPlayerStats(entry.participantId) || this.engine.initializePlayer(entry.participantId);
+      
+      stats.totalScore = entry.score;
+      stats.totalCorrect = entry.correctAnswers;
+      stats.totalAnswered = entry.totalQuestions;
+      stats.cumulativeSpeedMs = entry.totalTimeInMs;
+      stats.averageSpeedMs = entry.averageSpeedMs;
+      stats.streakCorrect = entry.streakCorrect;
+      stats.currentRank = entry.rank;
+      stats.previousRank = entry.previousRank;
+
+      return {
+        player: {
+          playerId: entry.participantId,
+          nickname: entry.participantName,
+          color: this.generateColor(entry.participantId),
+          avatarUrl: entry.avatarUrl || ''
+        },
+        stats: stats,
+        isHighlighted: entry.hasRankChange,
+        highlightType: entry.rankDelta > 0 ? 'rank-up' : (entry.rankDelta < 0 ? 'rank-down' : undefined),
+        showDeltaLabel: entry.hasRankChange,
+        justEntered: false
+      };
+    });
+
+    this.entries = newEntries;
+    this.cdr.detectChanges();
+
+    // Apply FLIP animation
+    setTimeout(() => {
+      this.animateReorder(oldPositions);
+    }, 0);
+  }
+
+  /**
+   * Handle individual score update from LeaderboardHub
+   */
+  private handleScoreUpdate(update: LeaderboardUpdate): void {
+    if (!update) return;
+
+    const existingEntry = this.entries.find(e => e.player.playerId === update.participantId.toString());
+    
+    if (existingEntry) {
+      // Update existing entry
+      existingEntry.stats.totalScore = update.newTotalScore;
+      existingEntry.stats.lastScoreDelta = update.scoreDelta;
+      existingEntry.stats.previousRank = update.oldRank;
+      existingEntry.stats.currentRank = update.newRank;
+      existingEntry.stats.streakCorrect = update.streakCorrect;
+      existingEntry.isHighlighted = true;
+      existingEntry.showDeltaLabel = true;
+      existingEntry.highlightType = update.rankDelta > 0 ? 'rank-up' : (update.rankDelta < 0 ? 'rank-down' : undefined);
+    } else {
+      // Add new entry
+      const stats = this.engine.initializePlayer(update.participantId.toString());
+      stats.totalScore = update.newTotalScore;
+      stats.lastScoreDelta = update.scoreDelta;
+      stats.currentRank = update.newRank;
+      stats.previousRank = update.oldRank;
+      stats.streakCorrect = update.streakCorrect;
+
+      this.entries.push({
+        player: {
+          playerId: update.participantId.toString(),
+          nickname: update.playerName,
+          color: this.generateColor(update.participantId.toString()),
+          avatarUrl: ''
+        },
+        stats: stats,
+        isHighlighted: true,
+        showDeltaLabel: true,
+        highlightType: 'rank-up',
+        justEntered: true
+      });
+    }
+
+    // Re-sort by rank
+    const oldPositions = this.captureRowPositions();
+    this.entries = this.engine.sortByRank(this.entries);
+    this.engine.updateRanks(this.entries);
+    
+    this.cdr.detectChanges();
+    
+    // Apply FLIP animation
+    setTimeout(() => {
+      this.animateReorder(oldPositions);
+    }, 0);
+  }
+
+  /**
+   * Set session ID (called by parent component)
+   */
+  public setSessionId(sessionId: number): void {
+    this.sessionId = sessionId;
+    localStorage.setItem('currentSessionId', sessionId.toString());
+    
+    // Initialize LeaderboardHub if not already connected
+    if (!this.signalrService.leaderboardConnectionEstablished$.value) {
+      this.signalrService.initLeaderboardHub(sessionId);
+    }
+    
+    // Load initial data
+    this.loadLeaderboard();
+  }
 }
+
