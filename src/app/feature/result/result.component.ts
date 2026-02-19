@@ -9,7 +9,7 @@ import { QuizPublishService } from '../../services/quiz-publish.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
 import { PollService } from '../../services/poll.service';
 import { SurveyService } from '../../services/survey.service';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { LoaderComponent } from '../../shared/loader/loader.component';
 import { QrcodeComponent } from '../qrcode/qrcode.component';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
@@ -969,7 +969,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getSurveySessionCode(surveyId: number): string | null {
     const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
-    return survey?.sessionId?.toString() || null;
+    return survey?.sessionCode || null;
   }
 
   formatCreatedDate(survey: SurveyOverview): Date {
@@ -985,29 +985,59 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async publishSurvey(surveyId: number) {
     try {
+      console.log('=== PUBLISH SURVEY CLICKED ===');
+      console.log('Survey ID:', surveyId);
+      
       const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      console.log('Found survey:', survey);
+      
       if (!survey) {
+        console.warn('Survey not found with ID:', surveyId);
         this.snackBar.open('⚠️ Survey not found', 'Close', { duration: 3000 });
         return;
       }
 
       const startTimeInput = this.surveyStartTimes[surveyId];
+      console.log('Start time input:', startTimeInput);
+      
       if (!startTimeInput) {
+        console.warn('Start time is required but not provided');
         this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
         return;
       }
 
-      const startTime = new Date(startTimeInput).toISOString();
+      const startTime = new Date(startTimeInput);
+      console.log('Formatted start time:', startTime.toISOString());
       
-      // Create session for survey
-      const sessionCode = `SURVEY-${surveyId}-${Date.now()}`;
+      // Step 1: Create session for survey
+      console.log('Creating session for survey...');
+      const tempSessionCode = `SURVEY-TEMP-${Date.now()}`;
+      const sessionResponse = await this.quizPublishService.createQuizSession(
+        null, // null for surveys
+        this.currentHostId(),
+        tempSessionCode,
+        startTime.toISOString(),
+        undefined,
+        'Active'
+      );
       
-      this.snackBar.open(`✅ Survey published! Session: ${sessionCode}`, 'Close', { duration: 5000 });
+      const sessionId = sessionResponse.sessionId;
+      console.log('Session created:', sessionId, 'Code:', sessionResponse.sessionCode);
+      
+      // Step 2: Publish survey with session ID
+      console.log('Publishing survey with session ID:', sessionId);
+      await firstValueFrom(
+        this.surveyService.publishSurveyWithSession(surveyId, sessionId)
+      );
+      
+      this.snackBar.open(`✅ Survey published! Session: ${sessionResponse.sessionCode}`, 'Close', { duration: 5000 });
       
       await this.loadSurveys();
-    } catch (error) {
-      console.error('Error publishing survey:', error);
-      this.snackBar.open('⚠️ Failed to publish survey', 'Close', { duration: 5000 });
+      console.log('=== PUBLISH SURVEY COMPLETED ===');
+    } catch (error: any) {
+      console.error('=== ERROR PUBLISHING SURVEY ===');
+      console.error('Error:', error);
+      this.snackBar.open(`⚠️ Failed to publish survey: ${error?.error?.message || error?.message || 'Unknown error'}`, 'Close', { duration: 5000 });
     }
   }
 
@@ -1063,7 +1093,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getPollSessionCode(pollId: number): string | null {
     const poll = this.hostPolls().find(p => p.pollId === pollId);
-    return poll?.sessionId?.toString() || null;
+    return poll?.sessionCode || null;
   }
 
   formatPollCreatedDate(poll: PollOverview): Date {
@@ -1079,29 +1109,59 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async publishPoll(pollId: number) {
     try {
+      console.log('=== PUBLISH POLL CLICKED ===');
+      console.log('Poll ID:', pollId);
+      
       const poll = this.hostPolls().find(p => p.pollId === pollId);
+      console.log('Found poll:', poll);
+      
       if (!poll) {
+        console.warn('Poll not found with ID:', pollId);
         this.snackBar.open('⚠️ Poll not found', 'Close', { duration: 3000 });
         return;
       }
 
       const startTimeInput = this.pollStartTimes[pollId];
+      console.log('Start time input:', startTimeInput);
+      
       if (!startTimeInput) {
+        console.warn('Start time is required but not provided');
         this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
         return;
       }
 
-      const startTime = new Date(startTimeInput).toISOString();
+      const startTime = new Date(startTimeInput);
+      console.log('Formatted start time:', startTime.toISOString());
       
-      // Create session for poll
-      const sessionCode = `POLL-${pollId}-${Date.now()}`;
+      // Step 1: Create session for poll
+      console.log('Creating session for poll...');
+      const tempSessionCode = `POLL-TEMP-${Date.now()}`;
+      const sessionResponse = await this.quizPublishService.createQuizSession(
+        null, // null for polls
+        this.currentHostId(),
+        tempSessionCode,
+        startTime.toISOString(),
+        undefined,
+        'Active'
+      );
       
-      this.snackBar.open(`✅ Poll published! Session: ${sessionCode}`, 'Close', { duration: 5000 });
+      const sessionId = sessionResponse.sessionId;
+      console.log('Session created:', sessionId, 'Code:', sessionResponse.sessionCode);
+      
+      // Step 2: Publish poll with session ID
+      console.log('Publishing poll with session ID:', sessionId);
+      await firstValueFrom(
+        this.pollService.publishPoll(pollId, sessionId)
+      );
+      
+      this.snackBar.open(`✅ Poll published! Session: ${sessionResponse.sessionCode}`, 'Close', { duration: 5000 });
       
       await this.loadPolls();
-    } catch (error) {
-      console.error('Error publishing poll:', error);
-      this.snackBar.open('⚠️ Failed to publish poll', 'Close', { duration: 5000 });
+      console.log('=== PUBLISH POLL COMPLETED ===');
+    } catch (error: any) {
+      console.error('=== ERROR PUBLISHING POLL ===');
+      console.error('Error:', error);
+      this.snackBar.open(`⚠️ Failed to publish poll: ${error?.error?.message || error?.message || 'Unknown error'}`, 'Close', { duration: 5000 });
     }
   }
 

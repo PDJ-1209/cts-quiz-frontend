@@ -92,6 +92,7 @@ export class SurveyService {
     return {
       surveyId: source?.surveyId ?? source?.SurveyId,
       sessionId: source?.sessionId ?? source?.SessionId,
+      sessionCode: source?.sessionCode ?? source?.SessionCode,
       title: source?.title ?? source?.Title ?? '',
       description: source?.description ?? source?.Description ?? null,
       isAnonymous: source?.isAnonymous ?? source?.IsAnonymous ?? false,

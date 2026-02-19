@@ -69,6 +69,7 @@ export interface CreatePollOptionApiRequest {
 export interface PollOverview {
   pollId: number;
   sessionId: number;
+  sessionCode?: string;
   pollTitle: string;
   pollQuestion: string;
   pollAnonymous: boolean;

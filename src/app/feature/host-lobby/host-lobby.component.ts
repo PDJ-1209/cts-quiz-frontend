@@ -125,6 +125,29 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   // NEW: Computed property to determine if leaderboard should be shown
   showLeaderboard = computed(() => this.contentType() === 'quiz');
 
+  /**
+   * Detect content type from session code format
+   * Quiz: Quiz_NAME_DD_MM_YYYY_AXXXX
+   * Survey: Survey_DD_MM_YYYY_SXXXX
+   * Poll: Poll_DD_MM_YYYY_PXXXX
+   */
+  private detectContentTypeFromSessionCode(sessionCode: string): 'quiz' | 'survey' | 'poll' {
+    if (!sessionCode) return 'quiz';
+    
+    const upperCode = sessionCode.toUpperCase();
+    if (upperCode.startsWith('SURVEY_')) return 'survey';
+    if (upperCode.startsWith('POLL_')) return 'poll';
+    return 'quiz';
+  }
+
+  /**
+   * Get display name for content type
+   */
+  getContentTypeDisplayName(): string {
+    const type = this.contentType();
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
   ngOnInit() {
     console.log('[HostLobby] Component initialized');
     // Get query parameters
@@ -132,14 +155,18 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       const code = params['sessionCode'] || '';
       const id = +params['quizId'] || +params['surveyId'] || +params['pollId'] || 0;
       const mode = params['mode'] === 'auto' ? 'auto' : 'manual';
-      const type = params['type'] || 'quiz'; // NEW: Detect content type
+      const typeParam = params['type'] || ''; // Get type from query param
       
-      console.log('[HostLobby] Params:', { sessionCode: code, id, mode, type });
+      console.log('[HostLobby] Params:', { sessionCode: code, id, mode, type: typeParam });
       
       this.sessionCode.set(code);
       this.quizId.set(id);
       this.mode.set(mode);
-      this.contentType.set(type as 'quiz' | 'survey' | 'poll'); // NEW: Set content type
+      
+      // Detect content type from session code if not provided in query param
+      const detectedType = typeParam || this.detectContentTypeFromSessionCode(code);
+      this.contentType.set(detectedType as 'quiz' | 'survey' | 'poll');
+      console.log('[HostLobby] Content type detected:', this.contentType())
       
       if (this.sessionCode()) {
         console.log('[HostLobby] Loading session data...');
@@ -546,7 +573,25 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         ...current,
         totalParticipants: count
       });
-      console.log('[HostLobby] Participant count:', count);
+      console.log('[HostLobby] Participant count updated:', count);
+    });
+
+    // NEW: Listen for participant join events (lobby sync)
+    this.hubConnection.on('ParticipantJoined', (data: any) => {
+      const participantName = data.ParticipantName || data.participantName || 'Someone';
+      const totalParticipants = data.TotalParticipants || data.totalParticipants || 0;
+      
+      console.log('[HostLobby] Participant joined:', participantName, '- Total:', totalParticipants);
+      
+      // Show notification
+      this.snackBar.open(`👤 ${participantName} joined! (${totalParticipants} total)`, 'Close', { duration: 3000 });
+      
+      // Update count
+      const current = this.participantProgress();
+      this.participantProgress.set({
+        ...current,
+        totalParticipants: totalParticipants
+      });
     });
 
     // Listen for quiz started confirmation
@@ -562,6 +607,36 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         await this.startQuestionTimer();
       }
       console.log('[HostLobby] State updated - waiting:', this.waitingForStart(), 'started:', this.quizStarted());
+    });
+
+    // NEW: Listen for survey started confirmation
+    this.hubConnection.on('SurveyStarted', async (sessionCode: string) => {
+      console.log('[HostLobby] SurveyStarted event received for:', sessionCode);
+      this.waitingForStart.set(false);
+      this.quizStarted.set(true);
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+      // Surveys typically don't have timers, but we can handle the first question
+      if (this.currentQuestion()) {
+        await this.startQuestionTimer();
+      }
+      console.log('[HostLobby] Survey started - waiting:', this.waitingForStart(), 'started:', this.quizStarted());
+    });
+
+    // NEW: Listen for poll started confirmation
+    this.hubConnection.on('PollStarted', async (sessionCode: string) => {
+      console.log('[HostLobby] PollStarted event received for:', sessionCode);
+      this.waitingForStart.set(false);
+      this.quizStarted.set(true);
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+      // Polls typically don't have timers, but handle the question if needed
+      if (this.currentQuestion()) {
+        await this.startQuestionTimer();
+      }
+      console.log('[HostLobby] Poll started - waiting:', this.waitingForStart(), 'started:', this.quizStarted());
     });
   }
 
@@ -638,10 +713,12 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
     }
 
     try {
-      console.log('[HostLobby] Force starting quiz for session:', this.sessionCode());
+      console.log('[HostLobby] Force starting content for session:', this.sessionCode());
+      console.log('[HostLobby] Content type:', this.contentType());
       
-      // Update session startedAt in backend and notify all participants
-      await this.hubConnection.invoke('NotifyQuizStart', this.sessionCode());
+      // Use unified content start method based on content type
+      const contentType = this.contentType();
+      await this.hubConnection.invoke('NotifyContentStart', this.sessionCode(), contentType);
       
       this.waitingForStart.set(false);
       this.quizStarted.set(true);
@@ -650,17 +727,18 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         clearInterval(this.countdownInterval);
       }
       
-      // Start the first question timer immediately after quiz starts
+      // Start the first question timer immediately after content starts
       if (this.currentQuestion()) {
         console.log('[HostLobby] Starting timer for first question');
         await this.startQuestionTimer();
       }
       
-      this.snackBar.open('🚀 Quiz started! Participants can now begin.', 'Close', { duration: 4000 });
-      console.log('[HostLobby] Quiz started successfully');
+      const contentLabel = contentType.charAt(0).toUpperCase() + contentType.slice(1);
+      this.snackBar.open(`🚀 ${contentLabel} started! Participants can now begin.`, 'Close', { duration: 4000 });
+      console.log('[HostLobby] Content started successfully');
     } catch (error) {
       console.error('[HostLobby] Force start failed:', error);
-      this.snackBar.open('⚠️ Failed to start quiz', 'Close', { duration: 3000 });
+      this.snackBar.open('⚠️ Failed to start content', 'Close', { duration: 3000 });
     }
   }
 

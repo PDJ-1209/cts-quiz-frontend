@@ -309,16 +309,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     try {
       this.isLoading.set(true);
       
-      // Pre-check if employee ID exists in database
-      const employeeExists = await this.authService.checkEmployeeExists(this.loginData.employeeId);
-      
-      // If employee ID doesn't exist, show specific error message
-      if (!employeeExists) {
-        this.showPopup('Employee ID does not exist.', 'error');
-        return;
-      }
-      
-      // Employee ID exists, now attempt login
+      // Attempt login - backend will validate employee ID and password
       const response = await this.authService.login({
         employeeId: this.loginData.employeeId,
         password: this.loginData.password
@@ -332,10 +323,9 @@ export class LandingPageComponent implements OnInit, OnDestroy {
         this.showPopup(`Welcome back! Redirecting to ${response.user.role} dashboard...`, 'success');
         
         // Let the AuthService handle the navigation since it already has redirect logic
-        // Remove the duplicate setTimeout redirect to prevent double redirects
       } else {
-        // If employee ID exists but login failed, it must be wrong password
-        this.showPopup('Incorrect password.', 'error');
+        // Login failed - show generic error (backend should provide specific message)
+        this.showPopup(response.message || 'Login failed. Please check your credentials.', 'error');
       }
       
     } catch (error: any) {

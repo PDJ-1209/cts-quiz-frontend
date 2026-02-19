@@ -28,6 +28,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
   sessionData: SessionData | null = null;
   participantName: string = '';
   sessionCode: string = '';
+  contentType = signal<'quiz' | 'survey' | 'poll'>('quiz'); // NEW: Content type detection
   
   quizStartTime: Date | null = null;
   quizEndTime: Date | null = null;
@@ -44,6 +45,29 @@ export class CountdownComponent implements OnInit, OnDestroy {
   
   private hubConnection?: signalR.HubConnection;
   private lastBackWarnAt = 0;
+
+  /**
+   * Detect content type from session code format
+   * Quiz: Quiz_NAME_DD_MM_YYYY_AXXXX
+   * Survey: Survey_DD_MM_YYYY_SXXXX
+   * Poll: Poll_DD_MM_YYYY_PXXXX
+   */
+  private detectContentTypeFromSessionCode(sessionCode: string): 'quiz' | 'survey' | 'poll' {
+    if (!sessionCode) return 'quiz';
+    
+    const upperCode = sessionCode.toUpperCase();
+    if (upperCode.startsWith('SURVEY_')) return 'survey';
+    if (upperCode.startsWith('POLL_')) return 'poll';
+    return 'quiz';
+  }
+
+  /**
+   * Get display name for content type
+   */
+  getContentTypeDisplayName(): string {
+    const type = this.contentType();
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -66,6 +90,13 @@ export class CountdownComponent implements OnInit, OnDestroy {
     // Get session code from query params
     this.route.queryParams.subscribe(params => {
       this.sessionCode = params['code'] || '';
+      
+      // Detect content type from session code
+      if (this.sessionCode) {
+        const detectedType = this.detectContentTypeFromSessionCode(this.sessionCode);
+        this.contentType.set(detectedType);
+        console.log('[Countdown] Content type detected:', this.contentType());
+      }
     });
 
     if (this.sessionData) {
@@ -162,6 +193,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
       .withAutomaticReconnect()
       .build();
 
+    // Listen for quiz start event
     this.hubConnection.on('QuizStarted', (sessionCode: string) => {
       console.log('Quiz started notification received for session:', sessionCode);
       this.hasStarted.set(true);
@@ -171,11 +203,38 @@ export class CountdownComponent implements OnInit, OnDestroy {
       setTimeout(() => this.navigateToQuiz(), 1000);
     });
 
+    // Listen for survey start event
+    this.hubConnection.on('SurveyStarted', (sessionCode: string) => {
+      console.log('Survey started notification received for session:', sessionCode);
+      this.hasStarted.set(true);
+      this.isWaiting.set(false);
+      this.stopCountdown();
+      this.snackBar.open('Survey is starting now!', 'Close', { duration: 2000 });
+      setTimeout(() => this.navigateToQuiz(), 1000);
+    });
+
+    // Listen for poll start event
+    this.hubConnection.on('PollStarted', (sessionCode: string) => {
+      console.log('Poll started notification received for session:', sessionCode);
+      this.hasStarted.set(true);
+      this.isWaiting.set(false);
+      this.stopCountdown();
+      this.snackBar.open('Poll is starting now!', 'Close', { duration: 2000 });
+      setTimeout(() => this.navigateToQuiz(), 1000);
+    });
+
     this.hubConnection.start()
       .then(() => {
         console.log('SignalR Connected');
         if (this.sessionCode) {
           this.hubConnection?.invoke('JoinSession', this.sessionCode);
+          
+          // Notify host that this participant has joined
+          if (this.participantName) {
+            this.hubConnection?.invoke('NotifyParticipantJoined', this.sessionCode, this.participantName)
+              .then(() => console.log('Notified host of participant join'))
+              .catch((err: unknown) => console.warn('Failed to notify host:', err));
+          }
         }
       })
       .catch((err: unknown) => console.error('Error connecting to SignalR:', err));

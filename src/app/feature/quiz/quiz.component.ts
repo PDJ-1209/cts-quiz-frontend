@@ -34,6 +34,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   quizTitle: string = '';
   sessionCode: string = '';
   participantName: string = '';
+  contentType: 'quiz' | 'survey' | 'poll' = 'quiz'; // NEW: Content type detection
 
   // Leaderboard display properties
   showLeaderboardOverlay: boolean = false;
@@ -59,6 +60,49 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   private participantService = inject(ParticipantService);
   router = inject(Router);
 
+  /**
+   * Detect content type from session code format
+   * Quiz: Quiz_NAME_DD_MM_YYYY_AXXXX
+   * Survey: Survey_DD_MM_YYYY_SXXXX
+   * Poll: Poll_DD_MM_YYYY_PXXXX
+   */
+  private detectContentTypeFromSessionCode(sessionCode: string): 'quiz' | 'survey' | 'poll' {
+    if (!sessionCode) return 'quiz';
+    
+    const upperCode = sessionCode.toUpperCase();
+    if (upperCode.startsWith('SURVEY_')) return 'survey';
+    if (upperCode.startsWith('POLL_')) return 'poll';
+    return 'quiz';
+  }
+
+  /**
+   * Get display name for content type
+   */
+  getContentTypeDisplayName(): string {
+    return this.contentType.charAt(0).toUpperCase() + this.contentType.slice(1);
+  }
+
+  /**
+   * Check if current session is a quiz (for leaderboard display)
+   */
+  isQuiz(): boolean {
+    return this.contentType === 'quiz';
+  }
+
+  /**
+   * Check if current session is a survey
+   */
+  isSurvey(): boolean {
+    return this.contentType === 'survey';
+  }
+
+  /**
+   * Check if current session is a poll
+   */
+  isPoll(): boolean {
+    return this.contentType === 'poll';
+  }
+
   async ngOnInit() {
     // Get participant and session data from localStorage
     const participantIdStr = localStorage.getItem('participantId');
@@ -78,6 +122,12 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.quizTitle = quizTitleStr || 'Quiz';
     this.sessionCode = sessionCodeStr || '';
     this.participantName = participantNameStr || '';
+    
+    // Detect content type from session code
+    if (this.sessionCode) {
+      this.contentType = this.detectContentTypeFromSessionCode(this.sessionCode);
+      console.log('[QuizPage] Content type detected:', this.contentType);
+    }
 
     this.blockBackNavigation();
 

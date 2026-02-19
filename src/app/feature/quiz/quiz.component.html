@@ -2,7 +2,7 @@
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-screen">
     <div class="loading-spinner"></div>
-    <p class="loading-text">Preparing your quiz...</p>
+    <p class="loading-text">Preparing your {{ getContentTypeDisplayName().toLowerCase() }}...</p>
   </div>
 
   <!-- Active Quiz -->
@@ -102,7 +102,7 @@
                 [disabled]="!selected || submitting"
                 [class.loading]="submitting"
                 (click)="submitAnswer()">
-          <span *ngIf="!submitting">Submit Answer →</span>
+          <span *ngIf="!submitting">Submit {{ isSurvey() ? 'Response' : 'Answer' }} →</span>
           <span *ngIf="submitting">
             <span class="spinner"></span> Submitting...
           </span>
@@ -114,11 +114,11 @@
   <!-- Results Screen -->
   <div *ngIf="!loading && finished" class="results-screen">
     <div class="results-card">
-      <div class="trophy-icon">🏆</div>
-      <h2 class="results-title">Quiz Complete!</h2>
+      <div class="trophy-icon">{{ isQuiz() ? '🏆' : (isSurvey() ? '📋' : '📊') }}</div>
+      <h2 class="results-title">{{ getContentTypeDisplayName() }} Complete!</h2>
       <p class="quiz-name">{{ quizTitle }}</p>
       
-      <div class="score-circle-container">
+      <div class="score-circle-container" *ngIf="isQuiz()">
         <svg class="score-svg" viewBox="0 0 200 200">
           <circle cx="100" cy="100" r="90" class="score-bg"></circle>
           <circle cx="100" cy="100" r="90" class="score-ring"
@@ -130,7 +130,7 @@
         </div>
       </div>
 
-      <div class="stats-row">
+      <div class="stats-row" *ngIf="isQuiz()">
         <div class="stat-box correct">
           <span class="stat-icon">✓</span>
           <span class="stat-value">{{ score }}</span>
@@ -148,14 +148,22 @@
         </div>
       </div>
 
+      <div class="stats-row" *ngIf="!isQuiz()">
+        <div class="stat-box total">
+          <span class="stat-icon">✓</span>
+          <span class="stat-value">{{ questions.length }}</span>
+          <span class="stat-label">{{ isSurvey() ? 'Responses' : 'Votes' }} Submitted</span>
+        </div>
+      </div>
+
       <button class="home-btn" (click)="returnToParticipant()">
         ✏️ Go to Feedback
       </button>
     </div>
   </div>
 
-  <!-- Leaderboard Overlay -->
-  <div *ngIf="showLeaderboardOverlay" class="leaderboard-overlay">
+  <!-- Leaderboard Overlay (Only for Quizzes) -->
+  <div *ngIf="showLeaderboardOverlay && isQuiz()" class="leaderboard-overlay">
     <div class="leaderboard-modal">
       <div class="leaderboard-header">
         <h2>🏆 Leaderboard</h2>

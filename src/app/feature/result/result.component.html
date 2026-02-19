@@ -109,35 +109,36 @@
         
         <!-- Quizzes Tab -->
         @if (selectedContentType() === 'quizzes') {
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Quiz Number</th>
-                  <th>Quiz Name</th>
-                  <th>Category</th>
-                  <th>Questions</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Start Time</th>
-                  <th>Publish</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (quiz of hostQuizzes(); track quiz.quizId) {
+          @if (hostQuizzes().length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
                   <tr>
-                    <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
-                    <td><strong>{{ quiz.quizName || '(Unnamed Quiz)' }}</strong></td>
-                    <td><span class="badge bg-secondary">{{ quiz.category }}</span></td>
-                    <td><span class="badge bg-info">{{ quiz.questionCount }}</span></td>
-                    <td class="text-center">
-                      <span 
-                        class="badge" 
-                        [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
-                        [class.bg-success]="quiz.status.toLowerCase() === 'active'"
-                        [class.bg-info]="quiz.status.toLowerCase() === 'completed'"
-                        [class.bg-primary]="quiz.status.toLowerCase() === 'live'">
+                    <th>Quiz Number</th>
+                    <th>Quiz Name</th>
+                    <th>Category</th>
+                    <th>Questions</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (quiz of hostQuizzes(); track quiz.quizId) {
+                    <tr>
+                      <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
+                      <td><strong>{{ quiz.quizName || '(Unnamed Quiz)' }}</strong></td>
+                      <td><span class="badge bg-secondary">{{ quiz.category }}</span></td>
+                      <td><span class="badge bg-info">{{ quiz.questionCount }}</span></td>
+                      <td class="text-center">
+                        <span 
+                          class="badge" 
+                          [class.bg-warning]="quiz.status.toLowerCase() === 'draft'"
+                          [class.bg-success]="quiz.status.toLowerCase() === 'active'"
+                          [class.bg-info]="quiz.status.toLowerCase() === 'completed'"
+                          [class.bg-primary]="quiz.status.toLowerCase() === 'live'">
                         {{ quiz.status || 'N/A' }}
                       </span>
                     </td>
@@ -210,12 +211,13 @@
               </tbody>
             </table>
           </div>
-        } @else {
-          <div class="text-center py-5">
-            <div class="mb-3" style="font-size: 3rem;">📭</div>
-            <h5>No Quizzes Found</h5>
-            <p class="text-muted">You haven't created any quizzes yet.</p>
-          </div>
+          } @else {
+            <div class="text-center py-5">
+              <div class="mb-3" style="font-size: 3rem;">📭</div>
+              <h5>No Quizzes Found</h5>
+              <p class="text-muted">You haven't created any quizzes yet.</p>
+            </div>
+          }
         }
         
         <!-- Surveys Tab -->
@@ -316,6 +318,8 @@
                         <td colspan="9" class="qr-cell">
                           <app-qrcode 
                             [surveyId]="survey.surveyId"
+                            [surveyNumber]="getSurveySessionCode(survey.surveyId) || 'N/A'"
+                            [contentType]="'survey'"
                             [showActions]="false">
                           </app-qrcode>
                         </td>
@@ -432,6 +436,8 @@
                         <td colspan="9" class="qr-cell">
                           <app-qrcode 
                             [pollId]="poll.pollId"
+                            [pollNumber]="getPollSessionCode(poll.pollId) || 'N/A'"
+                            [contentType]="'poll'"
                             [showActions]="false">
                           </app-qrcode>
                         </td>

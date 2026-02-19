@@ -288,7 +288,7 @@ export class QuizPublishService {
    * @param status - Session status (default: 'Active')
    */
   public async createQuizSession(
-    quizId: number,
+    quizId: number | null,
     hostId: string,
     quizNumber: string,
     startedAt?: string,

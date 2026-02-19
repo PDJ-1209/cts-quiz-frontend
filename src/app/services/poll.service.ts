@@ -54,6 +54,7 @@ export class PollService {
     return {
       pollId: source?.pollId ?? source?.PollId,
       sessionId: source?.sessionId ?? source?.SessionId,
+      sessionCode: source?.sessionCode ?? source?.SessionCode,
       pollTitle: source?.pollTitle ?? source?.PollTitle ?? '',
       pollQuestion: source?.pollQuestion ?? source?.PollQuestion ?? '',
       pollAnonymous: source?.pollAnonymous ?? source?.PollAnonymous ?? false,

@@ -72,7 +72,7 @@ export interface CreateQuizSessionRequest {
 // Response from backend after creating QuizSession
 export interface CreateQuizSessionResponse {
   sessionId: number;
-  quizId: number;
+  quizId: number | null;  // Made nullable to match backend for surveys/polls
   hostId: string;
   sessionCode: string;
   startedAt: string;

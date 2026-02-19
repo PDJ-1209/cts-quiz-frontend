@@ -1,4 +1,5 @@
-import { Injectable, signal, inject, PLATFORM_ID, Inject, DOCUMENT } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID, Inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
