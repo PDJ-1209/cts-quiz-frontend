@@ -1687,7 +1687,7 @@
     opacity: 1;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
-=======
+}
 .leaderboard-header {
   background: rgba(255, 255, 255, 0.1);
   padding: 20px 25px;
@@ -1888,4 +1888,6 @@
 
 .leaderboard-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+}
 }
