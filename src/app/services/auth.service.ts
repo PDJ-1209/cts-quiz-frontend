@@ -1,7 +1,7 @@
-import { Injectable, signal, inject, PLATFORM_ID, Inject } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID, Inject, DOCUMENT } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { isPlatformBrowser, DOCUMENT } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { 
