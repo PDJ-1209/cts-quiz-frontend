@@ -507,9 +507,8 @@ export class TemplateComponent implements OnInit {
       questionType: rq.questionType || 'MCQ',
       category: rq.category,
       order: rq.order ?? idx + 1,
-      points: rq.points ?? 1,
+      timerSeconds: rq.timerSec ?? 30,
       isRequired: rq.isRequired ?? true,
-      timerSeconds: rq.timerSec,
       options: (rq.options || []).map((opt, oi) => ({
         optionId: opt.optionId,
         optionText: opt.optionText || '',
@@ -523,7 +522,7 @@ export class TemplateComponent implements OnInit {
     return (qs || []).map((q, idx) => ({
       ...q,
       order: q.order ?? idx + 1,
-      points: q.points ?? 1,
+      timerSeconds: q.timerSeconds ?? 30,
       isRequired: q.isRequired ?? true,
       questionType: q.questionType || 'MCQ',
       options: (q.options || []).map((o, oi) => ({
@@ -574,7 +573,7 @@ export class TemplateComponent implements OnInit {
       questionType: 'MCQ',
       order: position === 'top' ? 1 : this.editorQuestions.length + 1,
       isRequired: true,
-      points: 1,
+      timerSeconds: 30,
       options: [
         { optionText: '', isCorrect: true, order: 1 },
         { optionText: '', isCorrect: false, order: 2 }
@@ -743,7 +742,7 @@ export class TemplateComponent implements OnInit {
         questionText: (q.questionText || '').trim(),
         questionType: q.questionType || 'MCQ',
         isRequired: q.isRequired ?? true,
-        points: q.points ?? 1,
+        timerSeconds: q.timerSeconds ?? 30,
         order: idx + 1,
         options: (q.options || []).map((o, oi) => ({
           optionId: o.optionId,

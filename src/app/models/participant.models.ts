@@ -43,6 +43,7 @@ export interface SessionQuestionsResponse {
   quizTitle: string;
   totalQuestions: number;
   questions: QuestionDetail[];
+  startedAt?: string;
 }
 
 export interface SubmitAnswerRequest {

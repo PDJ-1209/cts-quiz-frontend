@@ -188,12 +188,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.selected = value; // enables submit button
   }
 
-  startTimer() {
-    // Clear any existing timer
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
-
   // Remove startSyncTimer and stopSyncTimer - using SignalR instead
 
   private calculateQuestionState(serverNowMs: number): {
@@ -651,7 +645,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     if (this.currentIndex < this.questions.length - 1) {
       this.currentIndex++;
       this.currentQuestionStartMs = this.getServerNowMs();
-      this.startTimer(); // Start timer for next question
+      // Timer is controlled by SignalR - no need to start manually
       console.log('[QuizPage] advanced to index', this.currentIndex);
     } else {
       this.finished = true;
@@ -723,9 +717,5 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
   private getServerNowMs(): number {
     return Date.now() + this.serverTimeOffsetMs;
-  }
-
-  private updateQuestionState(): void {
-    this.currentQuestionStartMs = this.getServerNowMs();
   }
 }

@@ -5,7 +5,7 @@ export interface Question {
   questionText: string;
   questionType?: string;
   isRequired?: boolean;
-  points?: number;
+  timerSeconds?: number;
   order?: number;
   category?: string;
   difficultyLevel?: string;

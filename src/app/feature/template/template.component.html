@@ -146,8 +146,8 @@
               </select>
             </label>
             <label>
-              <span>Points</span>
-              <input type="number" min="0" [(ngModel)]="q.points" (ngModelChange)="markDirty()" />
+              <span>Timer (sec)</span>
+              <input type="number" min="5" [(ngModel)]="q.timerSeconds" (ngModelChange)="markDirty()" placeholder="30" />
             </label>
             <label class="checkbox-label">
               <input type="checkbox" [(ngModel)]="q.isRequired" (ngModelChange)="markDirty()" />

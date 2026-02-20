@@ -255,9 +255,9 @@ export interface RenderedQuestion {
   category?: string;
   difficultyLevel?: string;
   order: number;
-  points: number;
+  timerSeconds?: number;
   isRequired: boolean;
-  timerSec?: number;
+  timerSec?: number; // Legacy field from backend
   section?: string;
   options: RenderedOption[];
 }
