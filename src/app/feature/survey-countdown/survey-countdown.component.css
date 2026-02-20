@@ -1,0 +1,265 @@
+.countdown-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  padding: 20px;
+}
+
+.countdown-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 700px;
+  width: 100%;
+  padding: 40px;
+  text-align: center;
+}
+
+.header {
+  margin-bottom: 30px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 20px;
+}
+
+.survey-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.session-code {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+}
+
+.session-code strong {
+  color: #11998e;
+  font-size: 1.2rem;
+}
+
+.participant-info {
+  margin-bottom: 30px;
+}
+
+.participant-info p {
+  font-size: 1.1rem;
+  color: #555;
+  margin: 0;
+}
+
+.participant-info strong {
+  color: #11998e;
+}
+
+.countdown-display {
+  margin: 30px 0;
+}
+
+.countdown-label {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.time-blocks {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.time-block {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 100px;
+  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+}
+
+.time-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.time-label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.waiting-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-icon {
+  color: #11998e;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
+.waiting-info p {
+  margin: 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.small-text {
+  font-size: 0.85rem !important;
+  color: #777 !important;
+}
+
+.late-message,
+.starting-message {
+  margin: 30px 0;
+  padding: 30px;
+  border-radius: 12px;
+}
+
+.late-message {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+}
+
+.starting-message {
+  background: #d1ecf1;
+  border: 2px solid #17a2b8;
+}
+
+.warning-icon,
+.start-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 15px;
+}
+
+.warning-icon {
+  color: #ff9800;
+}
+
+.start-icon {
+  color: #17a2b8;
+}
+
+.late-message h2,
+.starting-message h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 15px 0;
+}
+
+.late-message p,
+.starting-message p {
+  font-size: 1rem;
+  color: #555;
+  margin: 8px 0;
+}
+
+.action-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+}
+
+.action-button,
+.back-button {
+  font-size: 1rem;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-button {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(17, 153, 142, 0.4);
+}
+
+.back-button {
+  background: white;
+  color: #11998e;
+  border: 2px solid #11998e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .countdown-card {
+    padding: 30px 20px;
+  }
+
+  .survey-title {
+    font-size: 1.5rem;
+  }
+
+  .time-blocks {
+    gap: 15px;
+  }
+
+  .time-block {
+    min-width: 80px;
+    padding: 15px;
+  }
+
+  .time-value {
+    font-size: 2.5rem;
+  }
+
+  .time-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .survey-title {
+    font-size: 1.3rem;
+  }
+
+  .time-blocks {
+    gap: 10px;
+  }
+
+  .time-block {
+    min-width: 70px;
+    padding: 12px;
+  }
+
+  .time-value {
+    font-size: 2rem;
+  }
+}

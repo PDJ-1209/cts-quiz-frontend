@@ -1,0 +1,65 @@
+<div class="poll-participate-container">
+  @if (loading()) {
+    <div class="loading-spinner">
+      <p>Loading poll...</p>
+    </div>
+  } @else if (poll()) {
+    <div class="poll-header">
+      <h1>{{ poll()?.pollTitle }}</h1>
+      <p class="poll-question">{{ poll()?.pollQuestion }}</p>
+      <span class="selection-type-badge">
+        {{ poll()?.selectionType === 'single' ? 'Single Choice' : 'Multi-Select' }}
+      </span>
+    </div>
+
+    <div class="options-container">
+      @for (option of poll()!.options; track option.optionId) {
+        <div 
+          class="option-card"
+          [class.selected]="isSelected(option.optionId)"
+          [class.disabled]="hasSubmitted() || pollEnded()"
+          (click)="toggleOption(option.optionId)"
+        >
+          <div class="option-checkbox">
+            @if (isSelected(option.optionId)) {
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path d="M4 10l4 4 8-8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+              </svg>
+            }
+          </div>
+          <div class="option-label">{{ option.optionLabel }}</div>
+        </div>
+      }
+    </div>
+
+    <div class="actions">
+      @if (hasSubmitted()) {
+        <div class="submitted-message">
+          <span class="check-icon">✓</span>
+          <span>Vote submitted successfully!</span>
+        </div>
+      } @else if (pollEnded()) {
+        <div class="ended-message">
+          <span>Poll has ended</span>
+        </div>
+      } @else {
+        <button 
+          class="submit-button" 
+          (click)="submitVote()"
+          [disabled]="!canSubmit()"
+        >
+          {{ submitting() ? 'Submitting...' : 'Submit Vote' }}
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="error-message">
+      <p>Failed to load poll. Please try again.</p>
+    </div>
+  }
+</div>
+
+<div class="loading-container" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>Loading poll...</p>
+</div>

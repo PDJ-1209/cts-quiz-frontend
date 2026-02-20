@@ -1,0 +1,340 @@
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { SurveyService } from '../../services/survey.service';
+import { SurveyOverview, SurveyQuestionOverview, SurveyResponse } from '../../models/isurvey';
+
+interface MultiSelectQuestion {
+  selectedOptions: number[];
+  rankings: { [optionId: number]: number };
+}
+
+@Component({
+  selector: 'app-survey-participate',
+  standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatSnackBarModule],
+  templateUrl: './survey-participate.component.html',
+  styleUrls: ['./survey-participate.component.css']
+})
+export class SurveyParticipateComponent implements OnInit, OnDestroy {
+  survey: SurveyOverview | null = null;
+  surveyForm!: FormGroup;
+  loading = true;
+  submitting = false;
+  participantId: number = 0;
+  sessionId: number = 0;
+  
+  // Multi-select and ranking state
+  multiSelectState: { [questionId: number]: MultiSelectQuestion } = {};
+  
+  private fb = inject(FormBuilder);
+  private surveyService = inject(SurveyService);
+  router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private snackBar = inject(MatSnackBar);
+
+  ngOnInit(): void {
+    // Try getting from query params first (for direct navigation)
+    this.route.queryParams.subscribe(params => {
+      if (params['sessionCode']) {
+        localStorage.setItem('sessionCode', params['sessionCode']);
+      }
+      if (params['participantId']) {
+        this.participantId = +params['participantId'];
+        localStorage.setItem('participantId', params['participantId']);
+      }
+      if (params['surveyId']) {
+        localStorage.setItem('surveyId', params['surveyId']);
+      }
+    });
+
+    // Get session ID from route params or query params or localStorage
+    this.route.params.subscribe(params => {
+      const sessionId = params['sessionId'];
+      if (sessionId) {
+        this.sessionId = parseInt(sessionId);
+        this.loadSurvey();
+      } else {
+        // Try query params
+        this.route.queryParams.subscribe(queryParams => {
+          if (queryParams['sessionId']) {
+            this.sessionId = parseInt(queryParams['sessionId']);
+            this.loadSurvey();
+          } else {
+            // Try localStorage
+            const storedSessionId = localStorage.getItem('sessionId') || localStorage.getItem('surveySessionId');
+            if (storedSessionId) {
+              this.sessionId = parseInt(storedSessionId);
+              this.loadSurvey();
+            } else {
+              this.snackBar.open('No survey session found', 'Close', { duration: 3000 });
+              this.router.navigate(['/']);
+            }
+          }
+        });
+      }
+    });
+
+    // Get participant ID from localStorage if not already set
+    if (!this.participantId) {
+      const participantIdStr = localStorage.getItem('participantId');
+      if (participantIdStr) {
+        this.participantId = parseInt(participantIdStr);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup if needed
+  }
+
+  loadSurvey(): void {
+    this.loading = true;
+    this.surveyService.getParticipantSurveyBySession(this.sessionId).subscribe({
+      next: (survey) => {
+        this.survey = survey;
+        this.initializeForm();
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading survey:', error);
+        this.snackBar.open('Failed to load survey', 'Close', { duration: 3000 });
+        this.loading = false;
+      }
+    });
+  }
+
+  initializeForm(): void {
+    if (!this.survey) return;
+
+    const formGroups: { [key: string]: any } = {};
+
+    this.survey.questions?.forEach((question) => {
+      const questionId = question.surveyQuestionId;
+
+      // Initialize multi-select state
+      if (this.isMultiSelectQuestion(question)) {
+        this.multiSelectState[questionId] = {
+          selectedOptions: [],
+          rankings: {}
+        };
+      }
+
+      // Create form controls based on question type
+      if (question.questionType === 'text' || question.questionType === 'short_text') {
+        formGroups[`q_${questionId}`] = [
+          '', 
+          question.isRequired ? Validators.required : []
+        ];
+      } else if (question.questionType === 'rating' || question.questionType === 'scale') {
+        formGroups[`q_${questionId}`] = [
+          null, 
+          question.isRequired ? Validators.required : []
+        ];
+      } else if (question.questionType === 'single_choice') {
+        formGroups[`q_${questionId}`] = [
+          null, 
+          question.isRequired ? Validators.required : []
+        ];
+      } else if (this.isMultiSelectQuestion(question)) {
+        // Multi-select and ranking use custom state management
+        formGroups[`q_${questionId}`] = [null];
+      }
+    });
+
+    this.surveyForm = this.fb.group(formGroups);
+  }
+
+  isMultiSelectQuestion(question: SurveyQuestionOverview): boolean {
+    return question.questionType === 'multiple_choice' || 
+           question.questionType === 'ranking' ||
+           question.questionType === 'multi_select';
+  }
+
+  isRankingQuestion(question: SurveyQuestionOverview): boolean {
+    return question.questionType === 'ranking';
+  }
+
+  toggleMultiSelectOption(questionId: number, optionId: number): void {
+    const state = this.multiSelectState[questionId];
+    if (!state) return;
+
+    const index = state.selectedOptions.indexOf(optionId);
+    if (index > -1) {
+      // Remove option
+      state.selectedOptions.splice(index, 1);
+      delete state.rankings[optionId];
+      
+      // Re-number remaining rankings
+      this.reorderRankings(questionId);
+    } else {
+      // Add option
+      state.selectedOptions.push(optionId);
+      
+      // If it's a ranking question, assign next rank
+      const question = this.survey?.questions?.find(q => q.surveyQuestionId === questionId);
+      if (question && this.isRankingQuestion(question)) {
+        state.rankings[optionId] = state.selectedOptions.length;
+      }
+    }
+  }
+
+  isOptionSelected(questionId: number, optionId: number): boolean {
+    return this.multiSelectState[questionId]?.selectedOptions.includes(optionId) || false;
+  }
+
+  setRanking(questionId: number, optionId: number, rank: number): void {
+    const state = this.multiSelectState[questionId];
+    if (!state) return;
+
+    // Find if another option has this rank
+    const existingOptionId = Object.keys(state.rankings).find(
+      key => state.rankings[parseInt(key)] === rank && parseInt(key) !== optionId
+    );
+
+    if (existingOptionId) {
+      // Swap ranks
+      const oldRank = state.rankings[optionId];
+      state.rankings[optionId] = rank;
+      state.rankings[parseInt(existingOptionId)] = oldRank;
+    } else {
+      state.rankings[optionId] = rank;
+    }
+  }
+
+  getRanking(questionId: number, optionId: number): number | undefined {
+    return this.multiSelectState[questionId]?.rankings[optionId];
+  }
+
+  getRankOptions(questionId: number): number[] {
+    const selectedCount = this.multiSelectState[questionId]?.selectedOptions.length || 0;
+    return Array.from({ length: selectedCount }, (_, i) => i + 1);
+  }
+
+  private reorderRankings(questionId: number): void {
+    const state = this.multiSelectState[questionId];
+    if (!state) return;
+
+    // Get all rankings sorted by value
+    const rankedOptions = Object.entries(state.rankings)
+      .sort(([, rankA], [, rankB]) => rankA - rankB);
+
+    // Reassign sequential rankings
+    rankedOptions.forEach(([optionId, _], index) => {
+      state.rankings[parseInt(optionId)] = index + 1;
+    });
+  }
+
+  validateForm(): boolean {
+    if (!this.survey) return false;
+
+    // Validate standard form fields
+    if (this.surveyForm.invalid) {
+      this.snackBar.open('Please answer all required questions', 'Close', { duration: 3000 });
+      return false;
+    }
+
+    // Validate multi-select and ranking questions
+    for (const question of this.survey.questions || []) {
+      if (question.isRequired && this.isMultiSelectQuestion(question)) {
+        const state = this.multiSelectState[question.surveyQuestionId];
+        if (!state || state.selectedOptions.length === 0) {
+          this.snackBar.open(`Please select at least one option for: ${question.questionText}`, 'Close', { 
+            duration: 3000 
+          });
+          return false;
+        }
+
+        // For ranking questions, ensure all selected options have ranks
+        if (this.isRankingQuestion(question)) {
+          const hasAllRanks = state.selectedOptions.every(
+            optionId => state.rankings[optionId] !== undefined
+          );
+          if (!hasAllRanks) {
+            this.snackBar.open(`Please rank all selected options for: ${question.questionText}`, 'Close', { 
+              duration: 3000 
+            });
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  onSubmit(): void {
+    if (!this.validateForm()) {
+      return;
+    }
+
+    this.submitting = true;
+
+    const responses: any[] = [];
+
+    this.survey?.questions?.forEach((question) => {
+      const questionId = question.surveyQuestionId;
+      const formValue = this.surveyForm.get(`q_${questionId}`)?.value;
+
+      if (question.questionType === 'text' || question.questionType === 'short_text') {
+        if (formValue) {
+          responses.push({
+            SurveyQuestionId: questionId,
+            ResponseText: formValue
+          });
+        }
+      } else if (question.questionType === 'rating' || question.questionType === 'scale') {
+        if (formValue !== null && formValue !== undefined) {
+          responses.push({
+            SurveyQuestionId: questionId,
+            ResponseNumber: formValue
+          });
+        }
+      } else if (question.questionType === 'single_choice') {
+        if (formValue) {
+          responses.push({
+            SurveyQuestionId: questionId,
+            SelectedOptionId: formValue
+          });
+        }
+      } else if (this.isMultiSelectQuestion(question)) {
+        const state = this.multiSelectState[questionId];
+        if (state && state.selectedOptions.length > 0) {
+          responses.push({
+            SurveyQuestionId: questionId,
+            SelectedOptionIds: state.selectedOptions,
+            OptionRanks: this.isRankingQuestion(question) ? state.rankings : undefined
+          });
+        }
+      }
+    });
+
+    const payload = {
+      SessionId: this.sessionId,
+      ParticipantId: this.participantId,
+      Responses: responses
+    };
+
+    this.surveyService.submitSurveyResponses(payload).subscribe({
+      next: () => {
+        this.snackBar.open('Survey submitted successfully!', 'Close', { duration: 3000 });
+        this.router.navigate(['/survey/thank-you']);
+      },
+      error: (error) => {
+        console.error('Error submitting survey:', error);
+        this.snackBar.open(
+          error.error?.message || 'Failed to submit survey. Please try again.', 
+          'Close', 
+          { duration: 3000 }
+        );
+        this.submitting = false;
+      }
+    });
+  }
+
+  getScaleArray(min: number, max: number): number[] {
+    return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  }
+}

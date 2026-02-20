@@ -1,0 +1,227 @@
+<div class="survey-container" *ngIf="!loading && survey">
+  <!-- Fixed Header with Survey Title and Progress -->
+  <div class="survey-header-fixed">
+    <h1 class="survey-title">{{ survey.title }}</h1>
+    
+    <!-- Question Progress Indicators -->
+    <div class="question-progress">
+      <div 
+        *ngFor="let num of questionNumbers; let i = index"
+        class="progress-circle"
+        [class.completed]="isQuestionCompleted(i)"
+        [class.current]="isCurrentQuestion(i)"
+        [class.upcoming]="i > currentQuestionIndex">
+        {{ num }}
+      </div>
+    </div>
+
+    <!-- Timer Display -->
+    <div class="timer-container">
+      <div class="timer-circle" [class.warning]="questionTimer <= 10">
+        <svg width="80" height="80">
+          <circle cx="40" cy="40" r="35" fill="none" stroke="#e0e0e0" stroke-width="5"/>
+          <circle 
+            cx="40" cy="40" r="35" 
+            fill="none" 
+            [attr.stroke]="questionTimer <= 10 ? '#e74c3c' : '#3498db'"
+            stroke-width="5"
+            stroke-linecap="round"
+            [attr.stroke-dasharray]="220"
+            [attr.stroke-dashoffset]="220 - (220 * getTimerPercentage() / 100)"
+            transform="rotate(-90 40 40)"/>
+        </svg>
+        <div class="timer-text">{{ getTimerDisplay() }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Question Display -->
+  <div class="question-view" *ngIf="currentQuestion">
+    <div class="question-card-single">
+      <div class="question-header">
+        <span class="question-number">Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}</span>
+        <span *ngIf="currentQuestion.isRequired" class="required-badge">Required</span>
+      </div>
+      
+      <h3 class="question-text">{{ currentQuestion.questionText }}</h3>
+
+      <form [formGroup]="surveyForm" class="answer-form">
+        <!-- Text Question -->
+        <div *ngIf="currentQuestion.questionType === 'text' || currentQuestion.questionType === 'short_text'" class="answer-section">
+          <textarea 
+            [formControlName]="'q_' + currentQuestion.surveyQuestionId"
+            class="form-control text-input"
+            rows="6"
+            placeholder="Type your answer here..."
+            [required]="currentQuestion.isRequired"
+            autofocus>
+          </textarea>
+        </div>
+
+        <!-- Rating/Scale Question -->
+        <div *ngIf="currentQuestion.questionType === 'rating' || currentQuestion.questionType === 'scale'" class="answer-section">
+          <div class="rating-container">
+            <button 
+              *ngFor="let value of getScaleArray(currentQuestion.scaleMin || 1, currentQuestion.scaleMax || 5)"
+              type="button"
+              class="rating-button"
+              [class.selected]="surveyForm.get('q_' + currentQuestion.surveyQuestionId)?.value === value"
+              (click)="surveyForm.get('q_' + currentQuestion.surveyQuestionId)?.setValue(value)">
+              {{ value }}
+            </button>
+          </div>
+          <div class="rating-labels">
+            <span>{{ currentQuestion.scaleMin || 1 }} (Low)</span>
+            <span>{{ currentQuestion.scaleMax || 5 }} (High)</span>
+          </div>
+        </div>
+
+        <!-- Single Choice Question -->
+        <div *ngIf="currentQuestion.questionType === 'single_choice'" class="answer-section">
+          <div class="radio-options">
+            <label 
+              *ngFor="let option of currentQuestion.options"
+              class="radio-option">
+              <input 
+                type="radio"
+                [formControlName]="'q_' + currentQuestion.surveyQuestionId"
+                [value]="option.optionId"
+                [required]="currentQuestion.isRequired">
+              <span class="radio-label">{{ option.optionText }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Multi-Select Question -->
+        <div *ngIf="currentQuestion.questionType === 'multiple_choice' || currentQuestion.questionType === 'multi_select'" class="answer-section">
+          <div class="checkbox-options">
+            <label 
+              *ngFor="let option of currentQuestion.options"
+              class="checkbox-option">
+              <input 
+                type="checkbox"
+                [checked]="isOptionSelected(currentQuestion.surveyQuestionId, option.optionId)"
+                (change)="toggleMultiSelectOption(currentQuestion.surveyQuestionId, option.optionId)">
+              <span class="checkbox-label">{{ option.optionText }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Ranking Question -->
+        <div *ngIf="currentQuestion.questionType === 'ranking'" class="answer-section">
+          <div class="ranking-instructions">
+            <i class="fas fa-info-circle"></i>
+            Click options in order of preference (1st click = Rank 1, 2nd = Rank 2, etc.)
+          </div>
+          
+          <!-- Debug: Show if options are missing -->
+          <div *ngIf="!currentQuestion.options || currentQuestion.options.length === 0" class="alert alert-warning">
+            No options available for this ranking question.
+          </div>
+          
+          <div class="ranking-options" *ngIf="currentQuestion.options && currentQuestion.options.length > 0">
+            <div 
+              *ngFor="let option of currentQuestion.options"
+              class="ranking-option-choice"
+              [class.selected]="isOptionSelected(currentQuestion.surveyQuestionId, option.optionId)"
+              (click)="toggleMultiSelectOption(currentQuestion.surveyQuestionId, option.optionId)">
+              
+              <div class="ranking-content">
+                <input 
+                  type="checkbox"
+                  [checked]="isOptionSelected(currentQuestion.surveyQuestionId, option.optionId)"
+                  (click)="$event.stopPropagation()"
+                  (change)="toggleMultiSelectOption(currentQuestion.surveyQuestionId, option.optionId)">
+                <span class="option-text">{{ option.optionText }}</span>
+              </div>
+
+              <span 
+                *ngIf="isOptionSelected(currentQuestion.surveyQuestionId, option.optionId)"
+                class="rank-badge">
+                Rank {{ getRanking(currentQuestion.surveyQuestionId, option.optionId) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button (Always shown, but user must wait for timer) -->
+        <div class="form-actions">
+          <button 
+            type="button"
+            class="btn btn-primary btn-submit"
+            [disabled]="!canNavigate || autoSubmitting"
+            (click)="submitCurrentAnswer()">
+            <span *ngIf="!autoSubmitting && currentQuestionIndex < totalQuestions - 1">
+              Next Question
+              <span *ngIf="!canNavigate" class="wait-text">(Wait {{ questionTimer }}s)</span>
+            </span>
+            <span *ngIf="!autoSubmitting && currentQuestionIndex === totalQuestions - 1">
+              Submit Survey
+              <span *ngIf="!canNavigate" class="wait-text">(Wait {{ questionTimer }}s)</span>
+            </span>
+            <span *ngIf="autoSubmitting">
+              <i class="fas fa-spinner fa-spin"></i> Auto-submitting...
+            </span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Final Submission View -->
+  <div class="submission-view" *ngIf="!currentQuestion && submitting">
+    <div class="submission-card">
+      <div class="spinner-large">
+        <i class="fas fa-spinner fa-spin"></i>
+      </div>
+      <h2>Submitting Your Responses...</h2>
+      <p>Please wait while we save your survey answers.</p>
+    </div>
+  </div>
+
+  <!-- Thank You Card -->
+  <div class="thank-you-view" *ngIf="!currentQuestion && !submitting && hasSubmitted">
+    <div class="thank-you-card">
+      <div class="success-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h1 class="thank-you-title">Thank You!</h1>
+      <p class="thank-you-message">Your survey responses have been submitted successfully.</p>
+      <div class="completion-info">
+        <div class="info-item">
+          <i class="fas fa-clipboard-check"></i>
+          <span>{{ totalQuestions }} Questions Completed</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-user"></i>
+          <span>Participant: {{ localStorage.getItem('participantName') || 'Anonymous' }}</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-check-double"></i>
+          <span>All responses saved</span>
+        </div>
+      </div>
+      <div class="thank-you-actions">
+        <button class="btn btn-home" (click)="router.navigate(['/'])">
+          <i class="fas fa-home"></i> Go to Home
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-container" *ngIf="loading">
+  <div class="spinner">
+    <i class="fas fa-spinner fa-spin"></i>
+  </div>
+  <p>Loading survey...</p>
+</div>
+
+<div class="error-container" *ngIf="!loading && !survey">
+  <i class="fas fa-exclamation-triangle"></i>
+  <h2>Survey Not Found</h2>
+  <p>The survey you're looking for could not be loaded.</p>
+  <button class="btn btn-secondary" (click)="router.navigate(['/'])">
+    Go Home
+  </button>
+</div>

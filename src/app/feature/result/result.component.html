@@ -119,6 +119,7 @@
                     <th>Category</th>
                     <th>Questions</th>
                     <th>Status</th>
+<<<<<<< HEAD
                     <th>Created</th>
                     <th>Start Time</th>
                     <th>Publish</th>
@@ -126,6 +127,16 @@
                   </tr>
                 </thead>
                 <tbody>
+=======
+                  <th>Created</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Publish</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
                 @for (quiz of hostQuizzes(); track quiz.quizId) {
                   <tr>
                     <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
@@ -283,12 +294,16 @@
           </div>
         } @else {
           <div class="text-center py-5">
-            <div class="mb-3" style="font-size: 3rem;">📭</div>
-            <h5>No Quizzes Found</h5>
-            <p class="text-muted">You haven't created any quizzes yet.</p>
+            <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+            <h5>{{ emptyStateConfig().title }}</h5>
+            <p class="text-muted">{{ emptyStateConfig().message }}</p>
           </div>
         }
+<<<<<<< HEAD
         }
+=======
+      }
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
         
         <!-- Surveys Tab -->
         @if (selectedContentType() === 'surveys') {
@@ -302,9 +317,15 @@
                     <th>Category</th>
                     <th>Questions</th>
                     <th>Status</th>
+<<<<<<< HEAD
                     <th>Created</th>
                     <th>Start Time</th>
                     <th>Publish</th>
+=======
+                    <th>Anonymous</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -361,6 +382,7 @@
                         }
                       </td>
                       <td>
+<<<<<<< HEAD
                         <div class="btn-group btn-group-sm">
                           <button 
                             class="btn btn-outline-primary"
@@ -398,6 +420,54 @@
                           <app-qrcode 
                             [quizNumber]="survey.surveyId.toString() || ''" 
                             [quizId]="survey.surveyId"
+=======
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="surveyStartTimes[survey.surveyId]"
+                            (change)="onSurveyStartTimeChange(survey.surveyId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(survey.startTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="surveyEndTimes[survey.surveyId]"
+                            (change)="onSurveyEndTimeChange(survey.surveyId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(survey.endTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success"
+                            (click)="publishSurvey(survey.surveyId)">
+                            📤 Publish
+                          </button>
+                        } @else {
+                          <button 
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="toggleQR(survey.surveyId)">
+                            {{ showQRForQuizId() === survey.surveyId ? 'Hide QR' : 'Show QR' }}
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                    @if (showQRForQuizId() === survey.surveyId && survey.sessionCode) {
+                      <tr>
+                        <td colspan="7" class="qr-cell">
+                          <app-qrcode 
+                            [surveyNumber]="survey.sessionCode" 
+                            [surveyId]="survey.surveyId"
+                            [contentType]="'survey'"
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
                             [showActions]="false">
                           </app-qrcode>
                         </td>
@@ -409,9 +479,9 @@
             </div>
           } @else {
             <div class="text-center py-5">
-              <div class="mb-3" style="font-size: 3rem;">📝</div>
-              <h5>No Surveys Found</h5>
-              <p class="text-muted">You haven't created any surveys yet.</p>
+              <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+              <h5>{{ emptyStateConfig().title }}</h5>
+              <p class="text-muted">{{ emptyStateConfig().message }}</p>
             </div>
           }
         }
@@ -428,9 +498,15 @@
                     <th>Category</th>
                     <th>Options</th>
                     <th>Status</th>
+<<<<<<< HEAD
                     <th>Created</th>
                     <th>Start Time</th>
                     <th>Publish</th>
+=======
+                    <th>Anonymous</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -487,6 +563,7 @@
                         }
                       </td>
                       <td>
+<<<<<<< HEAD
                         <div class="btn-group btn-group-sm">
                           <button 
                             class="btn btn-outline-primary"
@@ -518,6 +595,54 @@
                           <app-qrcode 
                             [quizNumber]="poll.pollId.toString() || ''" 
                             [quizId]="poll.pollId"
+=======
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="pollStartTimes[poll.pollId]"
+                            (change)="onPollStartTimeChange(poll.pollId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(poll.startTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <input 
+                            type="datetime-local" 
+                            class="form-control form-control-sm"
+                            [value]="pollEndTimes[poll.pollId]"
+                            (change)="onPollEndTimeChange(poll.pollId, $event)"
+                            style="min-width: 180px;">
+                        } @else {
+                          <span class="text-muted">{{ formatDateTime(poll.endTime) }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success"
+                            (click)="publishPoll(poll.pollId)">
+                            📤 Publish
+                          </button>
+                        } @else {
+                          <button 
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="toggleQR(poll.pollId)">
+                            {{ showQRForQuizId() === poll.pollId ? 'Hide QR' : 'Show QR' }}
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                    @if (showQRForQuizId() === poll.pollId && poll.sessionCode) {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [pollNumber]="poll.sessionCode" 
+                            [pollId]="poll.pollId"
+                            [contentType]="'poll'"
+>>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
                             [showActions]="false">
                           </app-qrcode>
                         </td>
@@ -529,9 +654,9 @@
             </div>
           } @else {
             <div class="text-center py-5">
-              <div class="mb-3" style="font-size: 3rem;">🗳️</div>
-              <h5>No Polls Found</h5>
-              <p class="text-muted">You haven't created any polls yet.</p>
+              <div class="mb-3" style="font-size: 3rem;">{{ emptyStateConfig().icon }}</div>
+              <h5>{{ emptyStateConfig().title }}</h5>
+              <p class="text-muted">{{ emptyStateConfig().message }}</p>
             </div>
           }
         }

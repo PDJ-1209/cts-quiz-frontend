@@ -3,6 +3,7 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { NavigationComponent } from './feature/navigation/navigation.component';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { ResultPollComponent } from './result-poll/result-poll.component';
 
 @Component({
   selector: 'app-root',

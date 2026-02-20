@@ -1,0 +1,184 @@
+<div class="participant-responses-container">
+  <!-- Header -->
+  <div class="header">
+    <button class="back-button" (click)="goBack()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back
+    </button>
+    <h1>My Responses</h1>
+    <button class="refresh-button" (click)="refresh()" [disabled]="loading">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M17.5 8.33333C17.5 4.65125 14.5988 1.66667 11 1.66667C7.40125 1.66667 4.5 4.65125 4.5 8.33333M2.5 11.6667C2.5 15.3487 5.40125 18.3333 9 18.3333C12.5988 18.3333 15.5 15.3487 15.5 11.6667" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M17.5 5V8.33333H14.1667" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 15V11.6667H5.83333" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Connection Status -->
+  <div class="connection-status" *ngIf="sessionCode">
+    <div class="status-indicator" [class.connected]="isConnected" [class.reconnecting]="reconnecting">
+      <span class="status-dot"></span>
+      <span class="status-text">
+        {{ isConnected ? 'Connected' : (reconnecting ? 'Reconnecting...' : 'Disconnected') }}
+      </span>
+    </div>
+    <div class="session-code">Session: {{ sessionCode }}</div>
+  </div>
+
+  <!-- Countdown Timer -->
+  <div class="countdown-section" *ngIf="showCountdown && sessionCode">
+    <app-countdown-timer
+      [duration]="countdownDuration"
+      [sessionCode]="sessionCode"
+      [questionIndex]="currentQuestionIndex"
+      [showMessage]="true"
+    ></app-countdown-timer>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" *ngIf="pollId && surveyId">
+    <button 
+      class="tab" 
+      [class.active]="activeTab === 'poll'" 
+      (click)="switchTab('poll')"
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="3" y="4" width="4" height="12" rx="1" stroke="currentColor" stroke-width="2"/>
+        <rect x="8" y="8" width="4" height="8" rx="1" stroke="currentColor" stroke-width="2"/>
+        <rect x="13" y="6" width="4" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      Poll Responses
+      <span class="badge" *ngIf="displayPollResponses.length > 0">{{ displayPollResponses.length }}</span>
+    </button>
+    <button 
+      class="tab" 
+      [class.active]="activeTab === 'survey'" 
+      (click)="switchTab('survey')"
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M5 10L8 13L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M18 10V15C18 16.1046 17.1046 17 16 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Survey Responses
+      <span class="badge" *ngIf="displaySurveyResponses.length > 0">{{ displaySurveyResponses.length }}</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading your responses...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-container" *ngIf="error && !loading">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="20" stroke="#EF4444" stroke-width="3"/>
+      <path d="M24 14V26" stroke="#EF4444" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="24" cy="32" r="2" fill="#EF4444"/>
+    </svg>
+    <h3>{{ error }}</h3>
+    <button class="primary-button" (click)="goBack()">Return to Dashboard</button>
+  </div>
+
+  <!-- Poll Responses Content -->
+  <div class="responses-content" *ngIf="!loading && !error && activeTab === 'poll'">
+    <div class="responses-header">
+      <h2>Poll Responses</h2>
+      <p class="participant-info">Participant ID: {{ participantId }}</p>
+    </div>
+
+    <!-- No responses message -->
+    <div class="empty-state" *ngIf="!hasResponses">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="28" stroke="#E5E7EB" stroke-width="3"/>
+        <path d="M32 20V36M32 42V44" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <h3>No Poll Responses Yet</h3>
+      <p>You haven't submitted any responses for this poll.</p>
+    </div>
+
+    <!-- Response cards -->
+    <div class="response-list" *ngIf="hasResponses">
+      <div class="response-card" *ngFor="let response of displayPollResponses; let i = index">
+        <div class="response-header">
+          <div class="question-badge">Q{{ i + 1 }}</div>
+          <span class="question-type-badge" [class]="response.questionType">
+            {{ response.questionType }}
+          </span>
+        </div>
+        <div class="question-text">{{ response.questionText }}</div>
+        <div class="answer-section">
+          <div class="answer-label">Your Answer:</div>
+          <div class="answers">
+            <div 
+              class="answer-item" 
+              *ngFor="let answer of response.answers; let j = index"
+              [class.ranked]="response.questionType === 'ranking'"
+            >
+              <span class="rank-indicator" *ngIf="response.questionType === 'ranking'">{{ j + 1 }}</span>
+              <span class="answer-text">{{ answer }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Survey Responses Content -->
+  <div class="responses-content" *ngIf="!loading && !error && activeTab === 'survey'">
+    <div class="responses-header">
+      <h2>Survey Responses</h2>
+      <p class="participant-info">Participant ID: {{ participantId }}</p>
+    </div>
+
+    <!-- No responses message -->
+    <div class="empty-state" *ngIf="!hasResponses">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="28" stroke="#E5E7EB" stroke-width="3"/>
+        <path d="M32 20V36M32 42V44" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <h3>No Survey Responses Yet</h3>
+      <p>You haven't submitted any responses for this survey.</p>
+    </div>
+
+    <!-- Response cards -->
+    <div class="response-list" *ngIf="hasResponses">
+      <div class="response-card" *ngFor="let response of displaySurveyResponses; let i = index">
+        <div class="response-header">
+          <div class="question-badge">Q{{ i + 1 }}</div>
+          <span class="question-type-badge" [class]="response.questionType">
+            {{ response.questionType }}
+          </span>
+        </div>
+        <div class="question-text">{{ response.questionText }}</div>
+        <div class="answer-section">
+          <div class="answer-label">Your Answer:</div>
+          <div class="answers">
+            <div 
+              class="answer-item" 
+              *ngFor="let answer of response.answers; let j = index"
+              [class.ranked]="response.questionType === 'ranking'"
+            >
+              <span class="rank-indicator" *ngIf="response.questionType === 'ranking'">{{ j + 1 }}</span>
+              <span class="answer-text">{{ answer }}</span>
+              <svg 
+                *ngIf="response.questionType === 'multi-select'" 
+                class="check-icon" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 16 16"
+              >
+                <path d="M3 8L6 11L13 4" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,72 @@
+<div class="countdown-container">
+  <div class="countdown-card">
+    <div class="header">
+      <h1 class="survey-title">{{ surveyTitle() }}</h1>
+      <p class="session-code">Session Code: <strong>{{ sessionCode() }}</strong></p>
+    </div>
+
+    <div class="participant-info">
+      <p>Welcome, <strong>{{ participantName() }}</strong>!</p>
+    </div>
+
+    @if (isLate()) {
+      <div class="late-message">
+        <mat-icon class="warning-icon">warning</mat-icon>
+        <h2>Survey Already Started</h2>
+        <p>Sorry, this survey has already started and late entry is not allowed.</p>
+        <p>Please contact the host if you need to join.</p>
+        <button mat-raised-button color="primary" (click)="returnToLobby()" class="action-button">
+          Return to Lobby
+        </button>
+      </div>
+    } @else if (hasStarted()) {
+      <div class="starting-message">
+        <mat-icon class="start-icon">play_circle</mat-icon>
+        <h2>Survey Starting...</h2>
+        <p>Please wait while we load the survey.</p>
+      </div>
+    } @else {
+      <div class="countdown-display">
+        <h2 class="countdown-label">Survey starts in:</h2>
+        
+        <div class="time-blocks">
+          @if (timeUntilStart().days > 0) {
+            <div class="time-block">
+              <div class="time-value">{{ timeUntilStart().days }}</div>
+              <div class="time-label">Days</div>
+            </div>
+          }
+          
+          @if (timeUntilStart().days > 0 || timeUntilStart().hours > 0) {
+            <div class="time-block">
+              <div class="time-value">{{ timeUntilStart().hours.toString().padStart(2, '0') }}</div>
+              <div class="time-label">Hours</div>
+            </div>
+          }
+          
+          <div class="time-block">
+            <div class="time-value">{{ timeUntilStart().minutes.toString().padStart(2, '0') }}</div>
+            <div class="time-label">Minutes</div>
+          </div>
+          
+          <div class="time-block">
+            <div class="time-value">{{ timeUntilStart().seconds.toString().padStart(2, '0') }}</div>
+            <div class="time-label">Seconds</div>
+          </div>
+        </div>
+
+        <div class="waiting-info">
+          <mat-icon class="info-icon">info</mat-icon>
+          <p>Please keep this page open. You will be automatically redirected when the survey starts.</p>
+          <p class="small-text">The survey will also start if the host publishes it early.</p>
+        </div>
+      </div>
+
+      <div class="action-section">
+        <button mat-stroked-button (click)="returnToLobby()" class="back-button">
+          Leave Waiting Room
+        </button>
+      </div>
+    }
+  </div>
+</div>

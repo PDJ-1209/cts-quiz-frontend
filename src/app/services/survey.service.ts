@@ -10,9 +10,7 @@ import {
   PublishSurveyResponse,
   SurveyResult,
   CreateSurveyApiRequest,
-  SurveyOverview,
-  WordCloudResponse,
-  SurveyTextResponse
+  SurveyOverview
 } from '../models/isurvey';
 import { CreateQuizSessionRequest, CreateQuizSessionResponse } from '../models/quiz-publish.models';
 
@@ -91,10 +89,13 @@ export class SurveyService {
     return {
       surveyId: source?.surveyId ?? source?.SurveyId,
       sessionId: source?.sessionId ?? source?.SessionId,
+      sessionCode: source?.sessionCode ?? source?.SessionCode ?? null,
       title: source?.title ?? source?.Title ?? '',
       description: source?.description ?? source?.Description ?? null,
       isAnonymous: source?.isAnonymous ?? source?.IsAnonymous ?? false,
-      status: source?.status ?? source?.Status ?? '',
+      status: source?.status ?? source?.Status ?? 'draft',
+      startTime: source?.startTime ?? source?.StartTime ?? null,
+      endTime: source?.endTime ?? source?.EndTime ?? null,
       questions: (source?.questions ?? source?.Questions ?? []).map((q: any) => ({
         surveyQuestionId: q?.surveyQuestionId ?? q?.SurveyQuestionId,
         sessionId: q?.sessionId ?? q?.SessionId,
@@ -116,10 +117,6 @@ export class SurveyService {
 
   getSurveyById(surveyId: number): Observable<Survey> {
     return this.http.get<Survey>(`${this.apiBaseV2}/${surveyId}`);
-  }
-
-  publishSurvey(request: PublishSurveyRequest): Observable<PublishSurveyResponse> {
-    return this.http.post<PublishSurveyResponse>(`${this.baseUrl}/survey/publish`, request);
   }
 
   getSurveyResults(surveyId: number): Observable<SurveyResult> {
@@ -156,21 +153,5 @@ export class SurveyService {
   // Participant: submit survey responses
   submitSurveyResponses(payload: any): Observable<any> {
     return this.http.post(`${environment.apiUrl}/Participate/Survey/submit`, payload);
-  }
-
-  // --- Word Cloud Analytics ---
-  
-  /**
-   * Generate word cloud from survey text responses
-   */
-  getWordCloud(surveyId: number, sessionId: number): Observable<WordCloudResponse> {
-    return this.http.get<WordCloudResponse>(`${this.apiBaseV2}/${surveyId}/wordcloud/${sessionId}`);
-  }
-
-  /**
-   * Get all text responses for analysis
-   */
-  getTextResponses(surveyId: number, sessionId: number): Observable<SurveyTextResponse[]> {
-    return this.http.get<SurveyTextResponse[]>(`${this.apiBaseV2}/${surveyId}/text-responses/${sessionId}`);
   }
 }

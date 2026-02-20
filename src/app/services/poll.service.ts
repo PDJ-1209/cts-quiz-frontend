@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../environments/environment';
 import { Poll, PollResult, CreatePollRequest, PollVoteSubmission, ClosePollResponse, PollVoteResponse, CreatePollApiRequest, PollOverview } from '../models/ipoll';
 
 @Injectable({
@@ -54,15 +54,18 @@ export class PollService {
     return {
       pollId: source?.pollId ?? source?.PollId,
       sessionId: source?.sessionId ?? source?.SessionId,
+      sessionCode: source?.sessionCode ?? source?.SessionCode ?? null,
       pollTitle: source?.pollTitle ?? source?.PollTitle ?? '',
       pollQuestion: source?.pollQuestion ?? source?.PollQuestion ?? '',
       pollAnonymous: source?.pollAnonymous ?? source?.PollAnonymous ?? false,
-      pollStatus: source?.pollStatus ?? source?.PollStatus ?? '',
-      selectionType: source?.selectionType ?? source?.SelectionType ?? '',
-      options: (source?.options ?? source?.Options ?? []).map((opt: any) => ({
+      pollStatus: source?.pollStatus ?? source?.PollStatus ?? 'draft',
+      selectionType: source?.selectionType ?? source?.SelectionType ?? 'single',
+      startTime: source?.startTime ?? source?.StartTime ?? null,
+      endTime: source?.endTime ?? source?.EndTime ?? null,
+      options: (source?.pollOptions ?? source?.PollOptions ?? []).map((opt: any) => ({
         optionId: opt?.optionId ?? opt?.OptionId,
         optionLabel: opt?.optionLabel ?? opt?.OptionLabel ?? '',
-        optionOrder: opt?.optionOrder ?? opt?.OptionOrder
+        optionOrder: opt?.optionOrder ?? opt?.OptionOrder ?? 0
       }))
     };
   }
@@ -92,21 +95,5 @@ export class PollService {
     return this.http.get<any>(`${environment.apiUrl}/Participate/Poll/session/${sessionId}`).pipe(
       map((response) => this.mapPollOverview(response))
     );
-  }
-
-  // --- New Quiz-Like Workflow Methods ---
-
-  updatePoll(pollId: number, request: CreatePollApiRequest): Observable<PollOverview> {
-    return this.http.put<any>(`${this.apiBaseV2}/${pollId}`, request).pipe(
-      map((response) => this.mapPollOverview(response))
-    );
-  }
-
-  publishPoll(pollId: number, publishData: any): Observable<any> {
-    return this.http.post<any>(`${this.apiBaseV2}/${pollId}/publish`, publishData);
-  }
-
-  deletePoll(pollId: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiBaseV2}/${pollId}`);
   }
 }
