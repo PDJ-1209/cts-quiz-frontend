@@ -773,6 +773,13 @@ export class ThemeStore {
     console.log('🎨 Theme received:', theme);
     console.log('🎨 Theme fontStyle from parameter:', theme.fontStyle);
     
+    // Check if we're on the landing page - if so, don't apply theme
+    const currentPath = window.location.pathname;
+    if (currentPath === '/' || currentPath === '/landing' || currentPath.includes('/landing')) {
+      console.log('🚫 Skipping theme application - on landing page');
+      return;
+    }
+    
     const body = document.body;
     const html = document.documentElement;
 

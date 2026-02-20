@@ -200,15 +200,15 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       color: '#6F42C1',
       gradient: 'linear-gradient(135deg, #6F42C1 0%, #5A32A3 100%)'
     },
-    {
-      id: 'leaderboard',
-      title: 'Leaderboard',
-      description: 'View real-time participant rankings and scores',
-      icon: 'fas fa-trophy',
-      route: '/host/leaderboard',
-      color: '#FFD700',
-      gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
-    },
+    // {
+    //   id: 'leaderboard',
+    //   title: 'Leaderboard',
+    //   description: 'View real-time participant rankings and scores',
+    //   icon: 'fas fa-trophy',
+    //   route: '/host/leaderboard',
+    //   color: '#FFD700',
+    //   gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+    // },
     {
       id: 'customize-theme',
       title: 'Customize Theme',
@@ -478,8 +478,8 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         this.resetTutorial();
         break;
       case 'themes':
-        // Implement themes functionality
-        console.log('Themes feature coming soon');
+        // Navigate to theme selection
+        this.router.navigate(['/host/themes']);
         break;
       case 'logout':
         this.logout();

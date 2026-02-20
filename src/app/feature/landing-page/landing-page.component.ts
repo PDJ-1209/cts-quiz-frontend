@@ -77,6 +77,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   error = signal<string | null>(null);
   showPassword = signal(false); // Password visibility toggle for registration
+  showLoginPassword = signal(false); // Password visibility toggle for login
   
   // Fancy popup for validation messages
   popup = signal<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -485,8 +486,13 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     this.popup.set(null);
   }
 
-  // Toggle password visibility
+  // Toggle password visibility for registration
   togglePasswordVisibility(): void {
     this.showPassword.set(!this.showPassword());
+  }
+
+  // Toggle password visibility for login
+  toggleLoginPasswordVisibility(): void {
+    this.showLoginPassword.set(!this.showLoginPassword());
   }
 }

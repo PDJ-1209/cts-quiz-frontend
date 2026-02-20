@@ -95,11 +95,6 @@ export class ThemeSelectionComponent implements OnInit {
     
     // Apply theme globally for the entire application
     console.log('✅ Theme applied successfully to the entire application:', theme.name);
-    
-    // Show success message to user
-    setTimeout(() => {
-      alert(`Theme "${theme.name}" has been applied successfully! 🎨\n\nThe new theme is now active across your application.`);
-    }, 500);
   }
 
   apply(theme: ThemeModel) {

@@ -82,7 +82,7 @@
 .empty-state h3 {
   margin: 0 0 8px 0;
   font-size: 22px;
-  color: var(--cognizant-gray-800);
+  color: var(--text-color, var(--cognizant-gray-800));
 }
 
 .quizzes-grid {
@@ -144,7 +144,7 @@
   background: var(--cognizant-gray-50);
   border-radius: var(--radius);
   font-size: 14px;
-  color: var(--cognizant-gray-700);
+  color: var(--text-color, var(--cognizant-gray-700));
 }
 
 .quiz-actions {
@@ -158,7 +158,7 @@
   border-radius: var(--radius);
   border: 1px solid var(--cognizant-gray-300);
   background: var(--cognizant-white);
-  color: var(--cognizant-gray-700);
+  color: var(--text-color, var(--cognizant-gray-700));
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
@@ -220,7 +220,7 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: var(--cognizant-gray-800);
+  color: var(--text-color, var(--cognizant-gray-800));
 }
 
 .section-icon {
@@ -252,12 +252,12 @@
 
 .meta-row .label {
   font-weight: 600;
-  color: var(--cognizant-gray-700);
+  color: var(--text-color, var(--cognizant-gray-700));
 }
 
 .meta-row .value {
   font-weight: 500;
-  color: var(--cognizant-gray-800);
+  color: var(--text-color, var(--cognizant-gray-800));
 }
 
 .questions-list {
@@ -347,7 +347,7 @@
 }
 
 .badge-type { background: linear-gradient(135deg, var(--cognizant-primary), var(--cognizant-accent)); color: white; }
-.badge-difficulty { background: var(--cognizant-gray-100); color: var(--cognizant-gray-700); }
+.badge-difficulty { background: var(--cognizant-gray-100); color: var(--text-color, var(--cognizant-gray-700)); }
 .badge-category { background: rgba(16, 185, 129, 0.12); color: var(--success); }
 .badge-timer { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
 
@@ -392,9 +392,32 @@
 .cancel-btn { background: var(--cognizant-gray-200); color: var(--cognizant-gray-700); }
 
 .form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-weight: 600; color: var(--cognizant-gray-700); margin-bottom: 6px; }
-.form-control { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--cognizant-gray-300); }
+.form-group label { display: block; font-weight: 600; color: var(--text-color, var(--cognizant-gray-700)) !important; margin-bottom: 6px; }
+.form-control { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--cognizant-gray-300); color: var(--text-color, var(--cognizant-gray-800)) !important; }
 .form-control:focus { outline: none; border-color: var(--cognizant-primary); box-shadow: 0 0 0 3px rgba(0,102,204,0.1); }
+
+/* Override Bootstrap form classes for theme support */
+.form-label {
+  color: var(--text-color, var(--cognizant-gray-700)) !important;
+}
+
+.form-select {
+  color: var(--text-color, var(--cognizant-gray-800)) !important;
+}
+
+.text-muted {
+  color: var(--text-color, #6c757d) !important;
+  opacity: 0.7;
+}
+
+.table {
+  color: var(--text-color, #212529) !important;
+}
+
+.table th,
+.table td {
+  color: var(--text-color, #212529) !important;
+}
 
 .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 
@@ -405,7 +428,7 @@
 
 .option-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
 .option-input { flex: 1; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--cognizant-gray-300); }
-.correct-label { display: flex; gap: 6px; align-items: center; font-weight: 500; color: var(--cognizant-gray-700); }
+.correct-label { display: flex; gap: 6px; align-items: center; font-weight: 500; color: var(--text-color, var(--cognizant-gray-700)); }
 .remove-option-btn { width: 32px; height: 32px; border: none; border-radius: var(--radius); background: var(--error); color: white; cursor: pointer; display: grid; place-items: center; }
 
 .no-questions { text-align: center; padding: 40px; color: var(--cognizant-gray-600); background: var(--cognizant-gray-50); border-radius: var(--radius); }

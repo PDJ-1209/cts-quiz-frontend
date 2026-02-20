@@ -57,7 +57,10 @@ export class ParticipantPageComponent implements OnInit {
     const now = Date.now();
     if (now - this.lastBackWarnAt > 2000) {
       this.lastBackWarnAt = now;
-      this.snackBar.open('Back navigation is disabled during quiz join.', 'Close', { duration: 2000 });
+      this.snackBar.open('Back navigation is disabled during quiz join.', 'Close', { 
+        duration: 2000,
+        panelClass: ['participant-snackbar']
+      });
     }
   }
 
@@ -91,7 +94,8 @@ export class ParticipantPageComponent implements OnInit {
     
     if (this.showWarning || !this.userName.trim() || !this.code.trim()) {
       this.snackBar.open('⚠️ Please enter both name and quiz code', 'Close', {
-        duration: 3000
+        duration: 3000,
+        panelClass: ['participant-snackbar']
       });
       return;
     }
@@ -107,7 +111,7 @@ export class ParticipantPageComponent implements OnInit {
       if (!validation.isValid) {
         this.snackBar.open(`❌ ${validation.message}`, 'Close', {
           duration: 5000,
-          panelClass: ['error-snackbar']
+          panelClass: ['participant-snackbar']
         });
         this.isJoining = false;
         return;
@@ -138,7 +142,7 @@ export class ParticipantPageComponent implements OnInit {
       if (!employeeId) {
         this.snackBar.open('⚠️ No user session found. Please login first.', 'Close', {
           duration: 5000,
-          panelClass: ['error-snackbar']
+          panelClass: ['participant-snackbar']
         });
         this.router.navigate(['/']);
         return;
@@ -165,7 +169,7 @@ export class ParticipantPageComponent implements OnInit {
       const friendlyMessage = this.getJoinErrorMessage(error);
       this.snackBar.open(`⚠️ ${friendlyMessage}`, 'Close', {
         duration: 5000,
-        panelClass: ['error-snackbar']
+        panelClass: ['participant-snackbar']
       });
     } finally {
       this.isJoining = false;
@@ -234,7 +238,10 @@ export class ParticipantPageComponent implements OnInit {
   onPermissionResponse(hasPermission: boolean): void {
     console.log('[Scanner] Camera permission:', hasPermission);
     if (!hasPermission) {
-      alert('Camera permission is required to scan QR codes. Please enable camera access in your browser settings.');
+      this.snackBar.open('📷 Camera permission is required to scan QR codes. Please enable camera access in your browser settings.', 'Close', {
+        duration: 6000,
+        panelClass: ['participant-snackbar']
+      });
       this.scannerActive = false;
     }
   }
@@ -253,7 +260,8 @@ export class ParticipantPageComponent implements OnInit {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       this.snackBar.open('⚠️ Please select a valid image file', 'Close', {
-        duration: 3000
+        duration: 3000,
+        panelClass: ['participant-snackbar']
       });
       input.value = '';
       return;
@@ -286,7 +294,8 @@ export class ParticipantPageComponent implements OnInit {
               
               // Show success message
               this.snackBar.open('✅ QR Code scanned successfully!', 'Close', {
-                duration: 2000
+                duration: 2000,
+                panelClass: ['participant-snackbar']
               });
               
               // Navigate after short delay
@@ -309,7 +318,7 @@ export class ParticipantPageComponent implements OnInit {
               console.error('[Scanner] Decode error:', decodeError);
               this.snackBar.open('❌ No QR code found in image. Make sure the QR code is clear and fully visible.', 'Close', {
                 duration: 5000,
-                panelClass: ['error-snackbar']
+                panelClass: ['participant-snackbar']
               });
             }
           };
@@ -318,7 +327,7 @@ export class ParticipantPageComponent implements OnInit {
             console.error('[Scanner] Image load error:', error);
             this.snackBar.open('❌ Failed to load image. Please try a different file.', 'Close', {
               duration: 5000,
-              panelClass: ['error-snackbar']
+              panelClass: ['participant-snackbar']
             });
           };
           
@@ -328,7 +337,7 @@ export class ParticipantPageComponent implements OnInit {
           console.error('[Scanner] Processing error:', error);
           this.snackBar.open('❌ Failed to process image. Error: ' + error.message, 'Close', {
             duration: 5000,
-            panelClass: ['error-snackbar']
+            panelClass: ['participant-snackbar']
           });
         }
       };
@@ -337,7 +346,7 @@ export class ParticipantPageComponent implements OnInit {
         console.error('[Scanner] FileReader error:', error);
         this.snackBar.open('❌ Failed to read file. Please try again.', 'Close', {
           duration: 5000,
-          panelClass: ['error-snackbar']
+          panelClass: ['participant-snackbar']
         });
       };
       
@@ -348,7 +357,7 @@ export class ParticipantPageComponent implements OnInit {
       console.error('[Scanner] File processing error:', error);
       this.snackBar.open('❌ Failed to process image. Error: ' + error.message, 'Close', {
         duration: 5000,
-        panelClass: ['error-snackbar']
+        panelClass: ['participant-snackbar']
       });
     }
     

@@ -8,13 +8,13 @@
           <span class="d-none d-md-inline">Back</span>
         </button> -->
         <div class="brand-info">
-          <div class="cognizant-logo d-flex align-items-center">
-            <div class="logo-container me-3">
+          <div class="cognizant-logo d-flex align-items-center gap-3">
+            <div class="logo-section">
               <img src="/Cognizant_logo.png" alt="Cognizant" class="cognizant-logo-img">
             </div>
             <div class="brand-text">
               <h4 class="mb-0 text-white fw-bold brand-title">Host Dashboard</h4>
-              <small class="text-light opacity-75 brand-subtitle">Cognizant Learning Platform</small>
+              <div class="brand-subtitle">Quiz Learning Platform</div>
             </div>
           </div>
         </div>
@@ -272,10 +272,10 @@
 
 <!-- Quiz Calendar Modal/Dropdown -->
 <div class="calendar-overlay" *ngIf="showCalendar()" (click)="toggleCalendar()">
-  <div class="calendar-popup" (click)="$event.stopPropagation()">
+  <div class="calendar-popup themed-card" (click)="$event.stopPropagation()">
     <div class="calendar-header">
-      <h4 class="mb-0">Quiz Calendar</h4>
       <button class="btn-close" (click)="toggleCalendar()">&times;</button>
+      <h4 class="mb-0">Quiz Calendar</h4>
     </div>
     <div class="calendar-body">
       <div class="quiz-calendar">

@@ -83,6 +83,22 @@
   margin: 0;
   opacity: 0.9;
   font-weight: 500;
+  color: var(--text-color, white) !important;
+}
+
+/* Override Bootstrap form classes for theme support */
+.form-label {
+  color: var(--text-color, #495057) !important;
+}
+
+.form-control,
+.form-select {
+  color: var(--text-color, #212529) !important;
+}
+
+.text-muted {
+  color: var(--text-color, #6c757d) !important;
+  opacity: 0.7;
 }
 
 /* Category List */
@@ -108,7 +124,7 @@
 
 .category-name {
   font-weight: 600;
-  color: #334155;
+  color: var(--text-color, #334155);
 }
 
 /* Table Styles */
@@ -122,7 +138,7 @@
 
 .table thead th {
   font-weight: 600;
-  color: #334155;
+  color: var(--text-color, #334155);
   border-bottom: 2px solid #E2E8F0;
   padding: 12px;
 }
@@ -415,14 +431,15 @@
 }
 
 .tutorial-popup h4 {
-  color: #333;
+  color: var(--text-color, #333);
   font-weight: 700;
   margin-bottom: 12px;
   font-size: 18px;
 }
 
 .tutorial-popup p {
-  color: #666;
+  color: var(--text-color, #666);
+  opacity: 0.9;
   line-height: 1.5;
   margin-bottom: 20px;
 }
@@ -437,7 +454,7 @@
 .tutorial-skip {
   background: transparent;
   border: 1px solid #dee2e6;
-  color: #6c757d;
+  color: var(--text-color, #6c757d);
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
@@ -488,7 +505,8 @@
 
 .tutorial-progress {
   text-align: center;
-  color: #6c757d;
+  color: var(--text-color, #6c757d);
+  opacity: 0.8;
   font-size: 12px;
   margin-top: 16px;
 }
