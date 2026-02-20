@@ -1,36 +1,47 @@
-/* Add Question Component - Bootstrap based */
+/* Add Question Component - Theme Responsive */
 
-/* Change all card headers to have light background with dark text */
+/* Change all card headers to use theme colors */
 .card-header {
-  background-color: #f8f9fa !important;
-  color: #212529 !important;
-  border-bottom: 2px solid #dee2e6 !important;
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border-bottom: 2px solid var(--accent-color) !important;
+  font-family: var(--app-font) !important;
 }
 
 .card-header h5 {
-  color: #212529 !important;
+  color: var(--text-color) !important;
+  font-family: var(--app-font) !important;
 }
 
 /* Form styling */
+.form-control {
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--accent-color) !important;
+  font-family: var(--app-font) !important;
+}
+
 .form-control:focus {
-  border-color: #0066CC;
-  box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 0.2rem rgba(var(--accent-color), 0.25);
+  background: var(--card-bg) !important;
 }
 
 /* Submit Button Override */
 .btn-success {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  background: var(--accent-color) !important;
   border: none !important;
-  color: white !important;
+  color: var(--text-color) !important;
   font-weight: 600 !important;
+  font-family: var(--app-font) !important;
   transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(var(--accent-color), 0.3) !important;
 }
 
 .btn-success:hover:not(:disabled) {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
-  background: linear-gradient(135deg, #20c997 0%, #28a745 100%) !important;
+  box-shadow: 0 6px 20px rgba(var(--accent-color), 0.4) !important;
+  filter: brightness(1.1) !important;
 }
 
 .btn-success:active {

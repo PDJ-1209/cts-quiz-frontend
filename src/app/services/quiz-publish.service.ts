@@ -301,7 +301,7 @@ export class QuizPublishService {
       quizId,
       hostId,
       sessionCode: quizNumber,
-      startedAt: startedAt || new Date().toISOString(),
+      startedAt: startedAt || new Date().toISOString(), // Use scheduled time or current time
       endedAt,
       status
     };
@@ -362,7 +362,11 @@ export class QuizPublishService {
         sessionCode: response.SessionCode || response.sessionCode,
         startedAt: response.StartedAt || response.startedAt,
         endedAt: response.EndedAt || response.endedAt,
-        status: response.Status || response.status
+        status: response.Status || response.status,
+        autoModeEnabled: response.AutoModeEnabled ?? response.autoModeEnabled ?? true,
+        currentQuestionId: response.CurrentQuestionId || response.currentQuestionId,
+        currentQuestionStartTime: response.CurrentQuestionStartTime || response.currentQuestionStartTime,
+        timerDurationSeconds: response.TimerDurationSeconds || response.timerDurationSeconds
       };
     } catch (error: any) {
       // Don't log 404 errors as they're expected when sessions are completed/deleted
@@ -513,5 +517,57 @@ export class QuizPublishService {
    */
   public getConnectionState(): ConnectionState {
     return this.connectionState$.value;
+  }
+
+  /**
+   * Set show leaderboard after each question
+   */
+  public async setShowLeaderboardAfterQuestion(sessionCode: string, enabled: boolean): Promise<void> {
+    if (!this.hubConnection || this.hubConnection.state !== signalR.HubConnectionState.Connected) {
+      throw new Error('Not connected to hub');
+    }
+
+    try {
+      await this.hubConnection.invoke('SetShowLeaderboardAfterQuestion', sessionCode, enabled);
+      console.log(`[QuizPublish] Set ShowLeaderboardAfterQuestion to ${enabled} for session ${sessionCode}`);
+    } catch (error) {
+      console.error('[QuizPublish] Failed to set ShowLeaderboardAfterQuestion:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set show leaderboard at end only
+   */
+  public async setShowLeaderboardAtEndOnly(sessionCode: string, enabled: boolean): Promise<void> {
+    if (!this.hubConnection || this.hubConnection.state !== signalR.HubConnectionState.Connected) {
+      throw new Error('Not connected to hub');
+    }
+
+    try {
+      await this.hubConnection.invoke('SetShowLeaderboardAtEndOnly', sessionCode, enabled);
+      console.log(`[QuizPublish] Set ShowLeaderboardAtEndOnly to ${enabled} for session ${sessionCode}`);
+    } catch (error) {
+      console.error('[QuizPublish] Failed to set ShowLeaderboardAtEndOnly:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Notify backend to start quiz automatically in auto-mode
+   * This initializes CurrentQuestionId, CurrentQuestionStartTime, and TimerDurationSeconds
+   */
+  public async notifyQuizStart(sessionCode: string): Promise<void> {
+    if (!this.hubConnection || this.hubConnection.state !== signalR.HubConnectionState.Connected) {
+      throw new Error('Not connected to hub');
+    }
+
+    try {
+      await this.hubConnection.invoke('NotifyQuizStart', sessionCode);
+      console.log(`[QuizPublish] Notified quiz start for session ${sessionCode} (auto-mode)`);
+    } catch (error) {
+      console.error('[QuizPublish] Failed to notify quiz start:', error);
+      throw error;
+    }
   }
 }

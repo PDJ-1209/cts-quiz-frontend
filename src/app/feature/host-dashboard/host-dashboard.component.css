@@ -1,25 +1,29 @@
-/* Cognizant Professional Color Palette */
-:root {
-  --cognizant-primary: #0066CC;
-  --cognizant-secondary: #004999;
-  --cognizant-accent: #00A3E0;
-  --cognizant-success: #28A745;
-  --cognizant-warning: #FFC107;
-  --cognizant-danger: #DC3545;
-  --cognizant-info: #17A2B8;
-  --cognizant-light: #F8F9FA;
-  --cognizant-dark: #212529;
-  --gradient-primary: linear-gradient(135deg, #0066CC 0%, #004999 100%);
-  --gradient-secondary: linear-gradient(135deg, #00A3E0 0%, #0066CC 100%);
-}
+/* Theme-Responsive Dashboard Styles */
 
 /* Header Styles */
 .dashboard-header {
-  background: var(--gradient-primary);
-  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.15);
+  background: var(--card-bg);
+  box-shadow: 0 4px 20px rgba(var(--accent-color), 0.15);
   position: sticky;
   top: 0;
   z-index: 1000;
+  color: var(--text-color);
+  font-family: var(--app-font);
+  border-bottom: 2px solid var(--accent-color);
+  backdrop-filter: blur(10px);
+  /* Enhanced contrast for better visibility */
+  min-height: 70px;
+}
+
+/* Override any inherited Bootstrap text colors */
+.dashboard-header,
+.dashboard-header * {
+  color: var(--text-color) !important;
+}
+
+.dashboard-header .text-white,
+.dashboard-header .text-light {
+  color: var(--text-color) !important;
 }
 
 .header-brand {
@@ -30,7 +34,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--accent-color);
   border-radius: 8px;
   padding: 8px;
   backdrop-filter: blur(10px);
@@ -52,11 +56,13 @@
   font-size: 1.4rem;
   letter-spacing: -0.5px;
   line-height: 1.2;
+  color: var(--text-color) !important;
 }
 
 .brand-subtitle {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-color);
+  opacity: 0.8;
 }
 
 .header-actions {
@@ -212,12 +218,14 @@
 
 .user-info {
   min-width: 180px;
+  color: var(--text-color) !important;
 }
 
 .user-name {
   font-size: 0.95rem;
-  color: white;
+  color: var(--text-color) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
 }
 
 .datetime-display {
@@ -226,7 +234,43 @@
 
 .datetime-display small {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-color) !important;
+  opacity: 0.8;
+}
+
+/* Header Button Styles - Theme Responsive */
+.dashboard-header .btn {
+  border: 1px solid var(--text-color) !important;
+  color: var(--text-color) !important;
+  background: transparent !important;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-family: var(--app-font);
+}
+
+.dashboard-header .btn:hover {
+  background: var(--accent-color) !important;
+  color: white !important;
+  border-color: var(--accent-color) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--accent-color), 0.3);
+}
+
+.dashboard-header .btn-outline-danger {
+  border-color: #dc3545 !important;
+  color: #dc3545 !important;
+}
+
+.dashboard-header .btn-outline-danger:hover {
+  background: #dc3545 !important;
+  color: white !important;
+  border-color: #dc3545 !important;
+}
+
+.dashboard-header .btn i {
+  font-size: 0.9rem;
 }
 
 /* Responsive adjustments */
@@ -256,16 +300,26 @@
   .datetime-display small {
     font-size: 0.7rem;
   }
+  
+  .dashboard-header .btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .header-actions {
+    gap: 0.5rem !important;
+  }
 }
 
 /* Welcome Section */
 .welcome-section {
   padding: 2rem 0;
-  background: linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%);
+  /* Let theme background show through */
+  background: transparent;
 }
 
 .welcome-card {
-  background: white;
+  background: var(--card-bg);
   border-radius: 20px;
   padding: 2rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
@@ -274,6 +328,9 @@
   justify-content: space-between;
   position: relative;
   overflow: hidden;
+  color: var(--text-color);
+  font-family: var(--app-font);
+  border: 1px solid var(--accent-color);
 }
 
 .welcome-card::before {
@@ -283,27 +340,30 @@
   left: 0;
   right: 0;
   height: 5px;
-  background: var(--gradient-primary);
+  background: var(--accent-color);
 }
 
 .welcome-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--cognizant-dark);
+  color: var(--text-color);
   margin-bottom: 0.5rem;
+  font-family: var(--app-font);
 }
 
 .welcome-subtitle {
   font-size: 1.3rem;
   font-weight: 500;
-  color: var(--cognizant-primary);
+  color: var(--accent-color);
   margin-bottom: 0.5rem;
+  font-family: var(--app-font);
 }
 
 .welcome-description {
   font-size: 1.1rem;
-  color: #6C757D;
+  color: var(--text-color);
   margin-bottom: 1rem;
+  font-family: var(--app-font);
 }
 
 .welcome-meta {

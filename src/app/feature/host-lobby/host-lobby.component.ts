@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -56,8 +56,9 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   sessionCode = signal<string>('');
   quizId = signal<number>(0);
   sessionId = signal<number>(0);
-  mode = signal<'manual' | 'auto'>('manual');
+  mode = signal<'manual' | 'auto'>('auto'); // Start in auto mode
   connectionStatus = signal<'connecting' | 'connected' | 'disconnected'>('connecting');
+  hostJustJoined = signal<boolean>(false); // Track if host just joined mid-session
   
   // Session and quiz state
   sessionData = signal<SessionData | null>(null);
@@ -69,6 +70,7 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   private countdownInterval: any;
   private questionTimerInterval: any;
   private isProcessingTimerExpiry: boolean = false; // Prevent re-entry
+  private processedTimerExpiries = new Set<number>(); // Track which questions have had timer expiry handled
   
   // Live quiz state
   currentQuestionId = signal<number>(1);
@@ -120,6 +122,40 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   currentQuestionText = computed(() => this.currentQuestion()?.questionText || 'Loading...');
   currentQuestionNumber = computed(() => this.currentQuestion()?.questionNumber || 1);
   totalQuestions = computed(() => this.allQuestions().length);
+
+  constructor() {
+    // Watch for timer expiration and handle leaderboard/question advancement
+    effect(() => {
+      const timer = this.questionTimer();
+      const isStarted = this.quizStarted();
+      const isEnded = this.quizEnded();
+      
+      // Only process if quiz is active and timer has expired (0 or below)
+      if (isStarted && !isEnded && timer.remainingSeconds <= 0 && timer.totalSeconds > 0) {
+        // Check if this question's timer expiry was already processed
+        if (this.processedTimerExpiries.has(timer.questionId)) {
+          console.log('[HostLobby] Timer expiry already processed for question:', timer.questionId, '- skipping');
+          return;
+        }
+        
+        // Prevent multiple triggers
+        if (!this.isProcessingTimerExpiry) {
+          this.isProcessingTimerExpiry = true;
+          console.log('[HostLobby] Timer expired for question:', timer.questionId, 'remaining:', timer.remainingSeconds);
+          
+          // Mark this question as processed
+          this.processedTimerExpiries.add(timer.questionId);
+          
+          // Use setTimeout to break out of the effect context
+          setTimeout(() => {
+            this.handleTimerExpiry().finally(() => {
+              this.isProcessingTimerExpiry = false;
+            });
+          }, 0);
+        }
+      }
+    });
+  }
 
   ngOnInit() {
     console.log('[HostLobby] Component initialized');
@@ -180,6 +216,16 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       this.sessionId.set(session.sessionId);
       this.quizId.set(session.quizId);
       
+      // ✅ SET LEADERBOARD SETTINGS FROM SESSION DATA
+      if (session.showLeaderboardAfterQuestion !== undefined) {
+        this.showLeaderboardAfterQuestion.set(session.showLeaderboardAfterQuestion);
+        console.log('[HostLobby] ShowLeaderboardAfterQuestion:', session.showLeaderboardAfterQuestion);
+      }
+      if (session.showLeaderboardAtEndOnly !== undefined) {
+        this.showLeaderboardAtEndOnly.set(session.showLeaderboardAtEndOnly);
+        console.log('[HostLobby] ShowLeaderboardAtEndOnly:', session.showLeaderboardAtEndOnly);
+      }
+      
       // Get quiz questions using the correct Area-based route
       const questionsResponse = await fetch(`http://localhost:5195/api/Participate/Session/${session.sessionId}/questions`);
       
@@ -233,12 +279,43 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       if (questions.length > 0) {
         this.currentQuestion.set(questions[0]);
         this.currentQuestionId.set(questions[0].questionId);
-        this.questionTimer.set({
-          questionId: questions[0].questionId,
-          remainingSeconds: questions[0].timerSeconds,
-          totalSeconds: questions[0].timerSeconds
-        });
-        console.log('[HostLobby] Set current question:', questions[0].questionText);
+        
+        // ✅ CHECK IF TIMER DATA EXISTS IN SESSION (quiz already started)
+        if (session.currentQuestionId && session.currentQuestionStartTime && session.timerDurationSeconds) {
+          console.log('[HostLobby] Quiz already in progress - syncing timer from session data');
+          
+          // Calculate remaining time from session data
+          const startTime = new Date(session.currentQuestionStartTime).getTime();
+          const now = Date.now();
+          const elapsed = (now - startTime) / 1000; // seconds
+          const remaining = Math.max(0, Math.floor(session.timerDurationSeconds - elapsed));
+          
+          // Find the current question from session
+          const currentQ = questions.find(q => q.questionId === session.currentQuestionId);
+          if (currentQ) {
+            this.currentQuestion.set(currentQ);
+            this.currentQuestionId.set(currentQ.questionId);
+          }
+          
+          this.questionTimer.set({
+            questionId: session.currentQuestionId,
+            remainingSeconds: remaining,
+            totalSeconds: session.timerDurationSeconds
+          });
+          
+          console.log('[HostLobby] Timer synced from session - Remaining:', remaining, 'Total:', session.timerDurationSeconds);
+        } else {
+          // No timer data in session, use default from question
+          this.questionTimer.set({
+            questionId: questions[0].questionId,
+            remainingSeconds: questions[0].timerSeconds,
+            totalSeconds: questions[0].timerSeconds
+          });
+          console.log('[HostLobby] Set default timer from question:', questions[0].timerSeconds);
+        }
+        
+        const currentQ = this.currentQuestion();
+        console.log('[HostLobby] Set current question:', currentQ?.questionText || 'N/A');
       }
       
       // Check if quiz has started
@@ -304,116 +381,10 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
    * Start question timer with broadcast
    */
   private async startQuestionTimer() {
-    console.log('[HostLobby] Starting question timer');
-    
-    // CRITICAL: Prevent duplicate timer creation
-    if (this.questionTimerInterval) {
-      console.log('⚠️ [HostLobby] Timer already running, clearing old one first');
-      clearInterval(this.questionTimerInterval);
-      this.questionTimerInterval = null;
-    }
-    
-    // Send initial timer sync immediately
-    const timer = this.questionTimer();
-    if (this.hubConnection && this.connectionStatus() === 'connected') {
-      try {
-        await this.hubConnection.invoke('BroadcastTimer', 
-          this.sessionCode(), 
-          timer.questionId, 
-          timer.remainingSeconds, 
-          timer.totalSeconds
-        );
-        console.log('[HostLobby] Sent initial timer sync:', timer.remainingSeconds, 'seconds');
-      } catch (error) {
-        console.error('[HostLobby] Failed to broadcast initial timer:', error);
-      }
-    }
-    
-    this.questionTimerInterval = setInterval(async () => {
-      const timer = this.questionTimer();
-      if (timer.remainingSeconds <= 0) {
-        
-        // Prevent multiple executions
-        if (this.isProcessingTimerExpiry) {
-          console.log('⚠️ [HostLobby] Already processing timer expiry, skipping...');
-          return;
-        }
-        
-        this.isProcessingTimerExpiry = true;
-        
-        console.log('⏰ [HostLobby] ========== QUESTION TIMER EXPIRED ==========');
-        console.log('⏰ [HostLobby] Question ID:', timer.questionId);
-        console.log('⏰ [HostLobby] ShowLeaderboardAfterQuestion setting:', this.showLeaderboardAfterQuestion());
-        console.log('⏰ [HostLobby] Display duration:', this.leaderboardDisplayDuration());
-        
-        // STOP the timer interval immediately
-        clearInterval(this.questionTimerInterval);
-        this.questionTimerInterval = null;
-        
-        // Show leaderboard after question if setting is enabled
-        if (this.showLeaderboardAfterQuestion()) {
-          console.log('📊 [HostLobby] CALLING ShowLeaderboardAfterQuestion Hub method...');
-          try {
-            await this.hubConnection!.invoke('ShowLeaderboardAfterQuestion', 
-              this.sessionCode(), 
-              timer.questionId, 
-              this.leaderboardDisplayDuration());
-            console.log('✅ [HostLobby] ShowLeaderboardAfterQuestion invoked successfully');
-            
-            // WAIT for leaderboard display duration before advancing to next question
-            const displayDuration = this.leaderboardDisplayDuration();
-            console.log(`⏳ [HostLobby] Waiting ${displayDuration} seconds for leaderboard display...`);
-            
-            await new Promise(resolve => setTimeout(resolve, displayDuration * 1000));
-            console.log('✅ [HostLobby] Leaderboard display completed, advancing to next question');
-            
-          } catch (error) {
-            console.error('❌ [HostLobby] Failed to show leaderboard after question:', error);
-          }
-        } else {
-          console.log('⚠️ [HostLobby] SKIPPING leaderboard - setting is disabled');
-        }
-        
-        console.log('⏰ [HostLobby] ==================================================');
-        
-        // Now advance to next question AFTER leaderboard is done
-        const nextQuestionNumber = this.currentQuestionNumber() + 1;
-        if (nextQuestionNumber <= this.totalQuestions()) {
-          console.log('[HostLobby] Auto-advancing to question', nextQuestionNumber);
-          try {
-            await this.forceNavigate(nextQuestionNumber);
-          } catch (error) {
-            console.error('[HostLobby] Auto-advance failed:', error);
-            this.snackBar.open('⚠️ Connection issue, advancing locally', 'Close', { duration: 2000 });
-          }
-        } else {
-          console.log('[HostLobby] Last question completed - ending quiz');
-          await this.manualEndQuiz(true);
-        }
-        
-        // Reset flag after processing complete
-        this.isProcessingTimerExpiry = false;
-      } else {
-        this.questionTimer.update(t => ({
-          ...t,
-          remainingSeconds: t.remainingSeconds - 1
-        }));
-        
-        // Broadcast timer update to all participants every second
-        if (this.hubConnection && this.connectionStatus() === 'connected') {
-          try {
-            await this.hubConnection.invoke('BroadcastTimer', 
-              this.sessionCode(), 
-              timer.questionId, 
-              timer.remainingSeconds - 1, 
-              timer.totalSeconds
-            );
-          } catch (error) {
-            console.error('[HostLobby] Failed to broadcast timer:', error);
-          }
-        }
-      }
-    }, 1000);
+    console.log('[HostLobby] Timer managed by backend - no local timer started');
+    // Timer is now managed by backend in AUTO mode
+    // In MANUAL mode, host controls when to advance
+    // Just display the timer updates from backend
   }
 
   /**
@@ -476,9 +447,12 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       await this.hubConnection.start();
       console.log('[HostLobby] SignalR connected');
       
+      // Check if host is already present (rejoining)
+      await this.hubConnection.invoke('CheckHostPresence', this.sessionCode());
+      
       // Join session as host (join host-specific group)
       await this.hubConnection.invoke('JoinHostSession', this.sessionCode());
-      console.log('[HostLobby] Joined host session group');
+      console.log('[HostLobby] Joined host session group - switching to MANUAL mode');
       
       // Also join regular session group to receive QuizStarted events
       await this.hubConnection.invoke('JoinSession', this.sessionCode());
@@ -500,6 +474,60 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   private registerSignalRHandlers() {
     if (!this.hubConnection) return;
 
+    // Listen for host presence status (when rejoining mid-session)
+    this.hubConnection.on('HostPresenceStatus', (data: any) => {
+      console.log('[HostLobby] Host presence status received:', data);
+      const hostPresent = data.HostPresent || data.hostPresent;
+      const mode = data.Mode || data.mode || 'auto';
+      
+      if (!hostPresent) {
+        // No other host present, we are in control
+        this.mode.set('manual');
+        this.hostJustJoined.set(false);
+      }
+    });
+
+    // Listen for session state sync (current question, settings, etc.)
+    this.hubConnection.on('SessionStateSync', (data: any) => {
+      console.log('[HostLobby] Session state sync received:', data);
+      const showAfterQuestion = data.ShowLeaderboardAfterQuestion ?? data.showLeaderboardAfterQuestion ?? false;
+      const showAtEndOnly = data.ShowLeaderboardAtEndOnly ?? data.showLeaderboardAtEndOnly ?? false;
+      const currentQuestionId = data.CurrentQuestionId ?? data.currentQuestionId;
+      const remainingSeconds = data.RemainingSeconds ?? data.remainingSeconds ?? 0;
+      const totalSeconds = data.TotalSeconds ?? data.totalSeconds ?? 0;
+      
+      this.showLeaderboardAfterQuestion.set(showAfterQuestion);
+      this.showLeaderboardAtEndOnly.set(showAtEndOnly);
+      this.mode.set('manual'); // Host joined, switch to manual
+      this.hostJustJoined.set(true);
+      
+      // If there's a current question, sync to it
+      if (currentQuestionId) {
+        const question = this.allQuestions().find(q => q.questionId === currentQuestionId);
+        if (question) {
+          this.currentQuestion.set(question);
+          this.currentQuestionId.set(currentQuestionId);
+          
+          // ✅ SYNC TIMER STATE
+          this.questionTimer.set({
+            questionId: currentQuestionId,
+            remainingSeconds: Math.max(0, remainingSeconds),
+            totalSeconds: totalSeconds > 0 ? totalSeconds : question.timerSeconds
+          });
+          
+          console.log('[HostLobby] Synced to current question:', question.questionNumber, 'Timer:', remainingSeconds, '/', totalSeconds);
+          
+          // If quiz is active and timer is running, ensure we're in started state
+          if (totalSeconds > 0 && remainingSeconds > 0) {
+            this.quizStarted.set(true);
+            this.waitingForStart.set(false);
+          }
+        }
+      }
+      
+      this.snackBar.open('🎮 Switched to MANUAL mode - You are now in control', 'Close', { duration: 4000 });
+    });
+
     // Listen for submission progress updates
     this.hubConnection.on('SubmissionProgressUpdate', (data: any) => {
       console.log('[HostLobby] Submission progress received:', data);
@@ -516,6 +544,21 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
           percentage: Math.round(percentage)
         });
         console.log('[HostLobby] Updated progress:', submittedCount, '/', totalParticipants, '(', percentage, '%)');
+      }
+    });
+
+    // Listen to timer updates from backend
+    this.hubConnection.on('LiveTimerUpdate', (data: any) => {
+      const questionId = data.QuestionId || data.questionId;
+      const remaining = data.RemainingSeconds || data.remainingSeconds || 0;
+      const total = data.TotalSeconds || data.totalSeconds || 0;
+      
+      if (questionId === this.currentQuestionId()) {
+        this.questionTimer.set({
+          questionId: questionId,
+          remainingSeconds: remaining,
+          totalSeconds: total
+        });
       }
     });
 
@@ -556,6 +599,51 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         await this.startQuestionTimer();
       }
       console.log('[HostLobby] State updated - waiting:', this.waitingForStart(), 'started:', this.quizStarted());
+    });
+
+    // ✅ Listen for successful join confirmations
+    this.hubConnection.on('JoinedHostSession', (sessionCode: string) => {
+      console.log('[HostLobby] Joined host session confirmed:', sessionCode);
+    });
+
+    this.hubConnection.on('JoinedSession', (sessionCode: string) => {
+      console.log('[HostLobby] Joined regular session confirmed:', sessionCode);
+    });
+
+    this.hubConnection.on('SessionSync', (data: any) => {
+      console.log('[HostLobby] Session sync received:', data);
+    });
+
+    // ✅ Listen for navigation events
+    this.hubConnection.on('ForceNavigateToQuestion', (data: any) => {
+      console.log('[HostLobby] Force navigate event received:', data);
+      const questionId = data.QuestionId || data.questionId;
+      if (questionId) {
+        const question = this.allQuestions().find(q => q.questionId === questionId);
+        if (question) {
+          this.currentQuestion.set(question);
+          this.currentQuestionId.set(questionId);
+        }
+      }
+    });
+
+    this.hubConnection.on('NavigationCommandSent', (questionId: number) => {
+      console.log('[HostLobby] Navigation command confirmed for question:', questionId);
+    });
+
+    this.hubConnection.on('TimerSync', (data: any) => {
+      console.log('[HostLobby] Timer sync received:', data);
+      const questionId = data.QuestionId || data.questionId;
+      const remaining = data.RemainingSeconds || data.remainingSeconds || 0;
+      const total = data.TotalSeconds || data.totalSeconds || 0;
+      
+      if (questionId === this.currentQuestionId()) {
+        this.questionTimer.set({
+          questionId: questionId,
+          remainingSeconds: remaining,
+          totalSeconds: total
+        });
+      }
     });
   }
 
@@ -635,7 +723,8 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       console.log('[HostLobby] Force starting quiz for session:', this.sessionCode());
       
       // Update session startedAt in backend and notify all participants
-      await this.hubConnection.invoke('NotifyQuizStart', this.sessionCode());
+      // Pass TRUE for isForceStart parameter to override scheduled start time
+      await this.hubConnection.invoke('NotifyQuizStart', this.sessionCode(), true);
       
       this.waitingForStart.set(false);
       this.quizStarted.set(true);
@@ -650,11 +739,79 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
         await this.startQuestionTimer();
       }
       
-      this.snackBar.open('🚀 Quiz started! Participants can now begin.', 'Close', { duration: 4000 });
-      console.log('[HostLobby] Quiz started successfully');
+      this.snackBar.open('🚀 Quiz FORCE STARTED! Start time updated to NOW.', 'Close', { duration: 4000 });
+      console.log('[HostLobby] Quiz force started successfully');
     } catch (error) {
       console.error('[HostLobby] Force start failed:', error);
       this.snackBar.open('⚠️ Failed to start quiz', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Handle timer expiration - show leaderboard if enabled, then move to next question
+   */
+  private async handleTimerExpiry() {
+    console.log('[HostLobby] Handling timer expiry...');
+    console.log('[HostLobby] Show leaderboard after question:', this.showLeaderboardAfterQuestion());
+    
+    try {
+      // Check if leaderboard should be shown
+      if (this.showLeaderboardAfterQuestion()) {
+        console.log('[HostLobby] Showing leaderboard before advancing...');
+        
+        // Fetch and display leaderboard
+        if (this.sessionId() && this.currentQuestionId()) {
+          this.isLoadingLeaderboard.set(true);
+          const leaderboard = await this.leaderboardService.getLeaderboard(this.sessionId()).toPromise();
+          this.leaderboardData.set(leaderboard);
+          this.showLeaderboardOverlay.set(true);
+          this.isLoadingLeaderboard.set(false);
+          
+          console.log('[HostLobby] Leaderboard displayed, broadcasting to participants...');
+          
+          // Broadcast leaderboard to participants via SignalR
+          if (this.hubConnection) {
+            const duration = this.leaderboardDisplayDuration();
+            await this.hubConnection.invoke('ShowLeaderboardAfterQuestion', 
+              this.sessionCode(), 
+              this.currentQuestionId(), 
+              duration
+            );
+            console.log('[HostLobby] Leaderboard broadcast to participants with duration:', duration);
+          }
+          
+          // Wait for leaderboard display duration
+          const duration = this.leaderboardDisplayDuration() * 1000;
+          await new Promise(resolve => setTimeout(resolve, duration));
+          
+          // Close leaderboard
+          this.showLeaderboardOverlay.set(false);
+          this.leaderboardData.set(null);
+          console.log('[HostLobby] Leaderboard closed, advancing to next question...');
+        }
+      }
+      
+      // Check if this is the last question
+      const currentNum = this.currentQuestionNumber();
+      const total = this.totalQuestions();
+      
+      if (currentNum >= total) {
+        console.log('[HostLobby] Last question completed, ending quiz...');
+        await this.manualEndQuiz();
+      } else {
+        // Move to next question
+        console.log('[HostLobby] Moving to next question...');
+        const nextQuestionNum = currentNum + 1;
+        const nextQuestion = this.allQuestions().find(q => q.questionNumber === nextQuestionNum);
+        
+        if (nextQuestion && this.hubConnection) {
+          await this.hubConnection.invoke('ForceNavigate', this.sessionCode(), nextQuestion.questionId);
+          console.log('[HostLobby] Navigated to question:', nextQuestionNum);
+        }
+      }
+    } catch (error) {
+      console.error('[HostLobby] Error handling timer expiry:', error);
+      this.snackBar.open('⚠️ Error advancing question', 'Close', { duration: 3000 });
     }
   }
 
@@ -906,8 +1063,10 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   private async disconnectSignalR() {
     if (this.hubConnection) {
       try {
+        // Notify backend that host is leaving
+        await this.hubConnection.invoke('LeaveHostSession', this.sessionCode());
         await this.hubConnection.stop();
-        console.log('[HostLobby] SignalR disconnected');
+        console.log('[HostLobby] SignalR disconnected - Session will switch to AUTO mode');
       } catch (error) {
         console.error('[HostLobby] Error disconnecting:', error);
       }

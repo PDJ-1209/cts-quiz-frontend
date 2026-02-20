@@ -208,6 +208,15 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       route: '/host/leaderboard',
       color: '#FFD700',
       gradient: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+    },
+    {
+      id: 'customize-theme',
+      title: 'Customize Theme',
+      description: 'Personalize the look and feel of your application',
+      icon: 'fas fa-palette',
+      route: '/host/themes',
+      color: '#E83E8C',
+      gradient: 'linear-gradient(135deg, #E83E8C 0%, #C2185B 100%)'
     }
   ];
 
@@ -434,6 +443,10 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  navigateToThemes(): void {
+    this.router.navigate(['/host/themes']);
   }
 
   // Calendar methods

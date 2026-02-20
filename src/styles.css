@@ -7,7 +7,15 @@
    ================================================================ */
 
 :root {
-  /* ===== COGNIZANT BRAND COLORS ===== */
+  /* Dynamic Theme Variables (Updated by ThemeStore) */
+  --app-text: #212529;
+  --app-accent: #0066CC;
+  --app-font: 'Arial, Helvetica, sans-serif';
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --text-color: #212529;
+  --accent-color: #0066CC;
+  
+  /* Cognizant Brand Colors - Updated Professional Palette */
   --cognizant-primary: #0066CC;
   --cognizant-secondary: #004999;
   --cognizant-accent: #00A3E0;
@@ -145,6 +153,95 @@
   --shadow-md: 0 8px 25px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 15px 50px rgba(0, 0, 0, 0.6);
   --shadow-xl: 0 25px 80px rgba(0, 0, 0, 0.7);
+}
+
+/* Theme-Responsive Global Classes */
+.themed-card {
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid rgba(var(--accent-color), 0.2) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.themed-button {
+  background: var(--accent-color) !important;
+  color: var(--text-color) !important;
+  border: none !important;
+  font-family: var(--app-font) !important;
+  transition: all 0.3s ease;
+}
+
+.themed-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.themed-text {
+  color: var(--text-color) !important;
+  font-family: var(--app-font) !important;
+}
+
+.themed-accent {
+  color: var(--accent-color) !important;
+}
+
+.themed-bg {
+  background: var(--card-bg) !important;
+}
+
+/* Override common Bootstrap components to be theme-responsive */
+.card {
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--accent-color) !important;
+  font-family: var(--app-font) !important;
+}
+
+.form-control {
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--accent-color) !important;
+  font-family: var(--app-font) !important;
+}
+
+.form-control:focus {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(var(--accent-color), 0.25) !important;
+}
+
+.modal-content {
+  background: var(--card-bg) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--accent-color) !important;
+}
+
+.modal-header {
+  border-bottom-color: var(--accent-color) !important;
+}
+
+.modal-footer {
+  border-top-color: var(--accent-color) !important;
+}
+
+/* Button Styles */
+.btn-primary {
+  background: var(--accent-color) !important;
+  border: none;
+  color: var(--text-color) !important;
+  font-family: var(--app-font) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Global animation classes for theme transitions */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
 }
 
 /* ================================================================

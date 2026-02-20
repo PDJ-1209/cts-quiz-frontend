@@ -89,6 +89,18 @@ export const routes: Routes = [
     redirectTo: '/host/create-question',
     pathMatch: 'full'
   },
+  { 
+    path: 'host/themes', 
+    loadComponent: () => import('./feature/theme-selection/theme-selection.component').then(c => c.ThemeSelectionComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
+  { 
+    path: 'host/themes/customize', 
+    loadComponent: () => import('./feature/theme-customize/theme-customize.component').then(c => c.ThemeCustomizeComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
   
   // User/Participant Routes - Lazy loaded (Role ID: 3)
   { 

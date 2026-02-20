@@ -78,4 +78,9 @@ export interface CreateQuizSessionResponse {
   startedAt: string;
   endedAt?: string;
   status: string;
+  autoModeEnabled: boolean;
+  currentQuestionId?: number;
+  currentQuestionStartTime?: string;
+  timerDurationSeconds?: number;
 }
+
