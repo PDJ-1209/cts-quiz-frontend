@@ -258,7 +258,8 @@ export class FeedbackFormComponent implements OnInit {
   }
 
   returnToHome() {
-    // Clear quiz session data
+    // Clear ONLY quiz session data, NOT authentication tokens
+    // Auth tokens are stored in 'auth_token' and 'auth_roles' - we keep these
     localStorage.removeItem('currentQuizId');
     localStorage.removeItem('participantId');
     localStorage.removeItem('sessionId');
@@ -267,8 +268,35 @@ export class FeedbackFormComponent implements OnInit {
     localStorage.removeItem('quizTitle');
     localStorage.removeItem('sessionData');
     localStorage.removeItem('finalScore');
+    localStorage.removeItem('feedbacks'); // Clear any locally saved feedbacks
     
     // Navigate to participant home page
-    this.router.navigate(['/participantpage']);
+    // The role guard will check auth tokens (auth_token/auth_roles) which we preserved
+    this.router.navigate(['/participant'], { replaceUrl: true }).catch(err => {
+      console.error('Navigation error:', err);
+      // Fallback to user/dashboard
+      this.router.navigate(['/user/dashboard'], { replaceUrl: true }).catch(err2 => {
+        console.error('Fallback navigation error:', err2);
+        // Final fallback to landing page
+        this.router.navigate(['/landing'], { replaceUrl: true });
+      });
+    });
+  }
+
+  getRatingLabel(stars: number): string {
+    const labels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+    return labels[stars] || 'Rate';
+  }
+
+  getRatingMessage(rating: number): string {
+    const messages: { [key: number]: string } = {
+      0: '👋 Tell us what you think!',
+      1: '😢 We\'re sorry to hear that. Help us improve!',
+      2: '😐 Thanks for the feedback. We\'ll do better!',
+      3: '😊 Glad you enjoyed it!',
+      4: '😄 Awesome! We love your enthusiasm!',
+      5: '🎉 Excellent! You\'re the best!'
+    };
+    return messages[rating] || 'Rate your experience';
   }
 }
