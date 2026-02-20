@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
-import { AuthService } from '../../Service/auth.service';
-import { SidebarService } from '../../Service/sidebar.service';
+import { AuthService } from '../../services/auth.service';
+import { SidebarService } from '../../services/sidebar.service';
 
 @Component({
   selector: 'app-sidebar',
   imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.css'
+  styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent implements OnInit {
   userName: string = 'User';

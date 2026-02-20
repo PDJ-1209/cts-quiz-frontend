@@ -4,6 +4,9 @@ export interface Question {
   templateId?: number;
   questionText: string;
   questionType?: string;
+  isRequired?: boolean;
+  points?: number;
+  order?: number;
   category?: string;
   difficultyLevel?: string;
   tags?: string;
@@ -20,4 +23,5 @@ export interface Option {
   questionId?: number;
   optionText: string;
   isCorrect?: boolean;
+  order?: number;
 }
