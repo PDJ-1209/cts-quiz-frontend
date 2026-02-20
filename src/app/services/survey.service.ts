@@ -94,8 +94,6 @@ export class SurveyService {
       description: source?.description ?? source?.Description ?? null,
       isAnonymous: source?.isAnonymous ?? source?.IsAnonymous ?? false,
       status: source?.status ?? source?.Status ?? 'draft',
-      startTime: source?.startTime ?? source?.StartTime ?? null,
-      endTime: source?.endTime ?? source?.EndTime ?? null,
       questions: (source?.questions ?? source?.Questions ?? []).map((q: any) => ({
         surveyQuestionId: q?.surveyQuestionId ?? q?.SurveyQuestionId,
         sessionId: q?.sessionId ?? q?.SessionId,
@@ -139,6 +137,26 @@ export class SurveyService {
     return this.http.post<any>(`${this.apiBaseV2}/${surveyId}/publish`, publishData);
   }
 
+  // Wrapper for publishing (keeps older code compatible)
+  publishSurvey(surveyId: number, payload: any): Observable<any> {
+    return this.publishSurveyV2(surveyId, payload);
+  }
+
+  // Schedule survey (uses publish endpoint with scheduling fields)
+  scheduleSurvey(surveyId: number, scheduledStart: Date, scheduledEnd: Date | null, countdownSeconds: number): Observable<any> {
+    const body = {
+      scheduledStartTime: scheduledStart.toISOString(),
+      scheduledEndTime: scheduledEnd ? scheduledEnd.toISOString() : undefined,
+      countdownDurationSeconds: countdownSeconds
+    };
+    return this.publishSurveyV2(surveyId, body);
+  }
+
+  // Word cloud helper
+  getWordCloud(surveyId: number, sessionId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiBaseV2}/${surveyId}/wordcloud/${sessionId}`);
+  }
+
   deleteSurveyV2(surveyId: number): Observable<any> {
     return this.http.delete<any>(`${this.apiBaseV2}/${surveyId}`);
   }
@@ -148,6 +166,11 @@ export class SurveyService {
     return this.http.get<any>(`${environment.apiUrl}/Participate/Survey/session/${sessionId}`).pipe(
       map((response) => this.mapSurveyOverview(response))
     );
+  }
+
+  // Participant: get survey responses for a participant
+  getSurveyResponsesByParticipant(participantId: number, surveyId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/Participate/Survey/responses/participant/${participantId}/survey/${surveyId}`);
   }
 
   // Participant: submit survey responses

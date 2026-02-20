@@ -99,14 +99,10 @@ export interface SurveyOverview {
   description?: string | null;
   isAnonymous: boolean;
   status: string;
-<<<<<<< HEAD
   category?: string;
-  sessionCode?: string;
   createdAt?: Date | string;
-=======
   startTime?: string | null;
   endTime?: string | null;
->>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
   questions?: SurveyQuestionOverview[];
 }
 

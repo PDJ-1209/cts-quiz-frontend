@@ -60,9 +60,7 @@ export class PollService {
       pollAnonymous: source?.pollAnonymous ?? source?.PollAnonymous ?? false,
       pollStatus: source?.pollStatus ?? source?.PollStatus ?? 'draft',
       selectionType: source?.selectionType ?? source?.SelectionType ?? 'single',
-      startTime: source?.startTime ?? source?.StartTime ?? null,
-      endTime: source?.endTime ?? source?.EndTime ?? null,
-      options: (source?.pollOptions ?? source?.PollOptions ?? []).map((opt: any) => ({
+      options: (source?.options ?? source?.Options ?? []).map((opt: any) => ({
         optionId: opt?.optionId ?? opt?.OptionId,
         optionLabel: opt?.optionLabel ?? opt?.OptionLabel ?? '',
         optionOrder: opt?.optionOrder ?? opt?.OptionOrder ?? 0
@@ -95,5 +93,30 @@ export class PollService {
     return this.http.get<any>(`${environment.apiUrl}/Participate/Poll/session/${sessionId}`).pipe(
       map((response) => this.mapPollOverview(response))
     );
+  }
+
+  // Participant: get poll responses for a participant
+  getPollResponsesByParticipant(participantId: number, pollId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/Participate/Poll/responses/participant/${participantId}/poll/${pollId}`);
+  }
+
+  // Publish a poll (wrapper for backend POST /{id}/publish)
+  publishPoll(pollId: number, payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseV2}/${pollId}/publish`, payload);
+  }
+
+  // Schedule a poll (alias to publish with scheduling fields)
+  schedulePoll(pollId: number, scheduledStart: Date, scheduledEnd: Date | null, countdownSeconds: number): Observable<any> {
+    const body = {
+      scheduledStartTime: scheduledStart.toISOString(),
+      scheduledEndTime: scheduledEnd ? scheduledEnd.toISOString() : undefined,
+      countdownDurationSeconds: countdownSeconds
+    };
+    return this.http.post<any>(`${this.apiBaseV2}/${pollId}/publish`, body);
+  }
+
+  // Delete poll
+  deletePoll(pollId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBaseV2}/${pollId}`);
   }
 }

@@ -74,14 +74,10 @@ export interface PollOverview {
   pollAnonymous: boolean;
   pollStatus: string;
   selectionType: string;
-<<<<<<< HEAD
   category?: string;
-  sessionCode?: string;
   createdAt?: Date | string;
-=======
   startTime?: string | null;
   endTime?: string | null;
->>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
   options: PollOptionOverview[];
 }
 

@@ -86,13 +86,12 @@ export class QuizUsernameComponent implements OnInit {
         // Store session data for countdown
         localStorage.setItem('sessionData', JSON.stringify(validation));
         localStorage.setItem('quizTitle', validation.quizTitle || 'Quiz');
-<<<<<<< HEAD
+        localStorage.setItem('sessionType', validation.sessionType || 'Quiz');
+        
         // Store quizId for feedback later
         if (validation.quizId) {
           localStorage.setItem('currentQuizId', validation.quizId.toString());
         }
-=======
-        localStorage.setItem('sessionType', validation.sessionType || 'Quiz');
         
         // For scheduled sessions, startedAt contains the scheduled time
         // For active sessions, it contains the actual start time
@@ -135,7 +134,6 @@ export class QuizUsernameComponent implements OnInit {
           console.log('[QuizUsername] Stored surveyId:', validation.surveyId);
         }
         console.log('[QuizUsername] Stored sessionType:', validation.sessionType || 'Quiz');
->>>>>>> 2e73df1791eb660398b638e6660e33385d16d837
       }
     } catch (error: any) {
       this.snackBar.open('❌ Failed to validate session code', 'Close', {
