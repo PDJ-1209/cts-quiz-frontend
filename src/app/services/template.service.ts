@@ -33,7 +33,9 @@ export class TemplateService {
     const payload: temp = {
       templateName: (template.templateName || '').trim(),
       templateType: template.templateType || 'PDF',
+      categoryType: template.categoryType,
       templateConfig: (template.templateConfig || '').trim(),
+      selectedQuestionIds: template.selectedQuestionIds,
       createdBy: Number(template.createdBy || 1)
     };
 
@@ -252,10 +254,11 @@ export interface RenderedQuestion {
   questionType?: string;
   category?: string;
   difficultyLevel?: string;
+  tags?: string;
   order: number;
-  points: number;
+  timerSeconds?: number;
   isRequired: boolean;
-  timerSec?: number;
+  timerSec?: number; // Legacy field from backend
   section?: string;
   options: RenderedOption[];
 }

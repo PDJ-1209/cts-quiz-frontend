@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, HostListener, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal, HostListener } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,6 +35,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
   timeUntilStart = signal({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   isWaiting = signal(true);
   hasStarted = signal(false);
+  lastBackWarnAt: number = 0;
 
   private intervalId?: number;
   private snackBar = inject(MatSnackBar);
@@ -43,12 +44,9 @@ export class CountdownComponent implements OnInit, OnDestroy {
   private platformId = inject(PLATFORM_ID);
   
   private hubConnection?: signalR.HubConnection;
-  private lastBackWarnAt = 0;
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-
-    this.lockBackNavigation();
 
     // Load session data from localStorage
     const sessionDataStr = localStorage.getItem('sessionData');
@@ -178,7 +176,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
           this.hubConnection?.invoke('JoinSession', this.sessionCode);
         }
       })
-      .catch((err: unknown) => console.error('Error connecting to SignalR:', err));
+      .catch((err: any) => console.error('Error connecting to SignalR:', err));
   }
 
   private startCountdown(): void {

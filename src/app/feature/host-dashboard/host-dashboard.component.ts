@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, signal, inject, computed, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AddQuestionService } from '../../services/add-question.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
@@ -11,6 +12,7 @@ import { SurveyService } from '../../services/survey.service';
 import { ActivityService, ActivityItem, RecentActivityResponse, ActivityStats } from '../../shared/services/activity.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
+import { TemplateService } from '../../services/template.service';
 
 interface DashboardStats {
   totalQuizzes: number;
@@ -59,7 +61,7 @@ interface CalendarQuiz {
 @Component({
   selector: 'app-host-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './host-dashboard.component.html',
   styleUrl: './host-dashboard.component.css'
 })
@@ -74,6 +76,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   private dashboardStatsService = inject(DashboardStatsService);
   private activityService = inject(ActivityService);
   private tutorialService = inject(TutorialService);
+  private templateService = inject(TemplateService);
 
   // Use shared stats service
   stats = this.dashboardStatsService.stats;
@@ -84,8 +87,8 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   
   // Get current user info from auth service
   currentUser = this.authService.currentUser;
-  currentHostId = computed(() => this.currentUser()?.employeeId || '2463579');
-  hostName = computed(() => this.currentUser() ? `${this.currentUser()?.firstName} ${this.currentUser()?.lastName}` : 'Host User');
+  currentHostId = this.currentUser()?.employeeId || '2463579';
+  hostName = this.currentUser() ? `${this.currentUser()?.firstName} ${this.currentUser()?.lastName}` : 'Host User';
   
   currentDateTime = signal('Loading...');
 
@@ -101,6 +104,24 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   
   // Tooltip timeout for better UX
   private tooltipTimeout: any = null;
+
+  // Template Modal signals
+  showTemplateModal = signal(false);
+  templateName = signal('');
+  selectedCategory = signal('');
+  templateConfig = signal('');
+  templateCategories = ['Java', 'JavaScript', 'Python', 'React', 'Angular', 'Node.js', 'Spring Boot', 'Database', 'DevOps', 'General'];
+  isSubmitting = signal(false);
+  
+  // Question selection signals
+  availableQuestions = signal<any[]>([]);
+  selectedQuestions = signal<Set<number>>(new Set());
+  loadingQuestions = signal(false);
+  
+  // Current template being viewed/edited
+  currentTemplate = signal<any | null>(null);
+  displayedQuestions = signal<any[]>([]);
+  isEditingTemplate = signal(false);
   
   weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -249,7 +270,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   async loadQuizzes() {
     try {
       this.loading.set(true);
-      const quizzes = await this.quizCreationService.getHostQuizzes(this.currentHostId());
+      const quizzes = await this.quizCreationService.getHostQuizzes(this.currentHostId);
       this.hostQuizzes.set(quizzes);
       
       // Update shared dashboard stats with real data
@@ -310,14 +331,14 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private async loadCalendarData(): Promise<void> {
     try {
-      console.log('[Calendar] Loading quiz session data for host:', this.currentHostId());
+      console.log('[Calendar] Loading quiz session data for host:', this.currentHostId);
       
       // Get quiz sessions from QuizSession table joined with Quiz table
-      const publishedQuizzes = await this.calendarService.getPublishedQuizzes(this.currentHostId());
+      const publishedQuizzes = await this.calendarService.getPublishedQuizzes(this.currentHostId);
       console.log('[Calendar] Quiz sessions from QuizSession table:', publishedQuizzes);
       
       if (publishedQuizzes.length === 0) {
-        console.log('[Calendar] No quiz sessions found for host:', this.currentHostId());
+        console.log('[Calendar] No quiz sessions found for host:', this.currentHostId);
         console.log('[Calendar] Note: Only quizzes that have active sessions will appear in the calendar');
       }
       
@@ -326,7 +347,7 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
         id: quiz.quizId.toString(),
         name: quiz.quizTitle || `Quiz ${quiz.quizId}`,
         category: 'General', // TODO: Get category from quiz details if needed
-        hostName: quiz.hostName || this.hostName(),
+        hostName: quiz.hostName || this.hostName,
         time: quiz.publishedDate ? new Date(quiz.publishedDate).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit', 
@@ -438,6 +459,8 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
   navigateToAction(action: QuickAction): void {
     if (action.id === 'quiz-calendar') {
       this.toggleCalendar();
+    } else if (action.id === 'create-template') {
+      this.openTemplateModal();
     } else if (action.params) {
       this.router.navigate([action.route], { queryParams: action.params });
     } else {
@@ -759,6 +782,160 @@ export class HostDashboardComponent implements OnInit, OnDestroy, AfterViewInit 
       top: `${top}px`,
       left: `${left}px`
     };
+  }
+
+  // Template Modal Methods
+  openTemplateModal(): void {
+    this.showTemplateModal.set(true);
+    this.templateName.set('');
+    this.selectedCategory.set('');
+    this.templateConfig.set('');
+    this.currentTemplate.set(null);
+    this.displayedQuestions.set([]);
+    this.isEditingTemplate.set(false);
+  }
+
+  closeTemplateModal(): void {
+    this.showTemplateModal.set(false);
+    this.templateName.set('');
+    this.selectedCategory.set('');
+    this.templateConfig.set('');
+    this.selectedQuestions.set(new Set());
+    this.availableQuestions.set([]);
+    this.currentTemplate.set(null);
+    this.displayedQuestions.set([]);
+    this.isEditingTemplate.set(false);
+  }
+
+  // Load questions for selected category
+  onCategoryChange(category: string): void {
+    if (!category) return;
+    
+    this.loadingQuestions.set(true);
+    const apiUrl = `http://localhost:5195/api/Host/Question/category/${category}/questions`;
+    
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then((data: any) => {
+        // API returns array directly
+        const questions = Array.isArray(data) ? data : (data.value || []);
+        console.log('Questions loaded:', questions);
+        this.availableQuestions.set(questions);
+        this.selectedQuestions.set(new Set());
+        this.loadingQuestions.set(false);
+      })
+      .catch(error => {
+        console.error('Error loading questions:', error);
+        alert('Failed to load questions for this category');
+        this.availableQuestions.set([]);
+        this.loadingQuestions.set(false);
+      });
+  }
+
+  // Toggle question selection
+  toggleQuestion(questionId: number): void {
+    const selected = new Set(this.selectedQuestions());
+    if (selected.has(questionId)) {
+      selected.delete(questionId);
+    } else {
+      // Limit to 3 selections
+      if (selected.size < 3) {
+        selected.add(questionId);
+      } else {
+        alert('You can select maximum 3 questions');
+        return;
+      }
+    }
+    this.selectedQuestions.set(selected);
+  }
+
+  // Check if question is selected
+  isQuestionSelected(questionId: number): boolean {
+    return this.selectedQuestions().has(questionId);
+  }
+
+  publishTemplate(): void {
+    if (!this.templateName() || !this.selectedCategory() || !this.templateConfig()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    if (this.selectedQuestions().size === 0) {
+      alert('Please select at least 1 question');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+
+    // Convert selected questions set to comma-separated string
+    const selectedIds = Array.from(this.selectedQuestions()).join(',');
+
+    // Create template object
+    const template = {
+      templateName: this.templateName(),
+      templateType: 'CATEGORY',
+      categoryType: this.selectedCategory(),
+      templateConfig: this.templateConfig(),
+      selectedQuestionIds: selectedIds,
+      createdBy: Number(this.currentHostId) || 1
+    };
+
+    console.log('Publishing template:', template);
+    
+    this.templateService.createTemplate(template).subscribe({
+      next: (response) => {
+        this.isSubmitting.set(false);
+        alert('Template created successfully!');
+        this.closeTemplateModal();
+        console.log('Template created:', response);
+      },
+      error: (error) => {
+        this.isSubmitting.set(false);
+        console.error('Error creating template:', error);
+        alert('Error creating template: ' + (error?.error?.message || error?.message || 'Unknown error'));
+      }
+    });
+  }
+
+  // Load questions for a template when viewing/editing it
+  loadTemplateQuestions(template: any): void {
+    if (!template.selectedQuestionIds) {
+      console.log('No selected questions for this template');
+      this.displayedQuestions.set([]);
+      return;
+    }
+
+    // Parse the comma-separated question IDs
+    const questionIds = template.selectedQuestionIds.split(',').map((id: string) => parseInt(id.trim()));
+    console.log('Loading questions for template:', questionIds);
+
+    // Fetch each question
+    const apiUrl = `http://localhost:5195/api/Host/Question`;
+    
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then((data: any) => {
+        const allQuestions = Array.isArray(data) ? data : (data.value || []);
+        // Filter questions that match the selected IDs
+        const selectedQs = allQuestions.filter((q: any) => questionIds.includes(q.questionId));
+        console.log('Selected questions loaded:', selectedQs);
+        this.displayedQuestions.set(selectedQs);
+      })
+      .catch(error => {
+        console.error('Error loading template questions:', error);
+        this.displayedQuestions.set([]);
+      });
+  }
+
+  // Open template for viewing/editing
+  openTemplateForView(template: any): void {
+    this.currentTemplate.set(template);
+    this.isEditingTemplate.set(false);
+    this.showTemplateModal.set(true);
+    this.templateName.set(template.templateName || '');
+    this.selectedCategory.set(template.categoryType || '');
+    this.templateConfig.set(template.templateConfig || '');
+    this.loadTemplateQuestions(template);
   }
 
   ngOnDestroy(): void {

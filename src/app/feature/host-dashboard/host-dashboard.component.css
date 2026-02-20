@@ -1087,3 +1087,364 @@
     gap: 0.5rem;
   }
 }
+
+/* Template Modal Styles */
+.template-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.template-modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-in-out;
+}
+
+.template-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem;
+  border-bottom: 2px solid #f0f0f0;
+  background: linear-gradient(135deg, #0066CC 0%, #004999 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+.template-modal-title {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.template-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.template-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: rotate(90deg);
+}
+
+.template-modal-body {
+  padding: 2rem;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #212529;
+  font-size: 0.95rem;
+}
+
+.form-control {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #0066CC;
+  box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+  outline: none;
+}
+
+.form-control-lg {
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  min-height: 45px;
+}
+
+.form-text {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
+textarea.form-control {
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Questions Container Styles */
+.questions-container {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.question-checkbox {
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #0066CC;
+  transition: all 0.2s ease;
+}
+
+.question-checkbox:hover {
+  background-color: #f0f7ff;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.1);
+}
+
+.form-check {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-check-input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: #0066CC;
+  cursor: pointer;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+}
+
+.form-check-input:checked {
+  background-color: #0066CC;
+  border-color: #0066CC;
+}
+
+.form-check-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.form-check-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background-color: #0066CC;
+  color: white;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.badge-info {
+  background-color: #17A2B8;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.alert-info {
+  background-color: #e7f3ff;
+  border: 1px solid #0066CC;
+  color: #0066CC;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+.template-modal-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f0f0;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0066CC 0%, #004999 100%);
+  color: white;
+  border-color: #004999;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 102, 204, 0.3);
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-lg {
+  padding: 0.875rem 2rem;
+  font-size: 1rem;
+  min-width: 150px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .template-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .template-modal-header {
+    padding: 1.5rem;
+  }
+
+  .template-modal-body {
+    padding: 1.5rem;
+  }
+
+  .template-modal-footer {
+    flex-direction: column;
+  }
+
+  .btn {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+/* Question Display Styles */
+.question-display {
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #0066CC;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.question-text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.question-options {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border-left: 3px solid #ddd;
+}
+
+.option-item.correct {
+  background-color: #e8f5e9;
+  border-left-color: #4caf50;
+}
+
+.option-text {
+  font-size: 0.9rem;
+  color: #555;
+  flex: 1;
+}
+
+.option-item.correct .option-text {
+  color: #2e7d32;
+  font-weight: 500;
+}
+

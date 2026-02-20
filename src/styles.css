@@ -624,11 +624,6 @@ html {
 
 /* Focus States */
 .btn:focus,
-.btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-}
-
 .form-control:focus,
 .form-select:focus {
   box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
@@ -962,105 +957,33 @@ body {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--cognizant-blue), var(--cognizant-dark-blue));
-  color: var(--white) !important;
+  color: var(--white);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--cognizant-dark-blue), var(--cognizant-navy));
   box-shadow: var(--shadow-cognizant);
-  color: var(--white) !important;
-}
-
-.btn-primary:focus,
-.btn-primary:focus-visible {
-  background: linear-gradient(135deg, var(--cognizant-blue), var(--cognizant-dark-blue));
-  color: var(--white) !important;
-  outline: 2px solid var(--cognizant-light-blue);
-  outline-offset: 2px;
 }
 
 .btn-secondary {
   background: var(--white);
-  color: var(--cognizant-blue) !important;
+  color: var(--cognizant-blue);
   border: 2px solid var(--cognizant-blue);
 }
 
 .btn-secondary:hover {
   background: var(--cognizant-blue);
-  color: var(--white) !important;
-}
-
-.btn-secondary:focus,
-.btn-secondary:focus-visible {
-  background: var(--white);
-  color: var(--cognizant-blue) !important;
-  border: 2px solid var(--cognizant-blue);
-  outline: 2px solid var(--cognizant-light-blue);
-  outline-offset: 2px;
+  color: var(--white);
 }
 
 .btn-success {
   background: linear-gradient(135deg, var(--success), var(--success-light));
-  color: var(--white) !important;
-}
-
-.btn-success:hover,
-.btn-success:focus,
-.btn-success:focus-visible {
-  background: linear-gradient(135deg, var(--success-light), var(--success));
-  color: var(--white) !important;
+  color: var(--white);
 }
 
 .btn-danger {
   background: linear-gradient(135deg, var(--danger), var(--danger-light));
-  color: var(--white) !important;
-}
-
-.btn-danger:hover,
-.btn-danger:focus,
-.btn-danger:focus-visible {
-  background: linear-gradient(135deg, var(--danger-light), var(--danger));
-  color: var(--white) !important;
-}
-
-/* Outline Button Styles */
-.btn-outline {
-  background: white;
-  border: 2px solid #e5e7eb;
-  color: #6b7280;
-}
-
-.btn-outline:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.btn-outline.btn-danger {
-  background: #fef2f2;
-  border: 2px solid #dc2626;
-  color: #dc2626 !important;
-  font-weight: 600;
-}
-
-.btn-outline.btn-danger:hover {
-  background: #fee2e2;
-  border-color: #b91c1c;
-  color: #b91c1c !important;
-  transform: translateY(-1px);
-}
-
-.btn-outline.btn-success {
-  background: #f0fdf4;
-  border: 2px solid #16a34a;
-  color: #16a34a !important;
-  font-weight: 600;
-}
-
-.btn-outline.btn-success:hover {
-  background: #dcfce7;
-  border-color: #15803d;
-  color: #15803d !important;
-  transform: translateY(-1px);
+  color: var(--white);
 }
 
 .btn-lg {

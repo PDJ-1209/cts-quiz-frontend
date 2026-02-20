@@ -29,7 +29,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   loading = true; 
   submitting = false; // Separate flag for answer submission
   answerStates: { [key: number]: 'answered' | 'missed' } = {}; // Track answer states for progress bar
-
+  waitingForNext = false;
   participantId: number = 0;
   sessionId: number = 0;
   quizTitle: string = '';
@@ -49,7 +49,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   startedAtMs: number = 0;
   currentQuestionStartMs: number = 0;
   currentQuestionEndMs: number = 0;
-  waitingForNext: boolean = false;
   submittedIndex: number | null = null;
   private lastBackWarnAt = 0;
   private timerSyncEnabled: boolean = false; // Track if we're using host's timer
@@ -145,7 +144,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         }));
       }
 
-      const serverTimeMs = response.serverTime ? new Date(response.serverTime).getTime() : Date.now();
+      const serverTimeMs = Date.now();
       this.serverTimeOffsetMs = serverTimeMs - Date.now();
       this.startedAtMs = response.startedAt ? new Date(response.startedAt).getTime() : serverTimeMs;
       
@@ -221,6 +220,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       }
       
       this.loading = false;
+      this.currentQuestionStartMs = this.getServerNowMs();
 
       // Initialize SignalR live sync (timer sync handled via SignalR)
       this.initializeSignalR();
@@ -241,10 +241,6 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   onSelectedChange(value: string) {
     console.log('[QuizPage] onSelectedChange:', value);
     this.selected = value; // enables submit button
-  }
-
-  private getServerNowMs(): number {
-    return Date.now() + this.serverTimeOffsetMs;
   }
 
   // Remove startSyncTimer and stopSyncTimer - using SignalR instead
@@ -691,7 +687,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
   async submitAnswer(isAutoSubmit: boolean = false) {
     console.log('[QuizPage] submitAnswer called. selected =', this.selected, 'isAutoSubmit =', isAutoSubmit);
-    if (!this.currentQuestion || this.submitting || this.waitingForNext || this.submittedIndex === this.currentIndex) return;
+    if (!this.currentQuestion || this.submitting) return;
 
     try {
       const currentQuestionDetail = this.questionDetails[this.currentIndex];
@@ -765,14 +761,34 @@ export class QuizPageComponent implements OnInit, OnDestroy {
         this.score += 1;
       }
 
-      this.submittedIndex = this.currentIndex;
-      this.waitingForNext = true;
-      this.selected = null;
+      // Move to next question after a brief delay
+      setTimeout(() => {
+        this.moveToNextQuestion();
+      }, isAutoSubmit ? 0 : 1000);
 
     } catch (error: any) {
       this.submitting = false;
       console.error('[QuizPage] Error submitting answer:', error);
       this.snackBar.open('Failed to submit answer. Please try again.', 'Close', { duration: 3000 });
+    }
+  }
+
+  async moveToNextQuestion() {
+    // advance
+    this.selected = null;
+    this.waitingForNext = false;
+    if (this.currentIndex < this.questions.length - 1) {
+      this.currentIndex++;
+      this.currentQuestionStartMs = this.getServerNowMs();
+      // Timer is controlled by SignalR - no need to start manually
+      console.log('[QuizPage] advanced to index', this.currentIndex);
+    } else {
+      this.finished = true;
+      console.log('[QuizPage] finished with score:', this.score);
+      
+      // Store final score
+      localStorage.setItem('finalScore', this.score.toString());
+      localStorage.setItem('totalQuestions', this.questions.length.toString());
     }
   }
 
@@ -832,5 +848,9 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.finished = false;
     this.timerSyncEnabled = false; // Reset timer sync on restart
     console.log('[QuizPage] restart');
+  }
+
+  private getServerNowMs(): number {
+    return Date.now() + this.serverTimeOffsetMs;
   }
 }

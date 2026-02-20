@@ -88,10 +88,6 @@
           <span>Category</span>
           <input [(ngModel)]="editorMeta.category" (ngModelChange)="markDirty()" placeholder="e.g., Angular" />
         </label>
-        <label>
-          <span>Tags (comma separated)</span>
-          <input [(ngModel)]="editorMeta.tags" (ngModelChange)="markDirty()" placeholder="tag1, tag2" />
-        </label>
       </div>
     </div>
 
@@ -146,12 +142,25 @@
               </select>
             </label>
             <label>
-              <span>Points</span>
-              <input type="number" min="0" [(ngModel)]="q.points" (ngModelChange)="markDirty()" />
+              <span>Difficulty</span>
+              <select [(ngModel)]="q.difficultyLevel" (ngModelChange)="markDirty()">
+                <option *ngFor="let d of difficultyLevels" [value]="d">{{ d }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Timer (sec)</span>
+              <input type="number" min="5" [(ngModel)]="q.timerSeconds" (ngModelChange)="markDirty()" placeholder="30" />
             </label>
             <label class="checkbox-label">
               <input type="checkbox" [(ngModel)]="q.isRequired" (ngModelChange)="markDirty()" />
               <span>Required</span>
+            </label>
+          </div>
+
+          <div class="question-tags">
+            <label>
+              <span>Tags (comma separated)</span>
+              <input [(ngModel)]="q.tags" (ngModelChange)="markDirty()" placeholder="e.g., basics, loops, arrays" />
             </label>
           </div>
 

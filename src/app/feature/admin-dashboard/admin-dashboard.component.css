@@ -646,46 +646,39 @@
 }
 
 .btn-sm {
-  padding: 0.45rem 0.75rem;
-  border-radius: 3px;
+  padding: 0.5rem;
+  border-radius: 6px;
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid;
-  font-weight: 500;
 }
 
 .btn-outline {
-  background: #ffffff;
-  border-color: #d0d8e0;
-  color: #333;
+  background: transparent;
+  border: 1px solid #e9ecef;
+  color: #6b7280;
 }
 
 .btn-outline:hover {
-  background: #f5f7fa;
-  border-color: #999;
+  background: #f3f4f6;
 }
 
 .btn-danger {
-  background: #f8d7da;
-  border-color: #f5c6cb;
-  color: #721c24;
+  border-color: #dc2626;
+  color: #dc2626;
 }
 
 .btn-danger:hover {
-  background: #f5c6cb;
-  border-color: #f1b0b7;
+  background: #fef2f2;
 }
 
 .btn-success {
-  background: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
+  border-color: #16a34a;
+  color: #16a34a;
 }
 
 .btn-success:hover {
-  background: #c3e6cb;
-  border-color: #b1dfbb;
+  background: #f0fff4;
 }
 
 /* Coming Soon Placeholder */

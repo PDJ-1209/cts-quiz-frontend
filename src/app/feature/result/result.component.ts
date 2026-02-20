@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { QuizCreationService } from '../../services/quiz-creation.service';
-import { AuthService } from '../../services/auth.service';
 import { QuizListItem } from '../../models/quiz.models';
 import { QuizPublishService } from '../../services/quiz-publish.service';
 import { DashboardStatsService } from '../../services/dashboard-stats.service';
@@ -45,7 +44,6 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   private dashboardStatsService = inject(DashboardStatsService);
   private pollService = inject(PollService);
   private surveyService = inject(SurveyService);
-  private authService = inject(AuthService);
   private subscriptions: Subscription[] = [];
   
   hostQuizzes = signal<QuizListItem[]>([]);
@@ -55,7 +53,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   startTimes: { [key: number]: string } = {};
   endTimes: { [key: number]: string } = {};
   loading = signal(false);
-  currentHostId = computed(() => this.authService.currentUser()?.employeeId || '2463579');
+  currentHostId = '2463579';
   activeSessionIds: Map<string, number> = new Map(); // Map quiz number to session ID
   private statusCheckInterval: any;
   private publishingInProgress = new Set<string>(); // Track quizzes currently being published
@@ -358,7 +356,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   async loadQuizzes() {
     try {
       this.loading.set(true);
-      const quizzes = await this.store.getHostQuizzes(this.currentHostId());
+      const quizzes = await this.store.getHostQuizzes(this.currentHostId);
       
       console.log('Loaded quizzes:', quizzes.map(q => ({
         id: q.quizId,
@@ -599,7 +597,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       // Create QuizSession with scheduled start time
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
-        this.currentHostId(),
+        this.currentHostId,
         quizNumber,
         startTime, // Send scheduled start time
         endTime,
@@ -745,7 +743,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
       // Create a new QuizSession with scheduled start time
       const sessionResponse = await this.quizPublishService.createQuizSession(
         quiz.quizId,
-        this.currentHostId(),
+        this.currentHostId,
         quizNumber,
         startTime, // Send scheduled start time
         endTime,

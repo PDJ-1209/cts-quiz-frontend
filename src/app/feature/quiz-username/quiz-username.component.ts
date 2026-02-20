@@ -18,7 +18,7 @@ export class QuizUsernameComponent implements OnInit {
   showWarning = false;
   sessionCode = '';
   isValidating = false;
-  private lastBackWarnAt = 0;
+  lastBackWarnAt: number = 0;
 
   constructor(
     private router: Router, 
@@ -29,7 +29,6 @@ export class QuizUsernameComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.lockBackNavigation();
     // Get session code from query params
     this.route.queryParams.subscribe(params => {
       this.sessionCode = params['code'] || '';
@@ -151,15 +150,13 @@ export class QuizUsernameComponent implements OnInit {
         localStorage.setItem('participantName', cleaned);
         localStorage.setItem('participantId', participant.participantId.toString());
         localStorage.setItem('sessionId', participant.sessionId.toString());
-        localStorage.setItem('sessionCode', this.sessionCode);
 
         // Go to waiting room (countdown) before quiz starts
         this.router.navigate(['/countdown'], { 
           queryParams: { code: this.sessionCode }
         });
       } catch (error: any) {
-        const friendlyMessage = this.getJoinErrorMessage(error);
-        this.snackBar.open(`⚠️ ${friendlyMessage}`, 'Close', {
+        this.snackBar.open(`⚠️ ${error.message}`, 'Close', {
           duration: 5000,
           panelClass: ['error-snackbar'],
           horizontalPosition: 'center',
@@ -174,14 +171,5 @@ export class QuizUsernameComponent implements OnInit {
         verticalPosition: 'top'
       });
     }
-  }
-
-  private getJoinErrorMessage(error: any): string {
-    const rawMessage = error?.message || 'Failed to join quiz.';
-    const prefix = 'Failed to join session:';
-    if (rawMessage.startsWith(prefix)) {
-      return rawMessage.replace(prefix, '').trim();
-    }
-    return rawMessage;
   }
 }

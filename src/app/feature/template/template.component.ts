@@ -59,7 +59,6 @@ export class TemplateComponent implements OnInit {
   editorMeta = {
     name: '',
     category: '',
-    tags: '',
     templateType: 'CATEGORY',
     visibility: 'private'
   };
@@ -69,6 +68,7 @@ export class TemplateComponent implements OnInit {
   validationErrors: string[] = [];
   toast: { type: 'success' | 'error' | 'warning'; message: string } | null = null;
   questionTypes = ['MCQ', 'Single', 'Multiple', 'TrueFalse', 'ShortAnswer'];
+  difficultyLevels = ['Easy', 'Medium', 'Hard'];
   isNewTemplate = false; // Track if this is an unsaved draft
 
   constructor(
@@ -337,7 +337,6 @@ export class TemplateComponent implements OnInit {
     this.editorMeta = {
       name: templateName,
       category: '',
-      tags: '',
       templateType: 'CATEGORY',
       visibility: 'private'
     };
@@ -385,6 +384,7 @@ export class TemplateComponent implements OnInit {
       this.editorTemplate = {
         templateName: templateName,
         templateType: 'CATEGORY',
+        categoryType: this.selectedCategory,
         templateConfig: JSON.stringify({
           category: this.selectedCategory,
           questionCount: questions.length,
@@ -400,7 +400,6 @@ export class TemplateComponent implements OnInit {
       this.editorMeta = {
         name: templateName,
         category: this.selectedCategory,
-        tags: '',
         templateType: 'CATEGORY',
         visibility: 'private'
       };
@@ -441,7 +440,6 @@ export class TemplateComponent implements OnInit {
           this.editorMeta = {
             name: response.templateName,
             category: config.category || '',
-            tags: Array.isArray(config.tags) ? config.tags.join(', ') : '',
             templateType: response.templateType || 'CATEGORY',
             visibility: config.visibility || 'private'
           };
@@ -471,7 +469,6 @@ export class TemplateComponent implements OnInit {
     this.editorMeta = {
       name: template.templateName,
       category: config.category || '',
-      tags: Array.isArray(config.tags) ? config.tags.join(', ') : (config.tags || ''),
       templateType: template.templateType,
       visibility: config.visibility || 'private'
     };
@@ -505,10 +502,11 @@ export class TemplateComponent implements OnInit {
       questionText: rq.questionText || '',
       questionType: rq.questionType || 'MCQ',
       category: rq.category,
+      difficultyLevel: rq.difficultyLevel || 'Medium',
+      tags: rq.tags || '',
       order: rq.order ?? idx + 1,
-      points: rq.points ?? 1,
+      timerSeconds: rq.timerSec ?? rq.timerSeconds ?? 30,
       isRequired: rq.isRequired ?? true,
-      timerSeconds: rq.timerSec,
       options: (rq.options || []).map((opt, oi) => ({
         optionId: opt.optionId,
         optionText: opt.optionText || '',
@@ -522,7 +520,9 @@ export class TemplateComponent implements OnInit {
     return (qs || []).map((q, idx) => ({
       ...q,
       order: q.order ?? idx + 1,
-      points: q.points ?? 1,
+      timerSeconds: q.timerSeconds ?? 30,
+      difficultyLevel: q.difficultyLevel || 'Medium',
+      tags: q.tags || '',
       isRequired: q.isRequired ?? true,
       questionType: q.questionType || 'MCQ',
       options: (q.options || []).map((o, oi) => ({
@@ -571,9 +571,11 @@ export class TemplateComponent implements OnInit {
     const newQ: Question = {
       questionText: '',
       questionType: 'MCQ',
+      difficultyLevel: 'Medium',
+      tags: '',
       order: position === 'top' ? 1 : this.editorQuestions.length + 1,
       isRequired: true,
-      points: 1,
+      timerSeconds: 30,
       options: [
         { optionText: '', isCorrect: true, order: 1 },
         { optionText: '', isCorrect: false, order: 2 }
@@ -732,7 +734,6 @@ export class TemplateComponent implements OnInit {
       templateType: this.editorMeta.templateType,
       templateConfig: JSON.stringify({
         category: this.editorMeta.category,
-        tags: this.editorMeta.tags ? this.editorMeta.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         visibility: this.editorMeta.visibility,
         questionCount: this.editorQuestions.length
       }),
@@ -741,8 +742,10 @@ export class TemplateComponent implements OnInit {
         questionId: q.questionId, // Existing questions have ID, new ones are undefined/null
         questionText: (q.questionText || '').trim(),
         questionType: q.questionType || 'MCQ',
+        difficultyLevel: q.difficultyLevel || 'Medium',
+        tags: q.tags || '',
         isRequired: q.isRequired ?? true,
-        points: q.points ?? 1,
+        timerSeconds: q.timerSeconds ?? 30,
         order: idx + 1,
         options: (q.options || []).map((o, oi) => ({
           optionId: o.optionId,
@@ -850,6 +853,11 @@ export class TemplateComponent implements OnInit {
         alert('Failed to delete template. ' + msg);
       }
     });
+  }
+
+  // Helper to get option labels (A, B, C, D...)
+  getOptionLabel(index: number): string {
+    return String.fromCharCode(65 + (index % 26)); // A=65, B=66, etc.
   }
 
   // —— Utility: Convert Angular HttpErrorResponse into readable text

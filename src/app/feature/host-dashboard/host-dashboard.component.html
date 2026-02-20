@@ -71,7 +71,7 @@
       <div class="col-12">
         <div class="welcome-card">
           <div class="welcome-content">
-            <h1 class="welcome-title">Welcome, {{ hostName() }}!</h1>
+            <h1 class="welcome-title">Welcome, {{ hostName }}!</h1>
             <h3 class="welcome-subtitle">{{ welcomeMessage() }}</h3>
             <p class="welcome-description">Create, manage, and deploy your learning content with our professional platform.</p>
           </div>
@@ -436,4 +436,138 @@
   </div>
   }
 </div>
+
+<!-- Template Creation Modal -->
+<div class="template-modal-overlay" *ngIf="showTemplateModal()" (click)="closeTemplateModal()">
+  <div class="template-modal-content" (click)="$event.stopPropagation()">
+    <div class="template-modal-header">
+      <h2 class="template-modal-title">Create New Template</h2>
+      <button class="template-modal-close" (click)="closeTemplateModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="template-modal-body">
+      <form (ngSubmit)="publishTemplate()">
+        <!-- Template Name Field -->
+        <div class="form-group mb-4">
+          <label for="templateName" class="form-label fw-bold">Template Name *</label>
+          <input 
+            type="text"
+            id="templateName"
+            class="form-control form-control-lg"
+            placeholder="Enter template name (e.g., Java Basics Quiz)"
+            [(ngModel)]="templateName"
+            name="templateName"
+            required>
+          <small class="form-text text-muted">Give your template a descriptive name</small>
+        </div>
+
+        <!-- Category Selection -->
+        <div class="form-group mb-4">
+          <label for="category" class="form-label fw-bold">Select Category *</label>
+          <select 
+            id="category"
+            class="form-control form-control-lg"
+            [(ngModel)]="selectedCategory"
+            (change)="onCategoryChange(selectedCategory())"
+            name="category"
+            required>
+            <option value="">-- Choose a Category --</option>
+            <option *ngFor="let cat of templateCategories" [value]="cat">{{ cat }}</option>
+          </select>
+          <small class="form-text text-muted">Select the category of questions for this template</small>
+        </div>
+
+        <!-- Questions Selection (appears after category selection) -->
+        <div class="form-group mb-4" *ngIf="selectedCategory()">
+          <label class="form-label fw-bold">Select Questions (Max 3) *</label>
+          <div *ngIf="loadingQuestions()" class="alert alert-info">
+            Loading questions for {{ selectedCategory() }}...
+          </div>
+          <div *ngIf="!loadingQuestions() && availableQuestions().length === 0" class="alert alert-warning">
+            No questions found for this category.
+          </div>
+          <div *ngIf="!loadingQuestions() && availableQuestions().length > 0" class="questions-container">
+            <div *ngFor="let question of availableQuestions()" class="question-checkbox mb-3">
+              <div class="form-check">
+                <input 
+                  type="checkbox"
+                  class="form-check-input"
+                  [id]="'q_' + question.questionId"
+                  [checked]="isQuestionSelected(question.questionId)"
+                  (change)="toggleQuestion(question.questionId)"
+                  [disabled]="selectedQuestions().size >= 3 && !isQuestionSelected(question.questionId)">
+                <label class="form-check-label" [for]="'q_' + question.questionId">
+                  {{ question.questionText }}
+                  <span class="badge badge-info ms-2">
+                    {{ question.category }} - Difficulty: {{ question.difficultyLevel }}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <small class="form-text text-muted d-block mt-2">
+            Selected: {{ selectedQuestions().size }}/3 questions
+          </small>
+        </div>
+
+        <!-- Display Questions for Viewing Template -->
+        <div class="form-group mb-4" *ngIf="currentTemplate() && displayedQuestions().length > 0">
+          <label class="form-label fw-bold">Template Questions</label>
+          <div class="questions-container">
+            <div *ngFor="let question of displayedQuestions()" class="question-display mb-3">
+              <div class="question-header">
+                <h6 class="question-text">{{ question.questionText }}</h6>
+                <span class="badge badge-info">
+                  {{ question.category }} - Difficulty: {{ question.difficultyLevel }}
+                </span>
+              </div>
+              <div class="question-options">
+                <div *ngFor="let option of question.options" class="option-item" [class.correct]="option.isCorrect">
+                  <span class="option-text">{{ option.optionText }}</span>
+                  <span *ngIf="option.isCorrect" class="badge bg-success ms-2">Correct</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template Config/Description -->
+        <div class="form-group mb-4">
+          <label for="templateConfig" class="form-label fw-bold">Template Configuration *</label>
+          <textarea 
+            id="templateConfig"
+            class="form-control form-control-lg"
+            rows="4"
+            placeholder="Describe the template configuration and requirements..."
+            [(ngModel)]="templateConfig"
+            name="templateConfig"
+            required></textarea>
+          <small class="form-text text-muted">Add configuration details or notes about this template</small>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="template-modal-footer">
+          <button 
+            type="button" 
+            class="btn btn-outline-secondary btn-lg"
+            (click)="closeTemplateModal()"
+            [disabled]="isSubmitting()">
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary btn-lg"
+            [disabled]="isSubmitting()">
+            <i class="fas fa-check me-2"></i>
+            {{ isSubmitting() ? 'Publishing...' : 'Publish Template' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 }
+
