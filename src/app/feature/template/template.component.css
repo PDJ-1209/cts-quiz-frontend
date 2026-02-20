@@ -1448,6 +1448,34 @@
     accent-color: #667eea;
 }
 
+/* Question Tags Section */
+.question-tags {
+    margin-bottom: 12px;
+}
+
+.question-tags label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.question-tags input {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.question-tags input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 /* Options Section */
 .options-section {
     background: #f9fafb;

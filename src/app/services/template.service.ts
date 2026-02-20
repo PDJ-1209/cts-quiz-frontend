@@ -254,6 +254,7 @@ export interface RenderedQuestion {
   questionType?: string;
   category?: string;
   difficultyLevel?: string;
+  tags?: string;
   order: number;
   timerSeconds?: number;
   isRequired: boolean;
