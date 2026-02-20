@@ -1,0 +1,163 @@
+<div class="poll-analytics-container">
+  <!-- Navigation Bar -->
+  <nav class="analytics-navbar">
+    <div class="navbar-content">
+      <h1 class="analytics-title">📊 Poll Analytics</h1>
+      <button class="export-btn" (click)="exportAnalytics()" title="Export Analytics">
+        📥 Export
+      </button>
+    </div>
+  </nav>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading poll analytics...</p>
+    </div>
+  }
+
+  <!-- Analytics Cards -->
+  <div class="analytics-cards">
+    <div class="analytics-card card-questions">
+      <div class="card-icon">❓</div>
+      <div class="card-content">
+        <h3>{{ totalQuestions() }}</h3>
+        <p>Total Questions</p>
+      </div>
+    </div>
+
+    <div class="analytics-card card-participants">
+      <div class="card-icon">👥</div>
+      <div class="card-content">
+        <h3>{{ totalParticipants() }}</h3>
+        <p>Total Participants</p>
+      </div>
+    </div>
+
+    <div class="analytics-card card-published">
+      <div class="card-icon">📅</div>
+      <div class="card-content">
+        <h3>{{ publishedDate() }}</h3>
+        <p>Published Date</p>
+      </div>
+    </div>
+
+    <div class="analytics-card card-votes">
+      <div class="card-icon">🗳️</div>
+      <div class="card-content">
+        <h3>{{ totalVotes() }}</h3>
+        <p>Total Votes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section">
+    <div class="search-container">
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Search questions..."
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+        (keyup.enter)="searchQuestions()">
+      <button class="search-btn" (click)="searchQuestions()">
+        🔍 Search
+      </button>
+    </div>
+  </div>
+
+  <!-- Question-wise Analytics Section -->
+  <div class="question-analytics-section">
+    <h2 class="section-title">📈 Question-wise Analytics</h2>
+
+    <div class="table-container">
+      <table class="analytics-table">
+        <thead>
+          <tr>
+            <th>Question Number</th>
+            <th>Question</th>
+            <th>Analytics</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (poll of filteredPolls(); track poll.pollId) {
+            <tr>
+              <td class="question-number">
+                <span class="q-badge">Q{{ $index + 1 }}</span>
+              </td>
+              <td class="question-text">{{ poll.pollQuestion }}</td>
+              <td class="analytics-actions">
+                <div class="action-group">
+                  <button 
+                    class="view-btn" 
+                    (click)="toggleChartView(poll.pollId)"
+                    title="Toggle Chart View">
+                    {{ activePollId() === poll.pollId ? '👁️ Hide' : '👁️ View' }}
+                  </button>
+                  
+                  <select 
+                    class="chart-type-select"
+                    [(ngModel)]="selectedChartTypes[poll.pollId]"
+                    (change)="onChartTypeChange(poll.pollId)"
+                    [disabled]="activePollId() !== poll.pollId">
+                    <option value="pie">🥧 Pie Chart</option>
+                    <option value="line">📈 Line Graph</option>
+                    <option value="doughnut">🍩 Donut Chart</option>
+                    <option value="wordcloud">☁️ Word Cloud</option>
+                  </select>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Chart Row (Expandable) -->
+            @if (activePollId() === poll.pollId) {
+              <tr class="chart-row">
+                <td colspan="3">
+                  <div class="chart-container">
+                    @if (selectedChartTypes[poll.pollId] === 'wordcloud') {
+                      <div class="wordcloud-wrapper">
+                        <canvas 
+                          #wordcloudCanvas
+                          [id]="'wordcloud-' + poll.pollId"
+                          class="wordcloud-canvas">
+                        </canvas>
+                      </div>
+                    } @else {
+                      <div class="chart-wrapper">
+                        <canvas 
+                          [id]="'chart-' + poll.pollId"
+                          class="analytics-chart">
+                        </canvas>
+                      </div>
+                    }
+                    
+                    <button 
+                      class="download-chart-btn"
+                      (click)="downloadChart(poll.pollId)"
+                      title="Download Chart">
+                      💾 Download Chart
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+          
+          @if (filteredPolls().length === 0) {
+            <tr>
+              <td colspan="3" class="no-results">
+                <div class="empty-state">
+                  <div class="empty-icon">🔍</div>
+                  <h3>No Results Found</h3>
+                  <p>Try adjusting your search query</p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

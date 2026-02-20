@@ -54,6 +54,7 @@ export interface CreateQuestionRequest {
 export interface CreateQuestionOptionRequest {
   option_text: string;
   display_order: number;
+  score_value?: number;
 }
 
 export interface CreateSurveyResponse {
@@ -73,7 +74,7 @@ export interface CreateSurveyApiRequest {
 }
 
 export interface CreateSurveyQuestionApiRequest {
-  sessionId: number;
+  sessionId?: number | null;
   questionText: string;
   questionType: string;
   questionOrder: number;
@@ -97,7 +98,34 @@ export interface SurveyOverview {
   description?: string | null;
   isAnonymous: boolean;
   status: string;
+  category?: string;
+  sessionCode?: string;
+  createdAt?: Date | string;
   questions?: SurveyQuestionOverview[];
+}
+
+// Word Cloud Models
+export interface WordCloudItem {
+  word: string;
+  frequency: number;
+  weight: number; // 0-1 normalized weight
+}
+
+export interface WordCloudResponse {
+  surveyId: number;
+  sessionId: number;
+  totalResponses: number;
+  uniqueWords: number;
+  words: WordCloudItem[];
+  generatedAt: Date | string;
+}
+
+export interface SurveyTextResponse {
+  responseId: number;
+  participantId: number;
+  questionId: number;
+  textResponse: string;
+  submittedAt: Date | string;
 }
 
 export interface SurveyQuestionOverview {

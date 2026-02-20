@@ -1,0 +1,84 @@
+<div class="result-poll-container">
+  <div class="result-header mb-4">
+    <div>
+      <h2>📊 Poll Results</h2>
+      <p class="text-muted" *ngIf="pollResults">Poll: {{ pollResults.pollName }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" (click)="refreshResults()" [disabled]="isLoading">
+        🔄 Refresh
+      </button>
+      <button class="btn btn-success" (click)="downloadResults()" [disabled]="isLoading">
+        📥 Download CSV
+      </button>
+      <button class="btn btn-secondary" (click)="goBack()">
+        ← Back
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="text-center py-5">
+      <div class="spinner-border mb-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p>Loading poll results...</p>
+    </div>
+  } @else if (pollResults) {
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">🗳️ {{ pollResults.pollName }}</h5>
+          <span class="badge bg-primary">Total Votes: {{ pollResults.totalVotes }}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        @if (pollResults.options.length > 0) {
+          <div class="poll-results-list">
+            @for (option of pollResults.options; track option.optionId) {
+              <div class="poll-option mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="option-text"><strong>{{ option.optionText }}</strong></span>
+                  <span class="badge bg-info">{{ option.voteCount }} votes ({{ option.percentage.toFixed(1) }}%)</span>
+                </div>
+                <div class="progress" style="height: 25px;">
+                  <div class="progress-bar" 
+                       [style.width.%]="getPercentageBarWidth(option)"
+                       [class.bg-success]="option.percentage > 50"
+                       [class.bg-warning]="option.percentage > 20 && option.percentage <= 50"
+                       [class.bg-info]="option.percentage <= 20">
+                    {{ (getPercentageBarWidth(option)).toFixed(1) }}%
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="alert alert-warning">
+            <strong>⚠️ No Vote Data</strong>
+            <p class="mb-0">This poll hasn't received any votes yet.</p>
+          </div>
+        }
+
+        @if (pollResults.pollStatus === 'Completed') {
+          <div class="alert alert-success mt-3 mb-0">
+            <strong>✅ Poll Completed</strong>
+            <p class="mb-0">Total participation: {{ pollResults.participationPercentage.toFixed(1) }}%</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Live Update Info -->
+    <div class="alert alert-info">
+      <small>
+        💡 <strong>Tip:</strong> Click "Refresh" to see the latest vote distribution. This page auto-updates every time the host publishes new results.
+      </small>
+    </div>
+  } @else {
+    <div class="alert alert-danger">
+      <strong>❌ No Poll Results Found</strong>
+      <p class="mb-0">Unable to load poll results. Please try again.</p>
+    </div>
+  }
+</div>

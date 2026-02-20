@@ -56,6 +56,7 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
   sessionCode = signal<string>('');
   quizId = signal<number>(0);
   sessionId = signal<number>(0);
+  sessionType = signal<'quiz' | 'survey' | 'poll'>('quiz'); // Track session type for content validation
   mode = signal<'manual' | 'auto'>('auto'); // Start in auto mode
   connectionStatus = signal<'connecting' | 'connected' | 'disconnected'>('connecting');
   hostJustJoined = signal<boolean>(false); // Track if host just joined mid-session
@@ -159,30 +160,48 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     console.log('[HostLobby] Component initialized');
-    // Get query parameters
-    this.route.queryParams.subscribe(async params => {
-      const code = params['sessionCode'] || '';
-      const id = +params['quizId'] || 0;
-      const mode = params['mode'] === 'auto' ? 'auto' : 'manual';
+    
+    // Check localStorage for session type (quiz/survey/poll)
+    const storedSessionType = localStorage.getItem('sessionType');
+    if (storedSessionType === 'survey' || storedSessionType === 'poll') {
+      this.sessionType.set(storedSessionType);
+      console.log('[HostLobby] Session type from localStorage:', storedSessionType);
       
-      console.log('[HostLobby] Params:', { sessionCode: code, quizId: id, mode });
-      
-      this.sessionCode.set(code);
-      this.quizId.set(id);
-      this.mode.set(mode);
-      
-      if (this.sessionCode()) {
-        console.log('[HostLobby] Loading session data...');
-        await this.loadSessionData();
-        console.log('[HostLobby] Session loaded, initializing SignalR...');
-        await this.initializeSignalR();
-        console.log('[HostLobby] Initialization complete');
-        console.log('[HostLobby] Final state - waiting:', this.waitingForStart(), 'started:', this.quizStarted(), 'countdown:', this.countdown());
-      } else {
-        this.snackBar.open('⚠️ No session code provided', 'Close', { duration: 4000 });
-        this.router.navigate(['/host/manage-content']);
+      // Get sessionId from localStorage
+      const storedSessionId = localStorage.getItem('sessionId');
+      if (storedSessionId) {
+        this.sessionId.set(+storedSessionId);
+        // Load session data for survey/poll
+        this.loadSessionData();
+        this.initializeSignalR();
       }
-    });
+    } else {
+      // Default quiz flow - check query params
+      this.route.queryParams.subscribe(async params => {
+        const code = params['sessionCode'] || '';
+        const id = +params['quizId'] || 0;
+        const mode = params['mode'] === 'auto' ? 'auto' : 'manual';
+        
+        console.log('[HostLobby] Params:', { sessionCode: code, quizId: id, mode });
+        
+        this.sessionCode.set(code);
+        this.quizId.set(id);
+        this.mode.set(mode);
+        this.sessionType.set('quiz');
+        
+        if (this.sessionCode()) {
+          console.log('[HostLobby] Loading session data...');
+          await this.loadSessionData();
+          console.log('[HostLobby] Session loaded, initializing SignalR...');
+          await this.initializeSignalR();
+          console.log('[HostLobby] Initialization complete');
+          console.log('[HostLobby] Final state - waiting:', this.waitingForStart(), 'started:', this.quizStarted(), 'countdown:', this.countdown());
+        } else {
+          this.snackBar.open('⚠️ No session code provided', 'Close', { duration: 4000 });
+          this.router.navigate(['/host/manage-content']);
+        }
+      });
+    }
   }
 
   ngOnDestroy() {
@@ -200,149 +219,231 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
    */
   private async loadSessionData() {
     try {
-      console.log('[HostLobby] Loading session data for code:', this.sessionCode());
+      const sessionType = this.sessionType();
+      console.log('[HostLobby] Loading session data for type:', sessionType);
       
-      // Get session data using the host endpoint (Area-based route)
-      const sessionResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/by-code/${this.sessionCode()}`);
-      
-      if (!sessionResponse.ok) {
-        console.error('[HostLobby] Session fetch failed:', sessionResponse.status, sessionResponse.statusText);
-        throw new Error(`Failed to fetch session: ${sessionResponse.statusText}`);
-      }
-      
-      const session = await sessionResponse.json();
-      console.log('[HostLobby] Session data:', session);
-      
-      this.sessionId.set(session.sessionId);
-      this.quizId.set(session.quizId);
-      
-      // ✅ SET LEADERBOARD SETTINGS FROM SESSION DATA
-      if (session.showLeaderboardAfterQuestion !== undefined) {
-        this.showLeaderboardAfterQuestion.set(session.showLeaderboardAfterQuestion);
-        console.log('[HostLobby] ShowLeaderboardAfterQuestion:', session.showLeaderboardAfterQuestion);
-      }
-      if (session.showLeaderboardAtEndOnly !== undefined) {
-        this.showLeaderboardAtEndOnly.set(session.showLeaderboardAtEndOnly);
-        console.log('[HostLobby] ShowLeaderboardAtEndOnly:', session.showLeaderboardAtEndOnly);
-      }
-      
-      // Get quiz questions using the correct Area-based route
-      const questionsResponse = await fetch(`http://localhost:5195/api/Participate/Session/${session.sessionId}/questions`);
-      
-      if (!questionsResponse.ok) {
-        console.error('[HostLobby] Questions fetch failed:', questionsResponse.status, questionsResponse.statusText);
-        throw new Error(`Failed to fetch questions: ${questionsResponse.statusText}`);
-      }
-      
-      const data = await questionsResponse.json();
-      console.log('[HostLobby] Questions data:', data);
-      console.log('[HostLobby] Questions array:', data.questions);
-      
-      this.sessionData.set({
-        sessionId: session.sessionId,
-        sessionCode: session.sessionCode || this.sessionCode(),
-        quizName: data.quizTitle || session.quizName || 'Quiz',
-        startedAt: session.startedAt,
-        endedAt: session.endedAt,
-        status: session.status || 'Active',
-        totalQuestions: data.questions?.length || 0
-      });
-      
-      // Map questions
-      const questions: QuestionData[] = data.questions?.map((q: any, index: number) => ({
-        questionId: q.questionId,
-        questionText: q.questionText,
-        timerSeconds: q.timerSeconds || 30,
-        questionNumber: index + 1
-      })) || [];
-      
-      this.allQuestions.set(questions);
-      console.log('[HostLobby] Loaded questions:', questions.length);
-      
-      // Fetch current participant count
-      try {
-        const participantsResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/${session.sessionId}/participants/count`);
-        if (participantsResponse.ok) {
-          const countData = await participantsResponse.json();
-          const initialCount = countData.count || countData.participantCount || 0;
-          console.log('[HostLobby] Initial participant count:', initialCount);
-          this.participantProgress.update(p => ({
-            ...p,
-            totalParticipants: initialCount
-          }));
-        }
-      } catch (error) {
-        console.warn('[HostLobby] Could not fetch participant count:', error);
-        // Will rely on SignalR update instead
-      }
-      
-      if (questions.length > 0) {
-        this.currentQuestion.set(questions[0]);
-        this.currentQuestionId.set(questions[0].questionId);
+      if (sessionType === 'survey' || sessionType === 'poll') {
+        // Load survey/poll session data from sessionId
+        const sessionId = this.sessionId();
+        console.log('[HostLobby] Loading session ID:', sessionId);
         
-        // ✅ CHECK IF TIMER DATA EXISTS IN SESSION (quiz already started)
-        if (session.currentQuestionId && session.currentQuestionStartTime && session.timerDurationSeconds) {
-          console.log('[HostLobby] Quiz already in progress - syncing timer from session data');
+        const sessionResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/${sessionId}`);
+        
+        if (!sessionResponse.ok) {
+          console.error('[HostLobby] Session fetch failed:', sessionResponse.status, sessionResponse.statusText);
+          throw new Error(`Failed to fetch session: ${sessionResponse.statusText}`);
+        }
+        
+        const session = await sessionResponse.json();
+        console.log('[HostLobby] Session data:', session);
+        
+        this.sessionCode.set(session.sessionCode || 'N/A');
+        
+        // Load questions based on type
+        let questionsData;
+        if (sessionType === 'survey') {
+          const surveyId = localStorage.getItem('surveyId');
+          const surveyResponse = await fetch(`http://localhost:5195/api/Host/Survey/${surveyId}`);
+          if (surveyResponse.ok) {
+            questionsData = await surveyResponse.json();
+            console.log('[HostLobby] Survey questions:', questionsData);
+          }
+        } else {
+          const pollId = localStorage.getItem('pollId');
+          const pollResponse = await fetch(`http://localhost:5195/api/Host/Poll/${pollId}`);
+          if (pollResponse.ok) {
+            questionsData = await pollResponse.json();
+            console.log('[HostLobby] Poll questions:', questionsData);
+          }
+        }
+        
+        this.sessionData.set({
+          sessionId: session.sessionId,
+          sessionCode: session.sessionCode || 'N/A',
+          quizName: questionsData?.title || questionsData?.pollTitle || sessionType.charAt(0).toUpperCase() + sessionType.slice(1),
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          status: session.status || 'Active',
+          totalQuestions: questionsData?.questions?.length || questionsData?.options?.length || 0
+        });
+        
+        // Map questions (for survey) or create single question (for poll)
+        let questions: QuestionData[] = [];
+        if (sessionType === 'survey' && questionsData?.questions) {
+          questions = questionsData.questions.map((q: any, index: number) => ({
+            questionId: q.surveyQuestionId || index + 1,
+            questionText: q.questionText,
+            timerSeconds: 60, // Default timer for surveys
+            questionNumber: index + 1
+          }));
+        } else if (sessionType === 'poll' && questionsData) {
+          questions = [{
+            questionId: questionsData.pollId || 1,
+            questionText: questionsData.pollQuestion || 'Poll Question',
+            timerSeconds: 60,
+            questionNumber: 1
+          }];
+        }
+        
+        this.allQuestions.set(questions);
+        console.log('[HostLobby] Loaded questions:', questions.length);
+        
+        if (questions.length > 0) {
+          this.currentQuestion.set(questions[0]);
+          this.currentQuestionId.set(questions[0].questionId);
+        }
+        
+        // For survey/poll, start immediately in manual mode
+        this.mode.set('manual');
+        this.waitingForStart.set(false);
+        this.quizStarted.set(true);
+        
+      } else {
+        // Original quiz flow
+        console.log('[HostLobby] Loading session data for code:', this.sessionCode());
+        
+        // Get session data using the host endpoint (Area-based route)
+        const sessionResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/by-code/${this.sessionCode()}`);
+        
+        if (!sessionResponse.ok) {
+          console.error('[HostLobby] Session fetch failed:', sessionResponse.status, sessionResponse.statusText);
+          throw new Error(`Failed to fetch session: ${sessionResponse.statusText}`);
+        }
+        
+        const session = await sessionResponse.json();
+        console.log('[HostLobby] Session data:', session);
+        
+        this.sessionId.set(session.sessionId);
+        this.quizId.set(session.quizId);
+        
+        // ✅ SET LEADERBOARD SETTINGS FROM SESSION DATA
+        if (session.showLeaderboardAfterQuestion !== undefined) {
+          this.showLeaderboardAfterQuestion.set(session.showLeaderboardAfterQuestion);
+          console.log('[HostLobby] ShowLeaderboardAfterQuestion:', session.showLeaderboardAfterQuestion);
+        }
+        if (session.showLeaderboardAtEndOnly !== undefined) {
+          this.showLeaderboardAtEndOnly.set(session.showLeaderboardAtEndOnly);
+          console.log('[HostLobby] ShowLeaderboardAtEndOnly:', session.showLeaderboardAtEndOnly);
+        }
+        
+        // Get quiz questions using the correct Area-based route
+        const questionsResponse = await fetch(`http://localhost:5195/api/Participate/Session/${session.sessionId}/questions`);
+        
+        if (!questionsResponse.ok) {
+          console.error('[HostLobby] Questions fetch failed:', questionsResponse.status, questionsResponse.statusText);
+          throw new Error(`Failed to fetch questions: ${questionsResponse.statusText}`);
+        }
+        
+        const data = await questionsResponse.json();
+        console.log('[HostLobby] Questions data:', data);
+        console.log('[HostLobby] Questions array:', data.questions);
+        
+        this.sessionData.set({
+          sessionId: session.sessionId,
+          sessionCode: session.sessionCode || this.sessionCode(),
+          quizName: data.quizTitle || session.quizName || 'Quiz',
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          status: session.status || 'Active',
+          totalQuestions: data.questions?.length || 0
+        });
+        
+        // Map questions
+        const questions: QuestionData[] = data.questions?.map((q: any, index: number) => ({
+          questionId: q.questionId,
+          questionText: q.questionText,
+          timerSeconds: q.timerSeconds || 30,
+          questionNumber: index + 1
+        })) || [];
+        
+        this.allQuestions.set(questions);
+        console.log('[HostLobby] Loaded questions:', questions.length);
+        
+        // Fetch current participant count
+        try {
+          const participantsResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/${session.sessionId}/participants/count`);
+          if (participantsResponse.ok) {
+            const countData = await participantsResponse.json();
+            const initialCount = countData.count || countData.participantCount || 0;
+            console.log('[HostLobby] Initial participant count:', initialCount);
+            this.participantProgress.update(p => ({
+              ...p,
+              totalParticipants: initialCount
+            }));
+          }
+        } catch (error) {
+          console.warn('[HostLobby] Could not fetch participant count:', error);
+          // Will rely on SignalR update instead
+        }
+        
+        if (questions.length > 0) {
+          this.currentQuestion.set(questions[0]);
+          this.currentQuestionId.set(questions[0].questionId);
           
-          // Calculate remaining time from session data
-          const startTime = new Date(session.currentQuestionStartTime).getTime();
-          const now = Date.now();
-          const elapsed = (now - startTime) / 1000; // seconds
-          const remaining = Math.max(0, Math.floor(session.timerDurationSeconds - elapsed));
-          
-          // Find the current question from session
-          const currentQ = questions.find(q => q.questionId === session.currentQuestionId);
-          if (currentQ) {
-            this.currentQuestion.set(currentQ);
-            this.currentQuestionId.set(currentQ.questionId);
+          // ✅ CHECK IF TIMER DATA EXISTS IN SESSION (quiz already started)
+          if (session.currentQuestionId && session.currentQuestionStartTime && session.timerDurationSeconds) {
+            console.log('[HostLobby] Quiz already in progress - syncing timer from session data');
+            
+            // Calculate remaining time from session data
+            const startTime = new Date(session.currentQuestionStartTime).getTime();
+            const now = Date.now();
+            const elapsed = (now - startTime) / 1000; // seconds
+            const remaining = Math.max(0, Math.floor(session.timerDurationSeconds - elapsed));
+            
+            // Find the current question from session
+            const currentQ = questions.find(q => q.questionId === session.currentQuestionId);
+            if (currentQ) {
+              this.currentQuestion.set(currentQ);
+              this.currentQuestionId.set(currentQ.questionId);
+            }
+            
+            this.questionTimer.set({
+              questionId: session.currentQuestionId,
+              remainingSeconds: remaining,
+              totalSeconds: session.timerDurationSeconds
+            });
+            
+            console.log('[HostLobby] Timer synced from session - Remaining:', remaining, 'Total:', session.timerDurationSeconds);
+          } else {
+            // No timer data in session, use default from question
+            this.questionTimer.set({
+              questionId: questions[0].questionId,
+              remainingSeconds: questions[0].timerSeconds,
+              totalSeconds: questions[0].timerSeconds
+            });
+            console.log('[HostLobby] Set default timer from question:', questions[0].timerSeconds);
           }
           
-          this.questionTimer.set({
-            questionId: session.currentQuestionId,
-            remainingSeconds: remaining,
-            totalSeconds: session.timerDurationSeconds
-          });
-          
-          console.log('[HostLobby] Timer synced from session - Remaining:', remaining, 'Total:', session.timerDurationSeconds);
-        } else {
-          // No timer data in session, use default from question
-          this.questionTimer.set({
-            questionId: questions[0].questionId,
-            remainingSeconds: questions[0].timerSeconds,
-            totalSeconds: questions[0].timerSeconds
-          });
-          console.log('[HostLobby] Set default timer from question:', questions[0].timerSeconds);
+          const currentQ = this.currentQuestion();
+          console.log('[HostLobby] Set current question:', currentQ?.questionText || 'N/A');
         }
         
-        const currentQ = this.currentQuestion();
-        console.log('[HostLobby] Set current question:', currentQ?.questionText || 'N/A');
-      }
-      
-      // Check if quiz has started
-      if (session.startedAt) {
-        const startTime = new Date(session.startedAt).getTime();
-        const now = Date.now();
-        
-        if (startTime <= now) {
-          console.log('[HostLobby] Quiz already started');
-          this.quizStarted.set(true);
-          this.waitingForStart.set(false);
+        // Check if quiz has started
+        if (session.startedAt) {
+          const startTime = new Date(session.startedAt).getTime();
+          const now = Date.now();
+          
+          if (startTime <= now) {
+            console.log('[HostLobby] Quiz already started');
+            this.quizStarted.set(true);
+            this.waitingForStart.set(false);
+          } else {
+            // Calculate countdown
+            const secondsUntilStart = Math.floor((startTime - now) / 1000);
+            console.log('[HostLobby] Quiz starts in', secondsUntilStart, 'seconds');
+            this.countdown.set(secondsUntilStart);
+            this.waitingForStart.set(true);
+            this.quizStarted.set(false);
+            this.startCountdown();
+          }
         } else {
-          // Calculate countdown
-          const secondsUntilStart = Math.floor((startTime - now) / 1000);
-          console.log('[HostLobby] Quiz starts in', secondsUntilStart, 'seconds');
-          this.countdown.set(secondsUntilStart);
+          console.log('[HostLobby] No start time set, entering waiting mode with default countdown');
+          // No start time set, quiz is waiting to be started manually
+          this.countdown.set(300); // 5 minutes default
           this.waitingForStart.set(true);
           this.quizStarted.set(false);
           this.startCountdown();
         }
-      } else {
-        console.log('[HostLobby] No start time set, entering waiting mode with default countdown');
-        // No start time set, quiz is waiting to be started manually
-        this.countdown.set(300); // 5 minutes default
-        this.waitingForStart.set(true);
-        this.quizStarted.set(false);
-        this.startCountdown();
       }
     } catch (error) {
       console.error('[HostLobby] Failed to load session data:', error);

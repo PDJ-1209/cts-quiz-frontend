@@ -109,22 +109,23 @@
         
         <!-- Quizzes Tab -->
         @if (selectedContentType() === 'quizzes') {
-          <div class="table-responsive">
-            <table class="table table-hover">
-              <thead>
-                <tr>
-                  <th>Quiz Number</th>
-                  <th>Quiz Name</th>
-                  <th>Category</th>
-                  <th>Questions</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Start Time</th>
-                  <th>Publish</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          @if (hostQuizzes().length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Quiz Number</th>
+                    <th>Quiz Name</th>
+                    <th>Category</th>
+                    <th>Questions</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
                 @for (quiz of hostQuizzes(); track quiz.quizId) {
                   <tr>
                     <td><code class="text-primary">{{ quiz.quizNumber }}</code></td>
@@ -287,6 +288,7 @@
             <p class="text-muted">You haven't created any quizzes yet.</p>
           </div>
         }
+        }
         
         <!-- Surveys Tab -->
         @if (selectedContentType() === 'surveys') {
@@ -295,49 +297,112 @@
               <table class="table table-hover">
                 <thead>
                   <tr>
-                    <th>Survey ID</th>
-                    <th>Title</th>
+                    <th>Session Code</th>
+                    <th>Survey Name</th>
+                    <th>Category</th>
                     <th>Questions</th>
                     <th>Status</th>
-                    <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (survey of hostSurveys(); track survey.surveyId) {
                     <tr>
-                      <td><code class="text-primary">{{ survey.surveyId }}</code></td>
+                      <td><code class="text-primary">{{ survey.sessionCode || 'N/A' }}</code></td>
                       <td><strong>{{ survey.title }}</strong></td>
+                      <td><span class="badge bg-secondary">{{ survey.category || 'General' }}</span></td>
                       <td><span class="badge bg-info">{{ survey.questions?.length || 0 }}</span></td>
-                      <td>
+                      <td class="text-center">
                         <span 
                           class="badge" 
                           [class.bg-warning]="survey.status.toLowerCase() === 'draft'"
-                          [class.bg-success]="survey.status.toLowerCase() !== 'draft'">
+                          [class.bg-success]="survey.status.toLowerCase() === 'active'"
+                          [class.bg-info]="survey.status.toLowerCase() === 'completed'"
+                          [class.bg-primary]="survey.status.toLowerCase() === 'published'">
                           {{ survey.status || 'Draft' }}
                         </span>
                       </td>
-                      <td>
-                        <span class="badge" [class.bg-success]="survey.isAnonymous" [class.bg-secondary]="!survey.isAnonymous">
-                          {{ survey.isAnonymous ? 'Yes' : 'No' }}
-                        </span>
+                      <td>{{ survey.createdAt | date:'short' }}</td>
+                      <td class="time-cell">
+                        <input 
+                          type="datetime-local" 
+                          class="form-control form-control-sm time-input"
+                          [value]="startTimes[survey.surveyId] || ''"
+                          (change)="onStartTimeChange(survey.surveyId, $event, 'survey')"
+                          placeholder="Start time"
+                          [disabled]="survey.status.toLowerCase() === 'published' || survey.status.toLowerCase() === 'active' || survey.status.toLowerCase() === 'completed'"
+                          [id]="'start-survey-' + survey.surveyId">
                       </td>
-                      <td>{{ survey.sessionId || 'N/A' }}</td>
+                      <td class="publish-cell">
+                        @if (survey.status.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success publish-btn"
+                            (click)="publishSurvey(survey.surveyId)">
+                            📤 Publish
+                          </button>
+                        } @else if (survey.status.toLowerCase() === 'published' || survey.status.toLowerCase() === 'active') {
+                          <button 
+                            class="btn btn-sm btn-primary enter-lobby-btn"
+                            (click)="enterLobby(survey.surveyId, survey.surveyId, 'survey')"
+                            title="Enter Host Lobby">
+                            🎮 Enter Lobby
+                          </button>
+                        } @else if (survey.status && (survey.status.toLowerCase() === 'completed')) {
+                          <button 
+                            class="btn btn-sm btn-warning republish-btn"
+                            (click)="republishSurvey(survey.surveyId)">
+                            🔄 Republish
+                          </button>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
                       <td>
                         <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Survey">
-                            <i class="fas fa-eye"></i>
+                          <button 
+                            class="btn btn-outline-primary"
+                            (click)="toggleQR(survey.surveyId, 'survey')"
+                            title="Show QR Code">
+                            {{ showQRForQuizId() === survey.surveyId && showQRType() === 'survey' ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Survey">
-                            <i class="fas fa-edit"></i>
+                          @if (survey.status.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-outline-info"
+                              (click)="viewSurveyResults(survey.surveyId)"
+                              title="View Results">
+                              📊 Results
+                            </button>
+                            <button 
+                              class="btn btn-outline-success"
+                              (click)="viewSurveyWordCloud(survey.surveyId, survey.sessionId || 0)"
+                              title="View Word Cloud">
+                              ☁️ Word Cloud
+                            </button>
+                          }
+                          <button class="btn btn-outline-warning" title="Edit Survey" (click)="editSurvey(survey.surveyId)">
+                            ✏️ Edit
                           </button>
-                          <button class="btn btn-outline-danger" title="Delete Survey">
-                            <i class="fas fa-trash"></i>
+                          <button class="btn btn-outline-danger" title="Delete Survey" (click)="deleteSurvey(survey.surveyId)">
+                            🗑️ Delete
                           </button>
                         </div>
                       </td>
                     </tr>
+                    <!-- QR Code Panel for Survey -->
+                    @if (showQRForQuizId() === survey.surveyId && showQRType() === 'survey') {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [quizNumber]="survey.surveyId.toString() || ''" 
+                            [quizId]="survey.surveyId"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>
@@ -358,51 +423,106 @@
               <table class="table table-hover">
                 <thead>
                   <tr>
-                    <th>Poll ID</th>
-                    <th>Title</th>
-                    <th>Question</th>
+                    <th>Session Code</th>
+                    <th>Poll Name</th>
+                    <th>Category</th>
                     <th>Options</th>
                     <th>Status</th>
-                    <th>Anonymous</th>
-                    <th>Session ID</th>
+                    <th>Created</th>
+                    <th>Start Time</th>
+                    <th>Publish</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (poll of hostPolls(); track poll.pollId) {
                     <tr>
-                      <td><code class="text-primary">{{ poll.pollId }}</code></td>
+                      <td><code class="text-primary">{{ poll.sessionCode || 'N/A' }}</code></td>
                       <td><strong>{{ poll.pollTitle }}</strong></td>
-                      <td>{{ poll.pollQuestion }}</td>
+                      <td><span class="badge bg-secondary">{{ poll.category || 'General' }}</span></td>
                       <td><span class="badge bg-info">{{ poll.options.length || 0 }}</span></td>
-                      <td>
+                      <td class="text-center">
                         <span 
                           class="badge" 
                           [class.bg-warning]="poll.pollStatus.toLowerCase() === 'draft'"
-                          [class.bg-success]="poll.pollStatus.toLowerCase() !== 'draft'">
+                          [class.bg-success]="poll.pollStatus.toLowerCase() === 'active'"
+                          [class.bg-info]="poll.pollStatus.toLowerCase() === 'completed'"
+                          [class.bg-primary]="poll.pollStatus.toLowerCase() === 'published'">
                           {{ poll.pollStatus || 'Draft' }}
                         </span>
                       </td>
-                      <td>
-                        <span class="badge" [class.bg-success]="poll.pollAnonymous" [class.bg-secondary]="!poll.pollAnonymous">
-                          {{ poll.pollAnonymous ? 'Yes' : 'No' }}
-                        </span>
+                      <td>{{ poll.createdAt | date:'short' }}</td>
+                      <td class="time-cell">
+                        <input 
+                          type="datetime-local" 
+                          class="form-control form-control-sm time-input"
+                          [value]="startTimes[poll.pollId] || ''"
+                          (change)="onStartTimeChange(poll.pollId, $event, 'poll')"
+                          placeholder="Start time"
+                          [disabled]="poll.pollStatus.toLowerCase() === 'published' || poll.pollStatus.toLowerCase() === 'active' || poll.pollStatus.toLowerCase() === 'completed'"
+                          [id]="'start-poll-' + poll.pollId">
                       </td>
-                      <td>{{ poll.sessionId || 'N/A' }}</td>
+                      <td class="publish-cell">
+                        @if (poll.pollStatus.toLowerCase() === 'draft') {
+                          <button 
+                            class="btn btn-sm btn-success publish-btn"
+                            (click)="publishPoll(poll.pollId)">
+                            📤 Publish
+                          </button>
+                        } @else if (poll.pollStatus.toLowerCase() === 'published' || poll.pollStatus.toLowerCase() === 'active') {
+                          <button 
+                            class="btn btn-sm btn-primary enter-lobby-btn"
+                            (click)="enterLobby(poll.pollId, poll.pollId, 'poll')"
+                            title="Enter Host Lobby">
+                            🎮 Enter Lobby
+                          </button>
+                        } @else if (poll.pollStatus && (poll.pollStatus.toLowerCase() === 'completed')) {
+                          <button 
+                            class="btn btn-sm btn-warning republish-btn"
+                            (click)="republishPoll(poll.pollId)">
+                            🔄 Republish
+                          </button>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
                       <td>
                         <div class="btn-group btn-group-sm">
-                          <button class="btn btn-outline-primary" title="View Poll">
-                            <i class="fas fa-eye"></i>
+                          <button 
+                            class="btn btn-outline-primary"
+                            (click)="toggleQR(poll.pollId, 'poll')"
+                            title="Show QR Code">
+                            {{ showQRForQuizId() === poll.pollId && showQRType() === 'poll' ? 'Hide QR' : 'Show QR' }}
                           </button>
-                          <button class="btn btn-outline-warning" title="Edit Poll">
-                            <i class="fas fa-edit"></i>
+                          @if (poll.pollStatus.toLowerCase() === 'completed') {
+                            <button 
+                              class="btn btn-outline-info"
+                              (click)="viewPollResults(poll.pollId)"
+                              title="View Results">
+                              📊 Results
+                            </button>
+                          }
+                          <button class="btn btn-outline-warning" title="Edit Poll" (click)="editPoll(poll.pollId)">
+                            ✏️ Edit
                           </button>
-                          <button class="btn btn-outline-danger" title="Delete Poll">
-                            <i class="fas fa-trash"></i>
+                          <button class="btn btn-outline-danger" title="Delete Poll" (click)="deletePoll(poll.pollId)">
+                            🗑️ Delete
                           </button>
                         </div>
                       </td>
                     </tr>
+                    <!-- QR Code Panel for Poll -->
+                    @if (showQRForQuizId() === poll.pollId && showQRType() === 'poll') {
+                      <tr>
+                        <td colspan="9" class="qr-cell">
+                          <app-qrcode 
+                            [quizNumber]="poll.pollId.toString() || ''" 
+                            [quizId]="poll.pollId"
+                            [showActions]="false">
+                          </app-qrcode>
+                        </td>
+                      </tr>
+                    }
                   }
                 </tbody>
               </table>

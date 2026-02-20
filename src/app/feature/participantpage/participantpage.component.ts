@@ -118,8 +118,20 @@ export class ParticipantPageComponent implements OnInit {
       localStorage.setItem('quizTitle', validation.quizTitle || 'Quiz');
       localStorage.setItem('sessionCode', cleanedCode);
       
+      // Detect and store session type (quiz/survey/poll)
+      const sessionType = validation.sessionType || 'quiz'; // Default to quiz if not specified
+      localStorage.setItem('sessionType', sessionType);
+      
       if (validation.quizId) {
         localStorage.setItem('currentQuizId', validation.quizId.toString());
+      }
+      
+      if (validation.surveyId) {
+        localStorage.setItem('currentSurveyId', validation.surveyId.toString());
+      }
+      
+      if (validation.pollId) {
+        localStorage.setItem('currentPollId', validation.pollId.toString());
       }
 
       // Step 2: Get employee ID

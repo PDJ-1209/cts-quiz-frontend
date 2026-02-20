@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ParticipantService } from '../../services/participant.service';
@@ -13,7 +14,7 @@ type Question = { id: string; text: string; options: string[]; answer: string; t
   selector: 'app-quiz-page',
   standalone: true,
   imports: [
-    NgIf, NgFor, MatSnackBarModule
+    NgIf, NgFor, FormsModule, MatSnackBarModule
   ],
   templateUrl: './quiz.component.html',
   styleUrls: ['./quiz.component.css']
@@ -25,6 +26,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   currentIndex = 0;
   score = 0;
   selected: string | null = null;
+  ratingValue: number = 0; // For rating questions
+  textAnswer: string = ''; // For text questions
   finished = false;
   loading = true; 
   submitting = false; // Separate flag for answer submission
@@ -35,6 +38,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   quizTitle: string = '';
   sessionCode: string = '';
   participantName: string = '';
+  sessionType: string = 'quiz'; // quiz, survey, or poll
+  questionType: string = 'single_choice'; // For current question type
 
   // Leaderboard display properties
   showLeaderboardOverlay: boolean = false;
@@ -67,6 +72,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     const quizTitleStr = localStorage.getItem('quizTitle');
     const sessionCodeStr = localStorage.getItem('sessionCode');
     const participantNameStr = localStorage.getItem('participantName') || localStorage.getItem('userName');
+    const sessionTypeStr = localStorage.getItem('sessionType');
 
     if (!participantIdStr || !sessionIdStr) {
       this.snackBar.open('No session found. Please join a quiz first.', 'Close', { duration: 3000 });
@@ -79,6 +85,7 @@ export class QuizPageComponent implements OnInit, OnDestroy {
     this.quizTitle = quizTitleStr || 'Quiz';
     this.sessionCode = sessionCodeStr || '';
     this.participantName = participantNameStr || '';
+    this.sessionType = sessionTypeStr || 'quiz';
 
     // Restore answerStates from localStorage
     const savedAnswerStates = localStorage.getItem('answerStates');
@@ -241,6 +248,81 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   onSelectedChange(value: string) {
     console.log('[QuizPage] onSelectedChange:', value);
     this.selected = value; // enables submit button
+  }
+
+  /**
+   * Handle rating selection (for survey rating questions)
+   */
+  onRatingChange(value: number) {
+    console.log('[QuizPage] onRatingChange:', value);
+    this.ratingValue = value;
+    this.selected = value.toString(); // Enable submit button
+  }
+
+  /**
+   * Handle text input (for survey text questions)
+   */
+  onTextChange(value: string) {
+    console.log('[QuizPage] onTextChange:', value);
+    this.textAnswer = value.trim();
+    this.selected = value.trim() ? 'text_answer' : null; // Enable submit if has text
+  }
+
+  /**
+   * Get current question type
+   */
+  getCurrentQuestionType(): string {
+    const currentQuestionDetail = this.questionDetails[this.currentIndex];
+    if (!currentQuestionDetail) return 'single_choice';
+    
+    // Map question type based on session type and question structure
+    if (this.sessionType === 'survey') {
+      return currentQuestionDetail.questionType || 'single_choice';
+    } else if (this.sessionType === 'poll') {
+      return 'poll';
+    }
+    return 'single_choice'; // Default for quiz
+  }
+
+  /**
+   * Check if current question is rating type
+   */
+  isRatingQuestion(): boolean {
+    return this.getCurrentQuestionType() === 'rating';
+  }
+
+  /**
+   * Check if current question is text type
+   */
+  isTextQuestion(): boolean {
+    const type = this.getCurrentQuestionType();
+    return type === 'text' || type === 'short_text';
+  }
+
+  /**
+   * Check if current question is poll
+   */
+  isPollQuestion(): boolean {
+    return this.sessionType === 'poll';
+  }
+
+  /**
+   * Check if submit button should be enabled
+   */
+  canSubmit(): boolean {
+    if (this.submitting || this.waitingForNext || this.submittedIndex === this.currentIndex) {
+      return false;
+    }
+
+    const questionType = this.getCurrentQuestionType();
+    
+    if (questionType === 'rating') {
+      return this.ratingValue > 0;
+    } else if (questionType === 'text' || questionType === 'short_text') {
+      return this.textAnswer.trim().length > 0;
+    } else {
+      return this.selected !== null;
+    }
   }
 
   private getServerNowMs(): number {
@@ -695,8 +777,81 @@ export class QuizPageComponent implements OnInit, OnDestroy {
 
     try {
       const currentQuestionDetail = this.questionDetails[this.currentIndex];
+      const questionType = this.getCurrentQuestionType();
       
-      // Handle unanswered question
+      // For survey/poll, handle different question types
+      if (this.sessionType === 'survey' || this.sessionType === 'poll') {
+        // Handle rating questions
+        if (questionType === 'rating') {
+          if (this.ratingValue === 0 && !isAutoSubmit) {
+            this.snackBar.open('⚠️ Please select a rating', 'Close', { duration: 2000 });
+            return;
+          }
+          
+          const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
+          
+          // Submit rating as text (API might need adjustment)
+          const request: SubmitAnswerRequest = {
+            participantId: this.participantId,
+            questionId: currentQuestionDetail.questionId,
+            selectedOptionId: this.ratingValue, // Use rating value as option ID
+            timeSpentSeconds: timeSpent,
+            textResponse: `Rating: ${this.ratingValue}/5`
+          };
+
+          this.submitting = true;
+          await this.participantService.submitParticipantAnswer(request);
+          this.submitting = false;
+          
+          this.answerStates[this.currentIndex] = 'answered';
+          localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
+          
+          if (!isAutoSubmit) {
+            this.snackBar.open('✅ Rating submitted successfully!', 'Close', { duration: 1500 });
+          }
+
+          this.submittedIndex = this.currentIndex;
+          this.waitingForNext = true;
+          this.ratingValue = 0;
+          return;
+        }
+        
+        // Handle text questions
+        if (questionType === 'text' || questionType === 'short_text') {
+          if (!this.textAnswer.trim() && !isAutoSubmit) {
+            this.snackBar.open('⚠️ Please enter your answer', 'Close', { duration: 2000 });
+            return;
+          }
+          
+          const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
+          
+          const request: SubmitAnswerRequest = {
+            participantId: this.participantId,
+            questionId: currentQuestionDetail.questionId,
+            selectedOptionId: 0, // No option for text
+            timeSpentSeconds: timeSpent,
+            textResponse: this.textAnswer.trim()
+          };
+
+          this.submitting = true;
+          await this.participantService.submitParticipantAnswer(request);
+          this.submitting = false;
+          
+          this.answerStates[this.currentIndex] = 'answered';
+          localStorage.setItem('answerStates', JSON.stringify(this.answerStates));
+          
+          if (!isAutoSubmit) {
+            this.snackBar.open('✅ Answer submitted successfully!', 'Close', { duration: 1500 });
+          }
+
+          this.submittedIndex = this.currentIndex;
+          this.waitingForNext = true;
+          this.textAnswer = '';
+          return;
+        }
+      }
+      
+      // Handle unanswered question (for quiz and multiple choice)
       if (!this.selected) {
         console.log('[QuizPage] No answer selected - submitting as unanswered');
         const timeSpent = Math.max(0, Math.floor((this.getServerNowMs() - this.currentQuestionStartMs) / 1000));
@@ -759,9 +914,8 @@ export class QuizPageComponent implements OnInit, OnDestroy {
       }
 
 
-      // Update score silently without popups
-
-      if (response.isCorrect) {
+      // Update score silently without popups (only for quiz)
+      if (this.sessionType === 'quiz' && response.isCorrect) {
         this.score += 1;
       }
 
@@ -814,15 +968,36 @@ export class QuizPageComponent implements OnInit, OnDestroy {
   returnToParticipant() {
     // Save quiz and participant info for feedback
     const quizId = localStorage.getItem('currentQuizId');
+    const surveyId = localStorage.getItem('currentSurveyId');
+    const pollId = localStorage.getItem('currentPollId');
     const participantId = localStorage.getItem('participantId');
     
-    // Navigate to feedback page with query params
-    this.router.navigate(['/feedback'], {
-      queryParams: {
-        quizId: quizId,
-        participantId: participantId
-      }
-    });
+    // Route based on session type
+    if (this.sessionType === 'survey' && surveyId) {
+      // Navigate to survey results/feedback page
+      this.router.navigate(['/survey-results'], {
+        queryParams: {
+          surveyId: surveyId,
+          participantId: participantId
+        }
+      });
+    } else if (this.sessionType === 'poll' && pollId) {
+      // Navigate to poll results page
+      this.router.navigate(['/poll-results'], {
+        queryParams: {
+          pollId: pollId,
+          participantId: participantId
+        }
+      });
+    } else {
+      // Navigate to quiz feedback page (existing flow)
+      this.router.navigate(['/feedback'], {
+        queryParams: {
+          quizId: quizId,
+          participantId: participantId
+        }
+      });
+    }
   }
 
   restart() {

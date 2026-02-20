@@ -79,6 +79,12 @@ export const routes: Routes = [
     data: { roles: ['Host'], roleIds: [2] }
   },
   { 
+    path: 'word-cloud', 
+    loadComponent: () => import('./feature/word-cloud/word-cloud.component').then(c => c.WordCloudComponent),
+    canActivate: [roleGuard],
+    data: { roles: ['Host'], roleIds: [2] }
+  },
+  { 
     path: 'host/leaderboard', 
     loadComponent: () => import('./feature/leaderboard/leaderboard.component').then(c => c.LeaderboardComponent),
     canActivate: [roleGuard],
@@ -149,6 +155,16 @@ export const routes: Routes = [
     path: 'feedback', 
     loadComponent: () => import('./feature/feedback/feedback.component').then(c => c.FeedbackFormComponent)
     // No guard needed - allow anyone who completed a quiz to give feedback
+  },
+  { 
+    path: 'survey-results', 
+    loadComponent: () => import('./feature/survey-results/survey-results.component').then(c => c.SurveyResultsComponent)
+    // No guard needed - allow participants to see their survey completion
+  },
+  { 
+    path: 'poll-results', 
+    loadComponent: () => import('./feature/poll-results/poll-results.component').then(c => c.PollResultsComponent)
+    // No guard needed - allow participants to see their poll completion
   },
   { 
     path: 'host/calendar', 

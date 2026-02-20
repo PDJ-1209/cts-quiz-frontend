@@ -16,7 +16,7 @@ export class PollService {
   // Create poll
   createPoll(poll: CreatePollRequest): Observable<PollOverview> {
     const payload: CreatePollApiRequest = {
-      sessionId: poll.session_id,
+      sessionId: poll.session_id && poll.session_id > 0 ? poll.session_id : null,
       pollTitle: poll.poll_title,
       pollQuestion: poll.poll_question,
       pollAnonymous: poll.poll_anonymous,
@@ -92,5 +92,21 @@ export class PollService {
     return this.http.get<any>(`${environment.apiUrl}/Participate/Poll/session/${sessionId}`).pipe(
       map((response) => this.mapPollOverview(response))
     );
+  }
+
+  // --- New Quiz-Like Workflow Methods ---
+
+  updatePoll(pollId: number, request: CreatePollApiRequest): Observable<PollOverview> {
+    return this.http.put<any>(`${this.apiBaseV2}/${pollId}`, request).pipe(
+      map((response) => this.mapPollOverview(response))
+    );
+  }
+
+  publishPoll(pollId: number, publishData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseV2}/${pollId}/publish`, publishData);
+  }
+
+  deletePoll(pollId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBaseV2}/${pollId}`);
   }
 }

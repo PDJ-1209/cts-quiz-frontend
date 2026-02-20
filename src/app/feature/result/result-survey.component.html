@@ -1,0 +1,87 @@
+<div class="result-survey-container">
+  <div class="result-header mb-4">
+    <div>
+      <h2>📊 Survey Results</h2>
+      <p class="text-muted">Session Code: {{ sessionCode }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" (click)="refreshResults()" [disabled]="isLoading">
+        🔄 Refresh
+      </button>
+      <button class="btn btn-success" (click)="downloadResults()" [disabled]="isLoading">
+        📥 Download CSV
+      </button>
+      <button class="btn btn-secondary" (click)="goBack()">
+        ← Back
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading) {
+    <div class="text-center py-5">
+      <div class="spinner-border mb-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p>Loading survey results...</p>
+    </div>
+  } @else {
+    @if (surveyResults.length > 0) {
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">📋 Participant Responses</h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Participant Name</th>
+                  <th>Completion %</th>
+                  <th>Completed At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (result of surveyResults; track result.surveyResponseId) {
+                  <tr>
+                    <td>
+                      <strong>{{ result.participantName }}</strong>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="progress" style="flex: 1; min-width: 100px;">
+                          <div class="progress-bar" 
+                               [style.width.%]="result.completionPercentage"
+                               [class.bg-success]="result.completionPercentage === 100"
+                               [class.bg-warning]="result.completionPercentage < 100 && result.completionPercentage >= 50"
+                               [class.bg-danger]="result.completionPercentage < 50">
+                            {{ result.completionPercentage }}%
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {{ result.completedAt | date: 'short' }}
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-primary" 
+                              (click)="viewParticipantResponse(result)"
+                              title="View Detailed Response">
+                        👁️ View Details
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="alert alert-info">
+        <strong>ℹ️ No Results Yet</strong>
+        <p class="mb-0">Participants haven't completed the survey yet.</p>
+      </div>
+    }
+  }
+</div>

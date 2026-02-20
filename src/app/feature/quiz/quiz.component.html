@@ -91,7 +91,8 @@
 
       <!-- Right Side: Options + Submit (40% width) - Centered -->
       <div class="options-section">
-        <div class="options-grid">
+        <!-- Standard Quiz/Poll Options (Single Choice) -->
+        <div class="options-grid" *ngIf="!isRatingQuestion() && !isTextQuestion()">
           <button *ngFor="let option of currentQuestion?.options; let i = index"
                   class="option-btn"
                   [class.selected]="selected === option"
@@ -103,13 +104,41 @@
           </button>
         </div>
 
+        <!-- Rating Question (Survey) -->
+        <div class="rating-container" *ngIf="isRatingQuestion()">
+          <p class="rating-label">Rate from 1 to 5</p>
+          <div class="rating-stars">
+            <button *ngFor="let star of [1, 2, 3, 4, 5]"
+                    class="star-btn"
+                    [class.selected]="ratingValue >= star"
+                    [disabled]="submitting"
+                    (click)="onRatingChange(star)">
+              {{ ratingValue >= star ? '★' : '☆' }}
+            </button>
+          </div>
+          <p class="rating-value" *ngIf="ratingValue > 0">Selected: {{ ratingValue }}/5</p>
+        </div>
+
+        <!-- Text Input Question (Survey) -->
+        <div class="text-input-container" *ngIf="isTextQuestion()">
+          <textarea
+            class="text-input"
+            [(ngModel)]="textAnswer"
+            (input)="onTextChange(textAnswer)"
+            [disabled]="submitting"
+            placeholder="Type your answer here..."
+            rows="6"
+            maxlength="500"></textarea>
+          <p class="char-count">{{ textAnswer.length }}/500 characters</p>
+        </div>
+
         <div class="submit-container">
           <button class="submit-btn" 
-                  [disabled]="!selected || submitting"
+                  [disabled]="!canSubmit()"
                   [class.loading]="submitting"
                   (click)="submitAnswer()">
             <span *ngIf="!submitting">
-              <span class="submit-icon">🚀</span> Submit Answer
+              <span class="submit-icon">🚀</span> Submit {{ sessionType === 'quiz' ? 'Answer' : 'Response' }}
             </span>
             <span *ngIf="submitting">
               <span class="spinner"></span> Submitting...
@@ -123,11 +152,14 @@
   <!-- Results Screen -->
   <div *ngIf="!loading && finished" class="results-screen">
     <div class="results-card">
-      <div class="trophy-icon">🏆</div>
-      <h2 class="results-title">Quiz Complete!</h2>
+      <div class="trophy-icon">{{ sessionType === 'quiz' ? '🏆' : sessionType === 'survey' ? '✅' : '📊' }}</div>
+      <h2 class="results-title">
+        {{ sessionType === 'quiz' ? 'Quiz Complete!' : sessionType === 'survey' ? 'Survey Complete!' : 'Poll Complete!' }}
+      </h2>
       <p class="quiz-name">{{ quizTitle }}</p>
       
-      <div class="score-circle-container">
+      <!-- Quiz Score Display -->
+      <div *ngIf="sessionType === 'quiz'" class="score-circle-container">
         <svg class="score-svg" viewBox="0 0 200 200">
           <circle cx="100" cy="100" r="90" class="score-bg"></circle>
           <circle cx="100" cy="100" r="90" class="score-ring"
@@ -139,7 +171,15 @@
         </div>
       </div>
 
-      <div class="stats-row">
+      <!-- Survey/Poll Completion Message -->
+      <div *ngIf="sessionType !== 'quiz'" class="completion-message">
+        <p class="thank-you-text">
+          {{ sessionType === 'survey' ? 'Thank you for completing the survey! Your responses have been recorded.' : 'Thank you for voting! Your response has been recorded.' }}
+        </p>
+      </div>
+
+      <!-- Quiz Stats -->
+      <div *ngIf="sessionType === 'quiz'" class="stats-row">
         <div class="stat-box correct">
           <span class="stat-icon">✓</span>
           <span class="stat-value">{{ score }}</span>
@@ -158,7 +198,7 @@
       </div>
 
       <button class="home-btn" (click)="returnToParticipant()">
-        ✏️ Go to Feedback
+        {{ sessionType === 'quiz' ? '✏️ Go to Feedback' : '🏠 Return Home' }}
       </button>
     </div>
   </div>

@@ -3,7 +3,10 @@ export interface ValidateSessionResponse {
   message: string;
   sessionId?: number;
   quizId?: number;
+  surveyId?: number;
+  pollId?: number;
   quizTitle?: string;
+  sessionType?: string; // 'quiz', 'survey', or 'poll'
   startedAt?: string;
   endedAt?: string;
   status?: string;
@@ -55,6 +58,7 @@ export interface SubmitAnswerRequest {
   questionId: number;
   selectedOptionId: number;
   timeSpentSeconds?: number;
+  textResponse?: string; // For survey text questions
 }
 
 export interface SubmitAnswerResponse {

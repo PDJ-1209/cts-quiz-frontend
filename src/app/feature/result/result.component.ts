@@ -165,12 +165,14 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   showQRForQuizId = signal<number | null>(null);
+  showQRType = signal<'quiz' | 'survey' | 'poll'>('quiz');
 
-  toggleQR(quizId: number) {
-    if (this.showQRForQuizId() === quizId) {
+  toggleQR(id: number, type: 'quiz' | 'survey' | 'poll' = 'quiz') {
+    if (this.showQRForQuizId() === id && this.showQRType() === type) {
       this.showQRForQuizId.set(null);
     } else {
-      this.showQRForQuizId.set(quizId);
+      this.showQRForQuizId.set(id);
+      this.showQRType.set(type);
     }
   }
 
@@ -800,10 +802,10 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  onStartTimeChange(quizId: number, event: Event) {
+  onStartTimeChange(id: number, event: Event, type: 'quiz' | 'survey' | 'poll' = 'quiz') {
     const input = event.target as HTMLInputElement;
-    this.startTimes![quizId] = input.value;
-    console.log(`Start time for quiz ${quizId}:`, input.value);
+    this.startTimes![id] = input.value;
+    console.log(`Start time for ${type} ${id}:`, input.value);
     
     // Convert to ISO string for backend
     if (input.value) {
@@ -947,26 +949,60 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Enter Host Lobby - Opens host dashboard in new tab with manual control mode
+   * Enter Host Lobby - Opens host lobby for quiz, survey, or poll
    */
-  async enterLobby(quizNumber: string, quizId: number) {
+  async enterLobby(id: number | string, sessionId: number, type: 'quiz' | 'survey' | 'poll' = 'quiz') {
     try {
-      // Get the session code for this quiz
-      const session = await this.quizPublishService.getQuizSessionByCode(quizNumber);
-      
-      if (!session || !session.sessionCode) {
-        this.snackBar.open('⚠️ No active session found for this quiz', 'Close', {
-          duration: 4000,
-          panelClass: ['warning-snackbar']
-        });
-        return;
+      if (type === 'quiz') {
+        // For quiz, get the session by quiz number
+        const session = await this.quizPublishService.getQuizSessionByCode(id.toString());
+        
+        if (!session || !session.sessionCode) {
+          this.snackBar.open('⚠️ No active session found for this quiz', 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar']
+          });
+          return;
+        }
+
+        // Open host dashboard in new tab with session code and manual control flag
+        const url = `/host-lobby?sessionCode=${session.sessionCode}&quizId=${id}&mode=manual`;
+        window.open(url, '_blank');
+      } else {
+        // For survey/poll, get session code first
+        let sessionCode = '';
+        try {
+          const sessionResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/${sessionId}`);
+          if (sessionResponse.ok) {
+            const sessionData = await sessionResponse.json();
+            sessionCode = sessionData.sessionCode || '';
+          }
+        } catch (e) {
+          console.error('Failed to fetch session code:', e);
+        }
+
+        // Store info in localStorage and navigate with session code
+        if (type === 'survey') {
+          localStorage.setItem('sessionType', 'survey');
+          localStorage.setItem('surveyId', id.toString());
+          localStorage.setItem('sessionId', sessionId.toString());
+        } else {
+          localStorage.setItem('sessionType', 'poll');
+          localStorage.setItem('pollId', id.toString());
+          localStorage.setItem('sessionId', sessionId.toString());
+        }
+        
+        // Navigate with sessionCode if available
+        if (sessionCode) {
+          this.router.navigate(['/host-lobby'], { 
+            queryParams: { sessionCode, mode: 'manual' } 
+          });
+        } else {
+          this.router.navigate(['/host-lobby']);
+        }
       }
 
-      // Open host dashboard in new tab with session code and manual control flag
-      const url = `/host-lobby?sessionCode=${session.sessionCode}&quizId=${quizId}&mode=manual`;
-      window.open(url, '_blank');
-
-      this.snackBar.open('🎮 Opening Host Lobby in new tab...', 'Close', {
+      this.snackBar.open('🎮 Opening Host Lobby...', 'Close', {
         duration: 3000,
         panelClass: ['success-snackbar']
       });
@@ -1077,6 +1113,277 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (error) {
       console.error('Failed to view leaderboard:', error);
       this.snackBar.open('⚠️ Failed to load leaderboard', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * View survey results
+   */
+  viewSurveyResults(surveyId: number) {
+    try {
+      // Store survey ID and navigate to survey results component
+      localStorage.setItem('currentSurveyId', surveyId.toString());
+      this.router.navigate(['/result-survey'], {
+        queryParams: { surveyId: surveyId }
+      });
+    } catch (error) {
+      console.error('Failed to navigate to survey results:', error);
+      this.snackBar.open('⚠️ Failed to open survey results', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * View survey word cloud
+   */
+  viewSurveyWordCloud(surveyId: number, sessionId: number) {
+    try {
+      this.router.navigate(['/word-cloud'], {
+        queryParams: { surveyId: surveyId, sessionId: sessionId }
+      });
+    } catch (error) {
+      console.error('Failed to navigate to word cloud:', error);
+      this.snackBar.open('⚠️ Failed to open word cloud', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * View poll results
+   */
+  viewPollResults(pollId: number) {
+    try {
+      // Store poll ID and navigate to poll results component
+      localStorage.setItem('currentPollId', pollId.toString());
+      this.router.navigate(['/result-poll'], {
+        queryParams: { pollId: pollId }
+      });
+    } catch (error) {
+      console.error('Failed to navigate to poll results:', error);
+      this.snackBar.open('⚠️ Failed to open poll results', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Publish survey
+   */
+  async publishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.startTimes[surveyId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const employeeId = this.currentHostId();
+
+      const result = await new Promise<any>((resolve, reject) => {
+        this.surveyService.publishSurveyV2(surveyId, { startTime, employeeId }).subscribe({
+          next: (data) => resolve(data),
+          error: (error) => reject(error)
+        });
+      });
+
+      this.snackBar.open(
+        `✅ Survey published! Session Code: ${result.sessionCode || 'N/A'}`,
+        'Close',
+        { duration: 5000, panelClass: ['success-snackbar'] }
+      );
+
+      // Reload surveys
+      await this.loadSurveys();
+    } catch (error: any) {
+      console.error('Error publishing survey:', error);
+      const errorMsg = error.error?.message || 'Failed to publish survey';
+      this.snackBar.open(`⚠️ ${errorMsg}`, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+    }
+  }
+
+  /**
+   * Republish survey (after completion)
+   */
+  async republishSurvey(surveyId: number) {
+    try {
+      const survey = this.hostSurveys().find(s => s.surveyId === surveyId);
+      if (!survey) {
+        this.snackBar.open('⚠️ Survey not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.startTimes[surveyId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const employeeId = this.currentHostId();
+
+      const result = await new Promise<any>((resolve, reject) => {
+        this.surveyService.publishSurveyV2(surveyId, { startTime, employeeId }).subscribe({
+          next: (data) => resolve(data),
+          error: (error) => reject(error)
+        });
+      });
+
+      this.snackBar.open(
+        `✅ Survey republished! Session Code: ${result.sessionCode || 'N/A'}`,
+        'Close',
+        { duration: 5000, panelClass: ['success-snackbar'] }
+      );
+
+      await this.loadSurveys();
+    } catch (error: any) {
+      console.error('Error republishing survey:', error);
+      const errorMsg = error.error?.message || 'Failed to republish survey';
+      this.snackBar.open(`⚠️ ${errorMsg}`, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+    }
+  }
+
+  /**
+   * Edit survey
+   */
+  editSurvey(surveyId: number) {
+    this.router.navigate(['/survey', surveyId, 'edit']);
+  }
+
+  /**
+   * Delete survey
+   */
+  async deleteSurvey(surveyId: number) {
+    const confirmed = confirm('Are you sure you want to delete this survey?');
+    if (confirmed) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.surveyService.deleteSurveyV2(surveyId).subscribe({
+            next: () => resolve(),
+            error: (error) => reject(error)
+          });
+        });
+
+        this.snackBar.open('✅ Survey deleted successfully', 'Close', { duration: 3000 });
+        await this.loadSurveys();
+      } catch (error) {
+        console.error('Failed to delete survey:', error);
+        this.snackBar.open('⚠️ Failed to delete survey', 'Close', { duration: 3000 });
+      }
+    }
+  }
+
+  /**
+   * Publish poll
+   */
+  async publishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.startTimes[pollId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const employeeId = this.currentHostId();
+
+      const result = await new Promise<any>((resolve, reject) => {
+        this.pollService.publishPoll(pollId, { startTime, employeeId }).subscribe({
+          next: (data) => resolve(data),
+          error: (error) => reject(error)
+        });
+      });
+
+      this.snackBar.open(
+        `✅ Poll published! Session Code: ${result.sessionCode || 'N/A'}`,
+        'Close',
+        { duration: 5000, panelClass: ['success-snackbar'] }
+      );
+
+      await this.loadPolls();
+    } catch (error: any) {
+      console.error('Error publishing poll:', error);
+      const errorMsg = error.error?.message || error.error?.error || 'Failed to publish poll';
+      this.snackBar.open(`⚠️ ${errorMsg}`, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+    }
+  }
+
+  /**
+   * Republish poll
+   */
+  async republishPoll(pollId: number) {
+    try {
+      const poll = this.hostPolls().find(p => p.pollId === pollId);
+      if (!poll) {
+        this.snackBar.open('⚠️ Poll not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const startTimeInput = this.startTimes[pollId];
+      if (!startTimeInput) {
+        this.snackBar.open('⚠️ Start time is required', 'Close', { duration: 4000 });
+        return;
+      }
+
+      const startTime = new Date(startTimeInput).toISOString();
+      const employeeId = this.currentHostId();
+
+      const result = await new Promise<any>((resolve, reject) => {
+        this.pollService.publishPoll(pollId, { startTime, employeeId }).subscribe({
+          next: (data) => resolve(data),
+          error: (error) => reject(error)
+        });
+      });
+
+      this.snackBar.open(
+        `✅ Poll republished! Session Code: ${result.sessionCode || 'N/A'}`,
+        'Close',
+        { duration: 5000, panelClass: ['success-snackbar'] }
+      );
+
+      await this.loadPolls();
+    } catch (error: any) {
+      console.error('Error republishing poll:', error);
+      const errorMsg = error.error?.message || error.error?.error || 'Failed to republish poll';
+      this.snackBar.open(`⚠️ ${errorMsg}`, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+    }
+  }
+
+  /**
+   * Edit poll
+   */
+  editPoll(pollId: number) {
+    this.router.navigate(['/poll', pollId, 'edit']);
+  }
+
+  /**
+   * Delete poll
+   */
+  async deletePoll(pollId: number) {
+    const confirmed = confirm('Are you sure you want to delete this poll?');
+    if (confirmed) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.pollService.deletePoll(pollId).subscribe({
+            next: () => resolve(),
+            error: (error) => reject(error)
+          });
+        });
+
+        this.snackBar.open('✅ Poll deleted successfully', 'Close', { duration: 3000 });
+        await this.loadPolls();
+      } catch (error) {
+        console.error('Failed to delete poll:', error);
+        this.snackBar.open('⚠️ Failed to delete poll', 'Close', { duration: 3000 });
+      }
     }
   }
 

@@ -10,7 +10,9 @@ import {
   PublishSurveyResponse,
   SurveyResult,
   CreateSurveyApiRequest,
-  SurveyOverview
+  SurveyOverview,
+  WordCloudResponse,
+  SurveyTextResponse
 } from '../models/isurvey';
 import { CreateQuizSessionRequest, CreateQuizSessionResponse } from '../models/quiz-publish.models';
 
@@ -46,13 +48,13 @@ export class SurveyService {
 
   createSurvey(request: CreateSurveyRequest): Observable<CreateSurveyResponse> {
     const payload: CreateSurveyApiRequest = {
-      sessionId: request.session_id ?? null,
+      sessionId: request.session_id && request.session_id > 0 ? request.session_id : null,
       title: request.title,
       description: request.description,
       isAnonymous: request.is_anonymous,
       status: 'draft',
       questions: (request.questions || []).map((q) => ({
-        sessionId: request.session_id ?? 0,
+        sessionId: request.session_id && request.session_id > 0 ? request.session_id : null,
         questionText: q.question_text,
         questionType: q.question_type,
         questionOrder: q.question_order,
@@ -61,11 +63,13 @@ export class SurveyService {
         scaleMax: q.scale_max,
         options: (q.options || []).map((opt) => ({
           optionText: opt.option_text,
-          displayOrder: opt.display_order
+          displayOrder: opt.display_order,
+          scoreValue: opt.score_value
         }))
       }))
     };
 
+    console.log('[SurveyService] Sending payload to backend:', JSON.stringify(payload, null, 2));
     return this.http.post<CreateSurveyResponse>(this.apiBaseV2, payload as any);
   }
 
@@ -126,6 +130,22 @@ export class SurveyService {
     return this.http.delete(`${this.baseUrl}/survey/${surveyId}`);
   }
 
+  // --- New Quiz-Like Workflow Methods ---
+
+  updateSurvey(surveyId: number, request: CreateSurveyApiRequest): Observable<SurveyOverview> {
+    return this.http.put<any>(`${this.apiBaseV2}/${surveyId}`, request).pipe(
+      map((response) => this.mapSurveyOverview(response))
+    );
+  }
+
+  publishSurveyV2(surveyId: number, publishData: any): Observable<any> {
+    return this.http.post<any>(`${this.apiBaseV2}/${surveyId}/publish`, publishData);
+  }
+
+  deleteSurveyV2(surveyId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiBaseV2}/${surveyId}`);
+  }
+
   // Participant: get survey by session
   getParticipantSurveyBySession(sessionId: number): Observable<SurveyOverview> {
     return this.http.get<any>(`${environment.apiUrl}/Participate/Survey/session/${sessionId}`).pipe(
@@ -136,5 +156,21 @@ export class SurveyService {
   // Participant: submit survey responses
   submitSurveyResponses(payload: any): Observable<any> {
     return this.http.post(`${environment.apiUrl}/Participate/Survey/submit`, payload);
+  }
+
+  // --- Word Cloud Analytics ---
+  
+  /**
+   * Generate word cloud from survey text responses
+   */
+  getWordCloud(surveyId: number, sessionId: number): Observable<WordCloudResponse> {
+    return this.http.get<WordCloudResponse>(`${this.apiBaseV2}/${surveyId}/wordcloud/${sessionId}`);
+  }
+
+  /**
+   * Get all text responses for analysis
+   */
+  getTextResponses(surveyId: number, sessionId: number): Observable<SurveyTextResponse[]> {
+    return this.http.get<SurveyTextResponse[]>(`${this.apiBaseV2}/${surveyId}/text-responses/${sessionId}`);
   }
 }

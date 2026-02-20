@@ -163,7 +163,7 @@ import { ApplySessionThemeRequest } from '../models/session-theme.model';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeApiService {
-  private base = environment.apiBaseUrl.replace(/\/$/, '');
+  private base = environment.apiUrl.replace(/\/$/, '');
 
   constructor(private http: HttpClient) {}
 

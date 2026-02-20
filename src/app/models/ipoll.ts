@@ -50,7 +50,7 @@ export interface CreatePollOptionRequest {
 
 // v2 API payloads (camelCase)
 export interface CreatePollApiRequest {
-  sessionId: number;
+  sessionId?: number | null;
   pollTitle: string;
   pollQuestion: string;
   pollAnonymous: boolean;
@@ -73,6 +73,9 @@ export interface PollOverview {
   pollAnonymous: boolean;
   pollStatus: string;
   selectionType: string;
+  category?: string;
+  sessionCode?: string;
+  createdAt?: Date | string;
   options: PollOptionOverview[];
 }
 

@@ -28,6 +28,8 @@ export class CountdownComponent implements OnInit, OnDestroy {
   sessionData: SessionData | null = null;
   participantName: string = '';
   sessionCode: string = '';
+  sessionType: string = 'quiz'; // quiz, survey, or poll
+  contentTitle: string = 'Quiz'; // Display title
   
   quizStartTime: Date | null = null;
   quizEndTime: Date | null = null;
@@ -53,6 +55,7 @@ export class CountdownComponent implements OnInit, OnDestroy {
     // Load session data from localStorage
     const sessionDataStr = localStorage.getItem('sessionData');
     const participantNameStr = localStorage.getItem('participantName');
+    const sessionTypeStr = localStorage.getItem('sessionType');
     
     if (!sessionDataStr) {
       this.snackBar.open('No session data found. Please join a quiz first.', 'Close', { duration: 3000 });
@@ -62,6 +65,16 @@ export class CountdownComponent implements OnInit, OnDestroy {
 
     this.sessionData = JSON.parse(sessionDataStr);
     this.participantName = participantNameStr || 'Participant';
+    this.sessionType = sessionTypeStr || 'quiz';
+    
+    // Set display title based on type
+    if (this.sessionType === 'survey') {
+      this.contentTitle = this.sessionData?.quizTitle || 'Survey';
+    } else if (this.sessionType === 'poll') {
+      this.contentTitle = this.sessionData?.quizTitle || 'Poll';
+    } else {
+      this.contentTitle = this.sessionData?.quizTitle || 'Quiz';
+    }
     
     // Get session code from query params
     this.route.queryParams.subscribe(params => {

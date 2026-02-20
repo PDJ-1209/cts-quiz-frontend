@@ -46,13 +46,15 @@
                 <div class="col-md-6">
                   <select formControlName="type" class="form-select cts-input">
                     <option value="single_choice">Single Choice</option>
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="ranking">Ranking</option>
                     <option value="rating">Rating (1-5 Stars)</option>
                     <option value="text">Short Text</option>
                   </select>
                 </div>
               </div>
 
-              <div *ngIf="q.get('type')?.value.includes('choice')" formArrayName="options">
+              <div *ngIf="q.get('type')?.value === 'single_choice' || q.get('type')?.value === 'multiple_choice' || q.get('type')?.value === 'ranking'" formArrayName="options">
                 <div *ngFor="let opt of getOptions(i).controls; let oi = index" class="input-group mb-2">
                   <span class="input-group-text bg-white"><i class="bi bi-circle"></i></span>
                   <input [formControlName]="oi" class="form-control" placeholder="Option {{ oi + 1 }}">
@@ -61,31 +63,70 @@
                 <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="addOption(i)">+ Add Option</button>
               </div>
 
-              <button type="button" class="btn btn-teal w-100 mt-4 text-white fw-bold" (click)="addQuestion()">+ Add Next Question</button>
+              <button type="button" class="btn btn-danger btn-sm mt-3" (click)="removeQuestion(i)" *ngIf="questions.length > 1">
+                <i class="fas fa-trash-alt"></i> Remove Question
+              </button>
             </div>
           </div>
         </div>
+
+        <!-- Add Question Button -->
+        <div class="text-center mt-4">
+          <button type="button" class="btn btn-primary btn-lg w-50" (click)="addQuestion()">
+            <i class="fas fa-plus-circle"></i> Add Question
+          </button>
+        </div>
       </div>
 
+      <!-- Survey Preview Card -->
       <div class="col-lg-4 col-md-12">
-        <div class="survey-summary-card card shadow-sm">
-          <div class="card-body p-4">
-            <h6 class="fw-bold border-bottom pb-2">Survey Summary</h6>
-            <div class="d-flex justify-content-between my-3">
-              <span class="text-muted">Questions</span>
-              <span class="badge bg-primary rounded-pill px-3">{{ questions.length }}</span>
+        <div class="card shadow-sm mb-4">
+          <div class="card-header bg-success text-white">
+            <h5 class="mb-0 text-white"><span class="me-2">👁️</span>Survey Preview ({{ questions.length }} questions)</h5>
+          </div>
+          <div class="card-body">
+            @if (questions.length === 0) {
+            <div class="text-center py-5">
+              <div class="display-1 mb-3">📋</div>
+              <p class="text-muted">No questions added yet. Create your first survey question above.</p>
             </div>
-            <div class="d-grid gap-2">
-              <button class="btn btn-primary py-2 fw-bold" (click)="onPublish()" [disabled]="loading">
-                {{ loading ? 'Publishing...' : 'Publish Survey' }}
-              </button>
-              <button class="btn btn-success py-2 fw-bold" (click)="createQuizFromSurvey()" [disabled]="loading">
-                🔄 Convert to Quiz Format
-              </button>
+            } @else {
+            <div class="list-group mb-3">
+              @for (q of questions.controls; let i = $index; track i) {
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <span class="badge bg-success rounded-pill">Q{{ i + 1 }}</span>
+                  <button class="btn btn-outline-danger btn-sm" type="button" (click)="removeQuestion(i)"
+                    title="Delete">🗑️</button>
+                </div>
+                <div class="fw-semibold mb-2">{{ q.get('text')?.value || 'No question text' }}</div>
+                @if (q.get('type')?.value === 'single_choice' || q.get('type')?.value === 'multiple_choice') {
+                <div class="d-flex flex-column gap-1">
+                  @for (opt of getOptions(i).controls; track $index) {
+                  <div class="badge bg-light text-dark">
+                    {{ opt.value || 'Option ' + ($index + 1) }}
+                  </div>
+                  }
+                </div>
+                }
+                <div class="d-flex gap-2 flex-wrap mt-2">
+                  <span class="badge bg-info">{{ getQuestionTypeLabel(q.get('type')?.value) }}</span>
+                  @if (q.get('isRequired')?.value) {
+                  <span class="badge bg-danger">Required</span>
+                  }
+                </div>
+              </div>
+              }
             </div>
-            <small class="text-muted mt-2 d-block text-center">
-              Convert survey to quiz format and switch to Questions tab
-            </small>
+            <button type="button" class="btn btn-success w-100 fw-bold" (click)="onPublish()" [disabled]="loading || questions.length === 0">
+              {{ loading ? '⏳ Creating...' : '🚀 Create Survey' }}
+            </button>
+            @if (questions.length === 0) {
+            <div class="text-muted text-center mt-2 small">
+              Add at least one question to create survey.
+            </div>
+            }
+            }
           </div>
         </div>
         

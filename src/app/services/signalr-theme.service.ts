@@ -22,7 +22,7 @@ export class SignalrThemeService {
     if (this.connection) return;
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(environment.themeHubUrl)
+      .withUrl(environment.signalRUrl)
       .withAutomaticReconnect()
       .build();
 
