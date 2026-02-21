@@ -1030,7 +1030,7 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Enter Host Lobby - Opens host lobby for quiz, survey, or poll
    */
-  async enterLobby(id: number | string, sessionId: number, type: 'quiz' | 'survey' | 'poll' = 'quiz') {
+  async enterLobby(id: number | string, sessionId: number | null | undefined, type: 'quiz' | 'survey' | 'poll' = 'quiz') {
     try {
       if (type === 'quiz') {
         // For quiz, get the session by quiz number
