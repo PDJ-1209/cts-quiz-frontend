@@ -225,13 +225,20 @@ export class HostLobbyComponent implements OnInit, OnDestroy {
       if (sessionType === 'survey' || sessionType === 'poll') {
         // Load survey/poll session data from sessionId
         const sessionId = this.sessionId();
-        console.log('[HostLobby] Loading session ID:', sessionId);
+        console.log('[HostLobby] Loading session ID:', sessionId, 'Type:', sessionType);
+        
+        if (!sessionId || sessionId === 0) {
+          console.error('[HostLobby] Invalid session ID:', sessionId);
+          throw new Error('Invalid session ID. Please publish the ' + sessionType + ' again.');
+        }
         
         const sessionResponse = await fetch(`http://localhost:5195/api/Host/QuizSession/${sessionId}`);
         
         if (!sessionResponse.ok) {
           console.error('[HostLobby] Session fetch failed:', sessionResponse.status, sessionResponse.statusText);
-          throw new Error(`Failed to fetch session: ${sessionResponse.statusText}`);
+          const errorText = await sessionResponse.text();
+          console.error('[HostLobby] Error details:', errorText);
+          throw new Error(`Failed to fetch ${sessionType} session (ID: ${sessionId}): ${sessionResponse.statusText}`);
         }
         
         const session = await sessionResponse.json();

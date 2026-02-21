@@ -1048,6 +1048,15 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
         const url = `/host-lobby?sessionCode=${session.sessionCode}&quizId=${id}&mode=manual`;
         window.open(url, '_blank');
       } else {
+        // Validate sessionId
+        if (!sessionId || sessionId === 0) {
+          this.snackBar.open(`⚠️ No session found. Please publish the ${type} first.`, 'Close', {
+            duration: 4000,
+            panelClass: ['warning-snackbar']
+          });
+          return;
+        }
+        
         // For survey/poll, get session code first
         let sessionCode = '';
         try {
@@ -1055,9 +1064,21 @@ export class ResultComponent implements OnInit, OnDestroy, AfterViewInit {
           if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
             sessionCode = sessionData.sessionCode || '';
+          } else {
+            console.error('Failed to fetch session:', sessionResponse.status);
+            this.snackBar.open(`⚠️ Failed to load ${type} session. Please publish again.`, 'Close', {
+              duration: 4000,
+              panelClass: ['error-snackbar']
+            });
+            return;
           }
         } catch (e) {
           console.error('Failed to fetch session code:', e);
+          this.snackBar.open(`⚠️ Failed to load ${type} session.`, 'Close', {
+            duration: 4000,
+            panelClass: ['error-snackbar']
+          });
+          return;
         }
 
         // Store info in localStorage and navigate with session code

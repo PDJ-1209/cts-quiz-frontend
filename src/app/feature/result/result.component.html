@@ -298,7 +298,7 @@
                 </button>
                 } @else if (survey.status.toLowerCase() === 'published' || survey.status.toLowerCase() === 'active') {
                 <button class="btn btn-sm btn-primary enter-lobby-btn"
-                  (click)="enterLobby(survey.surveyId, survey.surveyId, 'survey')" title="Enter Host Lobby">
+                  (click)="enterLobby(survey.surveyId, survey.sessionId, 'survey')" title="Enter Host Lobby">
                   🎮 Enter Lobby
                 </button>
                 } @else if (survey.status && (survey.status.toLowerCase() === 'completed')) {
@@ -406,7 +406,7 @@
                 } @else if (poll.pollStatus.toLowerCase() === 'published' || poll.pollStatus.toLowerCase() === 'active')
                 {
                 <button class="btn btn-sm btn-primary enter-lobby-btn"
-                  (click)="enterLobby(poll.pollId, poll.pollId, 'poll')" title="Enter Host Lobby">
+                  (click)="enterLobby(poll.pollId, poll.sessionId, 'poll')" title="Enter Host Lobby">
                   🎮 Enter Lobby
                 </button>
                 } @else if (poll.pollStatus && (poll.pollStatus.toLowerCase() === 'completed')) {

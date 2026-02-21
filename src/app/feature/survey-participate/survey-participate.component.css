@@ -885,6 +885,7 @@
     font-size: 0.95rem;
   }
 }
+.form-actions {
   padding-top: 2rem;
   border-top: 2px solid #e0e0e0;
 }
